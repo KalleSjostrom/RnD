@@ -1,0 +1,48 @@
+#define Array(Type) \
+struct Type##_Array { \
+	unsigned count; \
+	unsigned size; \
+	Type *data; \
+	Type& operator [](unsigned i) { ASSERT(i < count, "Array Index out of bounds."); return data[i]; };\
+}
+
+#define ConstArray(Type) \
+struct Const##Type##_Array { \
+	unsigned count; \
+	unsigned size; \
+	const Type *data; \
+	const Type& operator [](unsigned i) { ASSERT(i < count, "Array Index out of bounds."); return data[i]; };\
+}
+
+typedef Array(float) Float_Array;
+typedef ConstArray(float) ConstFloat_Array;
+typedef Array(Vector2) Vector2_Array;
+typedef ConstArray(Vector2) ConstVector2_Array;
+
+void _array_check_size(unsigned count, unsigned size) { ASSERT(count < size, "Array size out of index!"); }
+#define array_init(Data, Count, Size) { Count, Size, Data }
+#define array_index(ARRAY, pointer) (pointer - ARRAY.data)
+#define array_pushback(ARRAY, DATA) ( ARRAY.data[ARRAY.count++] = DATA, _array_check_size(ARRAY.count, ARRAY.size) )
+#define array_insert(ARRAY, DATA, INDEX) ( memmove(&ARRAY.data[INDEX], &ARRAY.data[INDEX+1], sizeof(*ARRAY.data) * (ARRAY.count++)-INDEX), ARRAY.data[INDEX] = DATA, _array_check_size(ARRAY.count, ARRAY.size))
+
+
+example:
+
+int lol[64];
+float lol2[128];
+
+void my_func2(Float_Array &arr) {
+	array_pushback(arr, 3.f);
+}
+
+void my_func() {
+	Array(int) my_array = array_init(lol, 0, 64);
+	Float_Array my_array2 = array_init(lol2, 0, 128);
+
+	array_insert(my_array2, 1.f, 0);
+	my_func2(my_array2);
+}
+
+int main() {
+
+}

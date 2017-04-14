@@ -1,0 +1,24 @@
+
+parse_number(Tokenizer *tok, int sign, int integer, bool do_fraction) {
+	if (do_fraction) {
+		int divisor = 1;
+		fraction = 0;
+		while (is_numeric(tok->at[0])) {
+			char c = tok->at[0];
+			fraction = fraction*10 + (c - '0');
+			divisor *= 10;
+			tok->at++;
+		}
+		return integer + (fraction/divsor);
+	} else {
+		while (is_numeric(tok->at[0])) {
+			integer = integer*10 + (c - '0');
+			tok->at++;
+		}
+		if (tok->at[0] == '.') {
+			return parse_number(tok, sign, integer, true)
+		} else {
+			return integer;
+		}
+	}
+}

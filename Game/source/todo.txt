@@ -1,0 +1,28 @@
+Graphics:
+	Shaders:
+		Round lights, resolution independent?
+	Video modes:
+		How to select between video-modes if I have no menu?
+		Fullscreen:
+			Make sure it works on multiple monitors.
+
+Animations:
+	Get more animations and blend between them
+
+Context sensitive controlls:
+	If avatar is close to ledge, slow down and stop
+
+Game Mechanics:
+	Teleportation:
+		Teleport an avatar
+
+	Cloning:
+		Clone an avatar so you can controll both of them
+
+	Basic level:
+		Start to the left and go interact with something on the right
+
+	Advanced level:
+		Use the level mechanic (reflected lights) to clear the level.
+
+

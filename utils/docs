@@ -1,0 +1,15 @@
+This approach leads to fixed bookkeeping overhead per chunk. Because both size information and bin links must be held in each available chunk, the smallest allocatable chunk is 16 bytes in systems with 32-bit pointers and 24 bytes in systems with 64-bit pointers. These minimum sizes are larger than most people would like to see -- they can lead to significant wastage for example in applications allocating many tiny linked-list nodes. However, the 16 bytes minimum at least is characteristic of any system requiring 8-byte alignment in which there is any malloc bookkeeping overhead.
+
+/*
+  create_mspace_with_base uses the memory supplied as the initial base
+  of a new mspace. Part (less than 128*sizeof(size_t) bytes) of this
+  space is used for bookkeeping, so the capacity must be at least this
+  large. (Otherwise 0 is returned.) When this initial space is
+  exhausted, additional memory will be obtained from the system.
+  Destroying this space will deallocate all additionally allocated
+  space (if possible) but not the initial base.
+*/
+DLMALLOC_EXPORT mspace create_mspace_with_base(void* base, size_t capacity, int locked);
+
+528 = 512
+nb = pad_request(bytes);
