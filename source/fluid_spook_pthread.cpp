@@ -4,8 +4,6 @@ namespace fluid {
 	using namespace fluid_common;
 	using namespace pthread_aux;
 
-	#define FLT_MAX 3.40282347E+38F // "No-entry-marker" for the schur complement matrix to
-
 	float k = 1000.0f; // spring constant
 	float d = 4.0f; // number of timesteps it takes to stabalize (~3-5) - τ / DT
 	float ξ = 1.0f / (1.0f + 4.0f*d); // regularization to relax the system
@@ -56,7 +54,7 @@ namespace fluid {
 		for (int i = job->start; i < job->stop; ++i) {
 			u32 hash = calculate_hash(positions[i].x, positions[i].y);
 			Element *element = hash_map[hash];
-			ASSERT(element);
+			ASSERT(element, "Null element in hash map");
 			Element *cursor;
 
 			#define POLY6_WHEN_DIST_IS_ZERO (4.0f/(PI * H*H))

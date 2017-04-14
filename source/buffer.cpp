@@ -17,8 +17,8 @@ inline v2 gen_pos(int i) {
 	float x = -19.9f + (i % 120) * 0.126f * 1.3f * 0.8f;
 	float y = -19.9f + (i / 120) * 0.126f * 1.3f * 0.8f;
 
-	ASSERT(y <= 20);
-	ASSERT(x <= 20);
+	ASSERT(y <= 20, "Position out of bounds");
+	ASSERT(x <= 20, "Position out of bounds");
 	return V2(x, y);
 }
 Buffer gen_buffer(cl_context context, v2 (*f)(int i)) {

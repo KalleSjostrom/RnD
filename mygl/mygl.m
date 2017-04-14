@@ -278,8 +278,9 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 			attributes[attribute_count++] = NSOpenGLPFAStencilSize;
 			attributes[attribute_count++] = FBCONFIG_STENCILBITS;
 
-			if (FBCONFIG_STEREO)
+#if FBCONFIG_STEREO
 				attributes[attribute_count++] = NSOpenGLPFAStereo;
+#endif
 
 			if (FBCONFIG_DOUBLEBUFFER)
 				attributes[attribute_count++] = NSOpenGLPFADoubleBuffer;
@@ -341,7 +342,7 @@ void mygl_swap_buffers(GLWindowHandle* handle) {
 void mygl_poll_events(void)
 {
 	for (;;) {
-		NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
+		NSEvent* event = [NSApp nextEventMatchingMask:NSEventMaskAny
 											untilDate:[NSDate distantPast]
 											   inMode:NSDefaultRunLoopMode
 											  dequeue:YES];

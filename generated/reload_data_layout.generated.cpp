@@ -180,7 +180,7 @@ void reload(char *old_memory, char *new_memory) {
 					base_old += top->size;
 				} break;
 				default: {
-					ASSERT_MSG(false, "Unknown reload type!")
+					ASSERT(false, "Unknown reload type!")
 				}
 			}
 

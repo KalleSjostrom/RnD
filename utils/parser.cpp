@@ -290,7 +290,10 @@ namespace parser {
 	#define PRINT_TOKEN_NUMBER(token) printf("%f\n", token.number);
 
 	#define ASSERT_NEXT_TOKEN(tokenizer, string) ASSERT(parser::is_equal(parser::next_token(&tokenizer), TOKENIZE(string)), "Unexpected token "#string)
+	#define ASSERT_TOKEN(token, string) ASSERT(parser::is_equal(token, TOKENIZE(string)), "Unexpected token "#string)
+
 	#define ASSERT_NEXT_TOKEN_TYPE(tokenizer, t) ASSERT(parser::next_token(&tokenizer).type == t, "Unexpected token")
+	#define ASSERT_TOKEN_TYPE(token, t) ASSERT(token.type == t, "Unexpected token")
 
 #if 0
 #define DEFAULT_INVALID_CHARACTERS " \n(),;"

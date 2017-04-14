@@ -46,7 +46,6 @@ namespace fluid_common {
 		u32 cx = (u32)((x + BOUNDS) * INV_HASH_CELL_SIZE);
 		u32 cy = (u32)((y + BOUNDS) * INV_HASH_CELL_SIZE);
 		u32 hash = ((cx * 73856093) ^ (cy * 19349663)) % NR_PARTICLES;
-		ASSERT(hash >= 0);
 		return hash;
 	}
 	void insert_in_hashmap(Element **hash_map, Element *elements, u32 index, u32 offset, float x, float y) {

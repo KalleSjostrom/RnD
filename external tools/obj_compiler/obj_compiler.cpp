@@ -17,7 +17,7 @@ typedef union {
 
 inline float next_number(parser::Tokenizer *tok) {
 	parser::Token token = parser::next_token(tok);
-	ASSERT(token.type == TokenType_Number);
+	ASSERT_TOKEN_TYPE(token, TokenType_Number);
 	return token.number;
 }
 
@@ -33,7 +33,7 @@ struct VertexData
 VertexData read_pot()
 {
 	FILE *file = fopen("external tools/obj_compiler/teapot.obj", "r");
-	ASSERT(file);
+	ASSERT(file, "Could not open 'external tools/obj_compiler/teapot.obj'");
 
 	size_t filesize = get_filesize(file);
 
@@ -71,14 +71,14 @@ VertexData read_pot()
 				}
 				// vt - texture coordinates
 				else if (parser::is_equal(token, TOKENIZE("vt"))) {
-					ASSERT(tex_coord_count < 1024);
+					ASSERT(tex_coord_count < 1024, "tex_coord_count out of bounds");
 					tex_coords[tex_coord_count++] = V2(
 						next_number(&tok),
 						next_number(&tok));
 				}
 				// vn - vertex normals
 				else if (parser::is_equal(token, TOKENIZE("vn"))) {
-					ASSERT(vertex_normal_count < 1024);
+					ASSERT(vertex_normal_count < 1024, "vertex_normal_count out of bounds");
 					vertex_normals[vertex_normal_count++] = V3(
 						next_number(&tok),
 						next_number(&tok),
@@ -86,7 +86,7 @@ VertexData read_pot()
 				}
 				// vc - vertex colors
 				else if (parser::is_equal(token, TOKENIZE("vc"))) {
-					ASSERT(vertex_color_count < 1024);
+					ASSERT(vertex_color_count < 1024, "vertex_color_count out of bounds");
 					vertex_colors[vertex_color_count++] = V4(
 						next_number(&tok),
 						next_number(&tok),

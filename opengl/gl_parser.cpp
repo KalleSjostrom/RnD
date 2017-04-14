@@ -16,7 +16,7 @@ struct InVariables {
 
 int main(int argc, char *argv[]) {
 	FILE *output = fopen("../generated/setup_vertex_array.cpp", "w");
-	ASSERT(output);
+	ASSERT(output, "Could not open ../generated/setup_vertex_array.cpp");
 	fprintf(output, "#include \"gl_preamble.cpp\"\n");
 	fprintf(output, "namespace gl_manager {\n");
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 							token = parser::next_token(&tok);
 							switch(token.type) {
 								case TokenType_Identifier: {
-									ASSERT(parser::is_equal(token, TOKENIZE("uniform")));
+									ASSERT_TOKEN(token, "uniform");
 									uniform.type = parser::next_token(&tok).string;
 									uniform.name = parser::next_token(&tok).string;
 									reached_end = true;
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 									} else if (parser::is_equal(token, TOKENIZE("value"))) {
 										uniform.value = parser::next_line(&tok).string;
 									} else {
-										ASSERT_MSG(false, "Unknown command!")
+										ASSERT(false, "Unknown command!")
 									}
 								}
 							}
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
 			if (string_is_equal(u.type, mat4)) {
 				fprintf(output, "\t\tglUniformMatrix4fv(%s_location, 1, GL_FALSE, (GLfloat*)(%s));\n", *u.name, *u.value);
 			} else {
-				ASSERT_MSG(false, "Only mat4 is supperted atm...");
+				ASSERT(false, "Only mat4 is supperted atm...");
 			}
 		}
 

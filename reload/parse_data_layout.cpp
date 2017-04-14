@@ -23,9 +23,7 @@ inline FILE *open_file(char *filename) {
 	FILE *file = fopen(filename, "r");
 	printf("Parsing file: %s\n", filename);
 	if (!file) {
-		char buffer[256];
-		sprintf(buffer, "No such file was found (path=%s)!", filename);
-		ASSERT_MSG(false, buffer);
+		ASSERT(false, "No such file was found (path=%s)!", filename);
 	}
 	return file;
 }
@@ -59,7 +57,6 @@ String coalesce_strings(String *strings, int count, MemoryArena &arena) {
 		}
 	}
 	new_string.text[index++] = '\0';
-	ASSERT(index == total_length);
 
 	return new_string;
 }
@@ -116,10 +113,10 @@ void parse_file(String folder, String filename, FILE *output, MemoryArena &arena
 				token = parser::next_token(&tok);
 				if (parser::is_equal(token, TOKENIZE("reloadable_struct"))) {
 					token = parser::next_token(&tok);
-					ASSERT(parser::is_equal(token, TOKENIZE("struct")));
+					ASSERT_TOKEN(token, "struct");
 
 					parser::Token name_token = parser::next_token(&tok);
-					ASSERT(parser::is_equal(parser::next_token(&tok), TOKENIZE("{")));
+					ASSERT_NEXT_TOKEN_TYPE(tok, '{');
 
 					Struct s = { 0 };
 					s.name = name_token.string;
@@ -129,7 +126,7 @@ void parse_file(String folder, String filename, FILE *output, MemoryArena &arena
 
 					bool found_struct_end = false;
 					while (!found_struct_end) {
-						ASSERT(token.type == TokenType_Identifier);
+						ASSERT_TOKEN_TYPE(token, TokenType_Identifier);
 
 						String member_strings[8];
 						int member_string_counter = 0;
@@ -140,11 +137,11 @@ void parse_file(String folder, String filename, FILE *output, MemoryArena &arena
 							//thing.text[0] = '_';
 							//thing.length = 1;
 							member_strings[member_string_counter++] = thing.string;
-							ASSERT(member_string_counter < 8);
+							ASSERT(member_string_counter < 8, "Member string array out of bounds");
 
 							token = parser::next_token(&tok);
 							member_strings[member_string_counter++] = token.string;
-							ASSERT(member_string_counter <= 8);
+							ASSERT(member_string_counter <= 8, "Member string array out of bounds");
 
 							thing = parser::next_token(&tok);
 						}
@@ -156,7 +153,7 @@ void parse_file(String folder, String filename, FILE *output, MemoryArena &arena
 						}
 
 	                    parser::Token member_name = thing;
-						ASSERT(member_name.type != '*');
+						ASSERT(member_name.type != '*', "Unexpected token!");
 
 						String member_type = coalesce_strings(member_strings, member_string_counter, arena);
 
@@ -166,7 +163,7 @@ void parse_file(String folder, String filename, FILE *output, MemoryArena &arena
 						m.is_pointer = is_pointer;
 
 						token = parser::next_token(&tok);
-						ASSERT(token.type == ';');
+						ASSERT_TOKEN_TYPE(token, ';');
 
 						token = parser::next_token(&tok);
 						if (token.type == TokenType_CommandMarker) {
@@ -206,7 +203,7 @@ int main(int argc, char *argv[]) {
 	char *output_filename = argv[2];
 
 	FILE *output = fopen(output_filename, "w");
-	ASSERT_MSG(output, "No such file was found!");
+	ASSERT(output, "No such file was found!");
 
 	Struct structs[1024] = {0};
 	unsigned struct_count = 0;
@@ -378,7 +375,7 @@ fprintf(output, "					base_new += top->size;\n");
 fprintf(output, "					base_old += top->size;\n");
 fprintf(output, "				} break;\n");
 fprintf(output, "				default: {\n");
-fprintf(output, "					ASSERT_MSG(false, \"Unknown reload type!\")\n");
+fprintf(output, "					ASSERT(false, \"Unknown reload type!\")\n");
 fprintf(output, "				}\n");
 fprintf(output, "			}\n");
 fprintf(output, "\n");

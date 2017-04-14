@@ -41,8 +41,7 @@ int main(int argc, char *argv[]) {
 
 						parser::Function func = {0};
 
-						parser::Token temp = parser::next_token(&tok);
-						ASSERT(temp.type == '(');
+						ASSERT_NEXT_TOKEN_TYPE(tok, '(');
 
 						int count = 0;
 						while (1) {
@@ -51,9 +50,9 @@ int main(int argc, char *argv[]) {
 							ASSERT_NEXT_TOKEN(tok, "*");
 							parser::Token variable_name = parser::next_token(&tok);
 
-							ASSERT_MSG(parser::is_equal(scope, TOKENIZE("__global")), "scope not __global.");
-							ASSERT_MSG(parser::is_equal(type, TOKENIZE("float2")), "type not __global.");
-							ASSERT_MSG(count < 32, "count exceeded.");
+							ASSERT(parser::is_equal(scope, TOKENIZE("__global")), "scope not __global.");
+							ASSERT(parser::is_equal(type, TOKENIZE("float2")), "type not __global.");
+							ASSERT(count < 32, "count exceeded.");
 
 							parser::Parameter p = {
 								scope.string, type.string, variable_name.string
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
 							if (next_token.type == ')') {
 								break;
 							} else {
-								ASSERT(next_token.type == ',');
+								ASSERT_TOKEN_TYPE(next_token, ',');
 							}
 						}
 

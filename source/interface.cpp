@@ -91,7 +91,7 @@ static void run() {
 
 	mygl_init();
 	GLWindowHandle *window = mygl_create_window(1024, 768, "RnD");
-	ASSERT(window);
+	ASSERT(window, "Could not create mygl window");
 
 	char const *lockfile_path = "./out/__lockfile";
 	time_t timestamp = get_timestamp(lockfile_path);

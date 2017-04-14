@@ -35,7 +35,7 @@ namespace font {
 
 	void load(MemoryArena &arena, const char *filename, Font *font) {
 		FILE *font_file = fopen(filename, "rb");
-		ASSERT_MSG_VAR(font_file, "No font file found at location '%s'\n", filename);
+		ASSERT(font_file, "No font file found at location '%s'\n", filename);
 
 		fread(&font->info, sizeof(FontInfo), 1, font_file);
 
