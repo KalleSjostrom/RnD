@@ -4,6 +4,8 @@
 #include "task_scheduler.cpp"
 
 struct NumberSubset {
+    uint64 id;
+
 	uint64 start;
 	uint64 end;
 
@@ -11,17 +13,22 @@ struct NumberSubset {
 };
 
 void AddNumberSubset(TaskScheduler *scheduler, void *arg) {
-	(void)scheduler;
 	NumberSubset *subset = reinterpret_cast<NumberSubset *>(arg);
 
 	subset->total = 0;
 
+    printf("Thread: start %d, %llu, %llu, %llu\n", scheduler->get_current_thread_index(), subset->id, subset->start, subset->end);
+    ASSERT(subset->start <= subset->end, "Thread: start %d, %llu, End > start!", scheduler->get_current_thread_index(), subset->id);
+
 	while (subset->start != subset->end) {
 		subset->total += subset->start;
 		++subset->start;
+        ASSERT(subset->start <= subset->end, "Thread: start %d, %llu, End > start!", scheduler->get_current_thread_index(), subset->id);
 	}
 
 	subset->total += subset->end;
+    
+    printf("Thread: end %d, %llu, %llu, %llu\n", scheduler->get_current_thread_index(), subset->id, subset->start, subset->end);
 }
 
 void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
@@ -47,25 +54,31 @@ void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
 	for (uint64 i = 0; i < num_tasks; ++i) {
 		NumberSubset *subset = &subsets[i];
 
+        subset->id = i;
+
 		subset->start = nextNumber;
 		subset->end = nextNumber + num_additions_per_task - 1;
 		if (subset->end > triangle_num) {
 			subset->end = triangle_num;
 		}
 
+        ASSERT(subset->start <= subset->end, "End > start!");
+        // printf("%llu, %llu\n", subset->start, subset->end);
+
 		tasks[i].Function = AddNumberSubset;
 		tasks[i].ArgData = subset;
 
 		nextNumber = subset->end + 1;
 	}
-	printf("1\n");
 
 	// Schedule the tasks and wait for them to complete
+	printf("Add tasks\n");
 	int job_handle = scheduler->add_tasks(num_tasks, tasks);
-	printf("3\n");
+
+	printf("wait_for_job\n");
 	scheduler->wait_for_job(job_handle, 0);
 
-	printf("5\n");
+	printf("Done waiting\n");
 
 	// Add the results
 	uint64 result = 0;

@@ -4,7 +4,7 @@ struct WaitFreeQueue {
 	int top;
 };
 
-#define MAX_ARRAY_SIZE 64
+#define MAX_ARRAY_SIZE 1024
 #define ARRAY_MASK (MAX_ARRAY_SIZE-1)
 
 b32 queue_take(WaitFreeQueue *q, int &value) {
@@ -40,7 +40,8 @@ void queue_push(WaitFreeQueue *q, int x) {
 	int *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
 	if (b - t > MAX_ARRAY_SIZE - 1) { /* Full queue. */
 		// resize(q);
-		a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
+		ASSERT(false, "Queue full!");
+		// a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
 	}
 	__atomic_store_n(&a[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
 	__atomic_thread_fence(__ATOMIC_RELEASE);
