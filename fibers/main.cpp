@@ -13,22 +13,16 @@ struct NumberSubset {
 };
 
 void AddNumberSubset(TaskScheduler *scheduler, void *arg) {
+	(void) scheduler;
 	NumberSubset *subset = reinterpret_cast<NumberSubset *>(arg);
-
 	subset->total = 0;
-
-    printf("Thread: start %d, %llu, %llu, %llu\n", scheduler->get_current_thread_index(), subset->id, subset->start, subset->end);
-    ASSERT(subset->start <= subset->end, "Thread: start %d, %llu, End > start!", scheduler->get_current_thread_index(), subset->id);
 
 	while (subset->start != subset->end) {
 		subset->total += subset->start;
 		++subset->start;
-        ASSERT(subset->start <= subset->end, "Thread: start %d, %llu, End > start!", scheduler->get_current_thread_index(), subset->id);
 	}
 
 	subset->total += subset->end;
-    
-    printf("Thread: end %d, %llu, %llu, %llu\n", scheduler->get_current_thread_index(), subset->id, subset->start, subset->end);
 }
 
 void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
@@ -73,10 +67,10 @@ void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
 
 	// Schedule the tasks and wait for them to complete
 	printf("Add tasks\n");
-	int job_handle = scheduler->add_tasks(num_tasks, tasks);
+	int job_handle = scheduler_add_tasks(*scheduler, num_tasks, tasks);
 
 	printf("wait_for_job\n");
-	scheduler->wait_for_job(job_handle, 0);
+	scheduler_wait_for_job(*scheduler, job_handle, 0);
 
 	printf("Done waiting\n");
 
@@ -116,6 +110,6 @@ printf("%llu\n", input & hej);
 	MemoryArena arena = init_memory(32*MB, true);
 	TaskScheduler scheduler = {};
 	printf("Hello\n");
-	scheduler.run(arena, TriangleNumberMainTask);
+	scheduler_start(scheduler, arena, TriangleNumberMainTask);
 #endif
 }

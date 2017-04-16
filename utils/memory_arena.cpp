@@ -71,6 +71,21 @@ inline size_t get_effective_size_for(MemoryArena &arena, size_t size, unsigned a
 	return size;
 }
 
+#if 0
+inline void memset32(intptr_t buf, uint32_t value, size_t count) {
+	__asm__ __volatile__ (
+			"cld\n\t"
+			"mov rcx, %0\n\t"
+			"mov rax, %1\n\t"
+			"mov rdi, %2\n\t"
+			"rep stosq\n\t"
+			: /* No outputs. */
+			: "r" (n), "r" (c), "r" (buf)
+			: "rcx", "rdi"
+			);
+}
+#endif
+
 inline void *_push_size(MemoryArena &arena, size_t size, unsigned alignment = 4, bool clear_to_zero = false) {
 	size = get_effective_size_for(arena, size, alignment);
 
@@ -82,6 +97,12 @@ inline void *_push_size(MemoryArena &arena, size_t size, unsigned alignment = 4,
 
 	if (clear_to_zero) {
 		memset(result, 0, size);
+	} else {
+		memset(result, 0, size);
+		uint32_t *buf = (uint32_t*)result;
+		for (size_t i = 0; i < size/4; i++) {
+			buf[i] = 0xDEADBEEF;
+		}
 	}
 
 	return result;
