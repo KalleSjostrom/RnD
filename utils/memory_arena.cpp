@@ -1,7 +1,7 @@
 //@ reloadable_struct
 struct MemoryArena {
 	size_t offset;
-	char *memory; //@ size offset
+	char *memory;
 	size_t _DEBUG_maxsize;
 };
 
@@ -10,10 +10,10 @@ struct MemoryBlockHandle {
 };
 
 MemoryArena init_memory(size_t size, b32 clear_to_zero = false) {
-	MemoryArena arena = {};
+	MemoryArena arena;
 
-	arena.memory = (char*)malloc(size);
 	arena.offset = 0;
+	arena.memory = (char*)malloc(size);
 	arena._DEBUG_maxsize = size;
 
 	if (clear_to_zero) {
@@ -23,10 +23,10 @@ MemoryArena init_memory(size_t size, b32 clear_to_zero = false) {
 	return arena;
 }
 MemoryArena init_from_existing(char *memory, size_t size) {
-	MemoryArena arena = {};
+	MemoryArena arena;
 
-	arena.memory = memory;
 	arena.offset = 0;
+	arena.memory = memory;
 	arena._DEBUG_maxsize = size;
 
 	return arena;

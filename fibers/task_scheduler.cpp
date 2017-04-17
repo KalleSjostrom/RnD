@@ -1,6 +1,403 @@
-#include "../utils/common.h"
-#include "../utils/memory_arena.cpp"
-#include "task_scheduler.h"
+/// Check operating system
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
+	#define OS_WINDOWS
+#elif defined(__APPLE__)
+    #include "TargetConditionals.h"
+
+    #if defined(TARGET_OS_MAC)
+        #define OS_MAC
+    #elif defined(TARGET_OS_IPHONE)
+        #define OS_iOS
+    #else
+		#error Unknown Apple platform
+	#endif
+#elif defined(__linux__)
+	#define OS_LINUX
+#endif
+
+/// Wrap os threading
+#if defined(OS_WINDOWS)
+	struct Win32Thread {
+		HANDLE Handle;
+		DWORD Id;
+	};
+	typedef Win32Thread ThreadType;
+
+	typedef u32(__stdcall *ThreadStartRoutine)(void *arg);
+	#define THREAD_FUNC_RETURN_TYPE u32
+
+	inline bool create_thread(u32 stackSize, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
+		HANDLE handle = reinterpret_cast<HANDLE>(_beginthreadex(0, stackSize, start_routine, arg, CREATE_SUSPENDED, 0));
+
+		if (handle == 0) {
+			return false;
+		}
+
+		out_thread->Handle = handle;
+		out_thread->Id = GetThreadId(handle);
+		ResumeThread(handle);
+
+		return true;
+	}
+
+	// Terminate the current thread
+	inline void exit_thread() {
+		_endthreadex(0);
+	}
+
+	// Blocking until 'thread' finishes
+	inline void join_thread(ThreadType thread) {
+		WaitForSingleObject(thread.Handle, INFINITE);
+	}
+
+	// Get the current thread
+	inline ThreadType get_current_thread() {
+		Win32Thread result{
+			::GetCurrentThread(),
+			::GetCurrentThreadId()
+		};
+
+		return result;
+	}
+
+	// Get the number of hardware threads. This should take Hyperthreading, etc. into account
+	inline int get_num_hardware_threads() {
+		SYSTEM_INFO sysinfo;
+		GetSystemInfo(&sysinfo);
+		return sysinfo.dwNumberOfProcessors;
+	}
+#elif defined(OS_MAC) || defined(OS_iOS) || defined(OS_LINUX)
+	#include <pthread.h>
+	#include <unistd.h>
+
+	typedef pthread_t ThreadType;
+
+	typedef void *(*ThreadStartRoutine)(void *arg);
+	#define THREAD_FUNC_RETURN_TYPE void *
+
+	inline bool create_thread(u32 stackSize, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
+		pthread_attr_t threadAttr;
+		pthread_attr_init(&threadAttr);
+
+		// Set stack size
+		pthread_attr_setstacksize(&threadAttr, stackSize);
+		int success = pthread_create(out_thread, NULL, start_routine, arg);
+		pthread_attr_destroy(&threadAttr);
+
+		return success == 0;
+	}
+
+	__attribute__((noreturn))
+	inline void exit_thread() {
+		pthread_exit(NULL);
+	}
+
+	// Blocking until 'thread' finishes
+	inline void join_thread(ThreadType thread) {
+		pthread_join(thread, NULL);
+	}
+
+	// Get the current thread
+	inline ThreadType get_current_thread() {
+		return pthread_self();
+	}
+
+	// Get the number of hardware threads. This should take Hyperthreading, etc. into account
+	inline int get_num_hardware_threads() {
+		return (int) sysconf(_SC_NPROCESSORS_ONLN);
+	}
+#endif
+
+
+/// Includes for running with guard pages
+#if defined(FIBER_STACK_GUARD_PAGES)
+	#if defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
+		#include <sys/mman.h>
+	#elif defined(OS_WINDOWS)
+		#define WIN32_LEAN_AND_MEAN
+		#include <windows.h>
+	#endif
+#else
+	inline void protect_memory(void *, size_t) { }
+	inline void unprotect_memory(void *, size_t) { }
+#endif
+
+
+/// Wrap os memory handling
+#if defined(OS_WINDOWS)
+	#if defined(FIBER_STACK_GUARD_PAGES)
+		inline void protect_memory(void *memory, size_t bytes) {
+			DWORD ignored;
+			BOOL result = VirtualProtect(memory, bytes, PAGE_NOACCESS, &ignored);
+			ASSERT(result, "Error in protect_memory");
+		}
+
+		inline void unprotect_memory(void *memory, size_t bytes) {
+			DWORD ignored;
+			BOOL result = VirtualProtect(memory, bytes, PAGE_READWRITE, &ignored);
+			ASSERT(result, "Error in unprotect_memory");
+		}
+	#endif
+
+	inline size_t get_page_size() {
+		SYSTEM_INFO sysInfo;
+		GetSystemInfo(&sysInfo);
+		return sysInfo.dwPageSize;
+	}
+	inline void *aligned_allocation(size_t size, size_t alignment) {
+		return _aligned_malloc(size, alignment);
+	}
+	inline void aligned_free(void *block) {
+		_aligned_free(block);
+	}
+#elif defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
+	#if defined(FIBER_STACK_GUARD_PAGES)
+		inline void protect_memory(void *memory, size_t bytes) {
+			int result = mprotect(memory, bytes, PROT_NONE);
+			ASSERT(!result, "Error in protect_memory");
+		}
+
+		inline void unprotect_memory(void *memory, size_t bytes) {
+			int result = mprotect(memory, bytes, PROT_READ | PROT_WRITE);
+			ASSERT(!result, "Error in unprotect_memory");
+		}
+	#endif
+
+	inline size_t get_page_size() {
+		int page_size = getpagesize();
+		return (size_t)page_size;
+	}
+	inline void *aligned_allocation(size_t size, size_t alignment) {
+		void *returnPtr;
+		posix_memalign(&returnPtr, alignment, size);
+		return returnPtr;
+	}
+	inline void aligned_free(void *block) {
+		free(block);
+	}
+#endif
+
+inline size_t round_up(size_t number, size_t multiple) {
+	if (multiple == 0) {
+		return number;
+	}
+
+	size_t remainder = number % multiple;
+	if (remainder == 0)
+		return number;
+
+	return number + multiple - remainder;
+}
+
+
+/// Fibers
+typedef void *FiberContext;
+
+extern "C" void jump_fcontext(FiberContext *from, FiberContext to, void *arg);
+// stack_pointer is the pointer to the _top_ of the stack (ie &stack_buffer[size]).
+extern "C" FiberContext make_fcontext(void * stack_pointer, size_t size, void(*func)(void *));
+
+typedef void (*FiberRoutine)(void *arg);
+
+struct Fiber {
+	void *stack;
+	size_t system_page_size;
+	size_t stack_size;
+	FiberContext context;
+	void *arg;
+};
+
+// Allocates a stack and sets it up to start executing 'routine' when first switched to
+void setup_fiber(Fiber &fiber, size_t wanted_stack_size, FiberRoutine routine, void *arguments) {
+	fiber.arg = arguments;
+	#if defined(FIBER_STACK_GUARD_PAGES)
+		fiber.system_page_size = get_page_size();
+	#else
+		fiber.system_page_size = 0;
+	#endif
+
+	fiber.stack_size = round_up(wanted_stack_size, fiber.system_page_size);
+	// We add a guard page both the top and the bottom of the stack
+	fiber.stack = aligned_allocation(fiber.system_page_size + fiber.stack_size + fiber.system_page_size, fiber.system_page_size);
+
+	// Setup the assembly stack with make_x86_64_sysv_macho_gas.S
+	// The stack grows "downwards" from high memory address to low, so set the start at the highest address.
+	char *stack_start = ((char *)fiber.stack) + fiber.system_page_size + fiber.stack_size;
+	fiber.context = make_fcontext(stack_start, fiber.stack_size, routine);
+
+	#if defined(FIBER_STACK_GUARD_PAGES)
+		protect_memory((char *)(fiber.stack), fiber.system_page_size);
+		protect_memory((char *)(fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.system_page_size);
+	#endif
+}
+
+// Saves the current stack context and then switches to the given fiber. Execution will resume here once another fiber switches to this fiber
+void fiber_switch(Fiber &source, Fiber &dest) {
+	jump_fcontext(&source.context, dest.context, dest.arg);
+}
+
+// Re-initializes the stack with a new routine and arg
+void reset_fiber(Fiber &fiber, FiberRoutine routine, void *arguments) {
+	fiber.context = make_fcontext(((char *)fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.stack_size, routine);
+	fiber.arg = arguments;
+}
+
+void destroy_fiber(Fiber &fiber) {
+	if (fiber.stack != NULL) {
+		if (fiber.system_page_size != 0) {
+			unprotect_memory((char *)(fiber.stack), fiber.system_page_size);
+			unprotect_memory((char *)(fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.system_page_size);
+		}
+
+		aligned_free(fiber.stack);
+	}
+}
+
+
+/// Lock free queue
+namespace queue {
+	struct Queue {
+		int *array;
+		int bottom;
+		int top;
+	};
+
+	#define MAX_ARRAY_SIZE 1024
+	#define ARRAY_MASK (MAX_ARRAY_SIZE-1)
+
+	b32 take(Queue *q, int &value) {
+		int b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED) - 1;
+		int *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
+		__atomic_store_n(&q->bottom, b, __ATOMIC_RELAXED);
+
+		__atomic_thread_fence(__ATOMIC_SEQ_CST);
+
+		int t = __atomic_load_n(&q->top, __ATOMIC_RELAXED);
+		b32 result = 1;
+		if (t <= b) {
+			// Non-empty queue.
+			value = __atomic_load_n(&a[b & ARRAY_MASK], __ATOMIC_RELAXED);
+			if (t == b) {
+				/* Single last element in queue. */
+				if (!__atomic_compare_exchange_n(&q->top, &t, t + 1, false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+					/* Failed race. */
+					result = false;
+				}
+				__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+			}
+		} else { /* Empty queue. */
+			result = false;
+			__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+		}
+		return result;
+	}
+
+	void push(Queue *q, int x) {
+		int b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED);
+		int t = __atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
+		int *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
+		if (b - t > MAX_ARRAY_SIZE - 1) { /* Full queue. */
+			ASSERT(false, "Queue full!");
+		}
+		__atomic_store_n(&a[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
+		__atomic_thread_fence(__ATOMIC_RELEASE);
+		__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+	}
+
+	b32 steal(Queue *q, int &value) {
+		int t = __atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
+		__atomic_thread_fence(__ATOMIC_SEQ_CST);
+		int b = __atomic_load_n(&q->bottom, __ATOMIC_ACQUIRE);
+		if (t < b) {
+			// Non-empty queue.
+			int *a = __atomic_load_n(&q->array, __ATOMIC_CONSUME);
+			value = __atomic_load_n(&a[t & ARRAY_MASK], __ATOMIC_RELAXED);
+			if (!__atomic_compare_exchange_n(&q->top, &t, t + 1, false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+				return false; // Failed race.
+			}
+	        return true;
+		}
+		return false;
+	}
+}
+
+
+/// Task scheduler
+struct TaskScheduler;
+typedef void(*TaskFunction)(TaskScheduler *taskScheduler, void *arg);
+struct Task {
+	TaskFunction Function;
+	void *ArgData;
+};
+
+#define INVALID_INDEX 0x7fffffff
+#define FIBER_POOL_SIZE 256
+#define MAX_JOBS_PER_THREAD 256
+
+// Holds a counter that is being waited on. Specifically, until counter == target_value
+struct WaitingBundle {
+	int job_handle;
+	int target;
+};
+
+enum FiberDestination {
+	FiberDestination_None = 0,
+
+	FiberDestination_ToPool,
+	FiberDestination_ToWaiting
+};
+
+// Holds a task that is ready to to be executed by the worker threads counter is the counter for the task(group). It will be decremented when the task completes
+struct TaskBundle {
+	Task task;
+	int job_handle;
+	b32 occupied;
+};
+
+struct ThreadLocalStorage {
+	TaskBundle bundle_storage[4096];
+	// Boost fibers require that fibers created from threads finish on the same thread where they started.
+	// To accommodate this, we have save the initial fibers created in each thread, and immediately switch out of them into the general fiber pool. Once the 'main_task' has finished, we signal all the threads to start quitting. When the receive the signal, they switch back to the thread_fiber, allowing it to safely clean up.
+	Fiber thread_fiber;
+	// The queue of waiting tasks
+	queue::Queue task_queue;
+	// The index of the current fiber in fibers
+	int current_fiber_index;
+	// The index of the previously executed fiber in fibers
+	int previous_fiber_index;
+	// Where OldFiber should be stored when we call CleanUpPoolAndWaiting()
+	FiberDestination previous_fiber_destination;
+	// The last queue that we successfully stole from. This is an offset index from the current thread index
+	int last_successful_steal;
+	int last_free_bundle;
+	int job_handle_counter;
+};
+
+struct TaskScheduler {
+	ThreadType *threads;
+
+	// C++ Thread Local Storage is, by definition, static/global. This poses some problems, such as multiple TaskScheduler instances. So we fake TLS.
+	// During initialization of the TaskScheduler, we create one ThreadLocalStorage instance per thread. Threads index into their storage using tls[GetCurrentThreadIndex()]
+	ThreadLocalStorage *tls_array;
+
+	// size of both threads and tls_array
+	int thread_count;
+	b32 quit;
+
+	// The backing storage for the fiber pool
+	Fiber fibers[FIBER_POOL_SIZE];
+	// An array of atomics, which signify if a fiber is available to be used. The indices of free_fibers correspond 1 to 1 with fibers. So, if free_fibers[i] == true, then fibers[i] can be used. Each atomic acts as a lock to ensure that threads do not try to use the same fiber at the same time
+	bool free_fibers[FIBER_POOL_SIZE];
+	// An array of atomics, which signify if a fiber is waiting for a counter. The indices of waiting_fibers correspond 1 to 1 with fibers. So, if waiting_fibers[i] == true, then fibers[i] is waiting for a counter
+	bool waiting_fibers[FIBER_POOL_SIZE];
+	// An array of WaitingBundles, which correspond 1 to 1 with waiting_fibers. If waiting_fibers[i] == true, waiting_bundles[i] will contain the data for the waiting fiber in fibers[i].
+	WaitingBundle waiting_bundles[FIBER_POOL_SIZE];
+
+	int *jobs;
+
+	int free_fiber_cursor;
+	int __padding;
+};
 
 struct ThreadArgs {
 	TaskScheduler *scheduler;
@@ -12,30 +409,10 @@ struct MainFiberArgs {
 	void *data;
 	TaskScheduler *scheduler;
 };
-#define MAX_JOBS_PER_THREAD 256
+
+static __thread int tls_thread_index;
 
 namespace {
-	// Gets the 0-based index of the current thread. This is useful for tls[GetCurrentThreadIndex()]
-	int _current_thread_index(ThreadType *threads, int thread_count) {
-		#if defined(FTL_WIN32_THREADS)
-			DWORD threadId = GetCurrentThreadId();
-			for (int i = 0; i < thread_count; ++i) {
-				if (threads[i].Id == threadId) {
-					return i;
-				}
-			}
-		#elif defined(FTL_POSIX_THREADS)
-			pthread_t currentThread = pthread_self();
-			for (int i = 0; i < thread_count; ++i) {
-				if (pthread_equal(currentThread, threads[i])) {
-					return i;
-				}
-			}
-		#endif
-
-		return FTL_INVALID_INDEX;
-	}
-
 	// Gets the index of the next available fiber in the pool
 	static int _next_free_fiber_index(TaskScheduler &scheduler) {
 		int cursor = scheduler.free_fiber_cursor;
@@ -56,76 +433,34 @@ namespace {
 	}
 
 	// If necessary, moves the old fiber to the fiber pool or the waiting list. The old fiber is the last fiber to run on the thread before the current fiber
-	static void _cleanup_old_fiber(TaskScheduler &scheduler) {
-		// Clean up from the last Fiber to run on this thread
-		//
-		// Explanation:
-		// When switching between fibers, there's the innate problem of tracking the fibers.
-		// For example, let's say we discover a waiting fiber that's ready. We need to put the currently
-		// running fiber back into the fiber pool, and then switch to the waiting fiber. However, we can't
-		// just do the equivalent of:
+	static void _cleanup_old_fiber(ThreadLocalStorage &tls, bool *free_fibers, bool *waiting_fibers) {
+		// When switching between fibers, there's the innate problem of tracking the fibers. For example, let's say we discover a waiting fiber that's ready. We need to put the currently running fiber back into the fiber pool, and then switch to the waiting fiber. However, we can't just do the equivalent of:
 		//     fibers.Push(currentFiber)
-		//     currentFiber.switch_to_fiber(waitingFiber)
-		// In the time between us adding the current fiber to the fiber pool and switching to the waiting fiber, another
-		// thread could come along and pop the current fiber from the fiber pool and try to run it.
-		// This leads to stack corruption and/or other undefined behavior.
+		//     currentFiber.switch_to_fiber(waitingFiber) In the time between us adding the current fiber to the fiber pool and switching to the waiting fiber, another thread could come along and pop the current fiber from the fiber pool and try to run it. This leads to stack corruption and/or other undefined behavior.
 		//
-		// In the previous implementation of TaskScheduler, we used helper fibers to do this work for us.
-		// AKA, we stored currentFiber and waitingFiber in TLS, and then switched to the helper fiber. The
-		// helper fiber then did:
-		//     fibers.Push(currentFiber)
-		//     helperFiber.switch_to_fiber(waitingFiber)
-		// If we have 1 helper fiber per thread, we can guarantee that currentFiber is free to be executed by any thread
-		// once it is added back to the fiber pool
-		//
-		// This solution works well, however, we actually don't need the helper fibers
-		// The code structure guarantees that between any two fiber switches, the code will always end up in WaitForCounter or FibeStart.
-		// Therefore, instead of using a helper fiber and immediately pushing the fiber to the fiber pool or waiting list,
-		// we defer the push until the next fiber gets to one of those two places
-		//
-		// Proof:
-		// There are only two places where we switch fibers:
-		// 1. When we're waiting for a counter, we pull a new fiber from the fiber pool and switch to it.
-		// 2. When we found a counter that's ready, we put the current fiber back in the fiber pool, and switch to the waiting fiber.
-		//
-		// Case 1:
-		// A fiber from the pool will always either be completely new or just come back from switching to a waiting fiber
-		// The while and the if/else in _fiber_start will guarantee the code will call cleanup_old_fiber() before executing any other fiber.
-		// QED
-		//
-		// Case 2:
-		// A waiting fiber can do two things:
-		//    a. Finish the task and return
-		//    b. Wait on another counter
-		// In case a, the while loop and if/else will again guarantee the code will call cleanup_old_fiber() before executing any other fiber.
-		// In case b, WaitOnCounter will directly call cleanup_old_fiber(). Any further code is just a recursion.
-		// QED
-
-		// In this specific implementation, the fiber pool and waiting list are flat arrays signaled by atomics
-		// So in order to "Push" the fiber to the fiber pool or waiting list, we just set their corresponding atomics to true
-		ThreadLocalStorage &tls = scheduler.tls_array[_current_thread_index(scheduler.threads, scheduler.thread_count)];
+		// In this specific implementation, the fiber pool and waiting list are flat arrays signaled by atomics. So in order to "Push" the fiber to the fiber pool or waiting list, we just set their corresponding atomics to true
 		switch (tls.previous_fiber_destination) {
 		case FiberDestination_ToPool:
-			__atomic_store_n(&scheduler.free_fibers[tls.previous_fiber_index], true, __ATOMIC_RELEASE);
+			__atomic_store_n(free_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
 			tls.previous_fiber_destination = FiberDestination_None;
-			tls.previous_fiber_index = FTL_INVALID_INDEX;
+			tls.previous_fiber_index = INVALID_INDEX;
 			break;
 		case FiberDestination_ToWaiting:
-			__atomic_store_n(&scheduler.waiting_fibers[tls.previous_fiber_index], true, __ATOMIC_RELEASE);
+			__atomic_store_n(waiting_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
 			tls.previous_fiber_destination = FiberDestination_None;
-			tls.previous_fiber_index = FTL_INVALID_INDEX;
+			tls.previous_fiber_index = INVALID_INDEX;
 			break;
 		case FiberDestination_None:
 			break;
 		}
 	}
 
-	static FTL_THREAD_FUNC_RETURN_TYPE _thread_start(void *thread_args) {
+	static THREAD_FUNC_RETURN_TYPE _thread_start(void *thread_args) {
 		ThreadArgs *args = (ThreadArgs *) thread_args;
 		TaskScheduler *scheduler = args->scheduler;
 		int index = args->thread_index;
 
-		printf("t1 %u\n", index); fflush(stdout);
+		tls_thread_index = index;
 
 		// Get a free fiber to switch to
 		int fiber_index = _next_free_fiber_index(*scheduler);
@@ -134,11 +469,10 @@ namespace {
 		scheduler->tls_array[index].current_fiber_index = fiber_index;
 		fiber_switch(scheduler->tls_array[index].thread_fiber, scheduler->fibers[fiber_index]);
 
-		printf("t2 %u\n", index); fflush(stdout);
-
 		// Cleanup and shutdown
-		EndCurrentThread();
-		FTL_THREAD_FUNC_END;
+		exit_thread();
+
+		return 0;
 	}
 	static void _main_fiber_start(void *main_fiber_args) {
 		MainFiberArgs *args = (MainFiberArgs *) main_fiber_args;
@@ -151,7 +485,7 @@ namespace {
 		__atomic_store_n(&scheduler->quit, true, __ATOMIC_RELEASE);
 
 		// Switch to the thread fibers
-		ThreadLocalStorage &tls = scheduler->tls_array[_current_thread_index(scheduler->threads, scheduler->thread_count)];
+		ThreadLocalStorage &tls = scheduler->tls_array[tls_thread_index];
 		fiber_switch(scheduler->fibers[tls.current_fiber_index], tls.thread_fiber);
 
 		// We should never get here
@@ -159,30 +493,29 @@ namespace {
 	}
 
 	// Pops the next task off the queue into nextTask. If there are no tasks in the the queue, it will return false.
-	static bool _scheduler_get_next_task(TaskScheduler &scheduler, TaskBundle *next_task) {
-		int current_thread_index = _current_thread_index(scheduler.threads, scheduler.thread_count);
-		ThreadLocalStorage &tls = scheduler.tls_array[current_thread_index];
+	static bool _scheduler_get_next_task(ThreadLocalStorage *tls_array, int thread_count, TaskBundle *next_task) {
+		ThreadLocalStorage &tls = tls_array[tls_thread_index];
 
 		// Try to pop from our own queue
 		int index;
-		if (queue_take(&tls.task_queue, index)) {
+		if (queue::take(&tls.task_queue, index)) {
 			*next_task = tls.bundle_storage[index];
 			return true;
 		}
 
 		// Ours is empty, try to steal from the others'
 		int thread_index_to_steal_from = tls.last_successful_steal;
-		for (int i = 0; i < scheduler.thread_count; ++i) {
-			if (thread_index_to_steal_from >= scheduler.thread_count) {
+		for (int i = 0; i < thread_count; ++i) {
+			if (thread_index_to_steal_from >= thread_count) {
 				thread_index_to_steal_from = 0;
 			}
 
-			if (thread_index_to_steal_from == current_thread_index) {
+			if (thread_index_to_steal_from == tls_thread_index) {
 				continue;
 			}
 
-			ThreadLocalStorage &other_tls = scheduler.tls_array[thread_index_to_steal_from];
-			if (queue_steal(&other_tls.task_queue, index)) {
+			ThreadLocalStorage &other_tls = tls_array[thread_index_to_steal_from];
+			if (queue::steal(&other_tls.task_queue, index)) {
 				*next_task = other_tls.bundle_storage[index];
 				tls.last_successful_steal = i;
 				return true;
@@ -197,12 +530,14 @@ namespace {
 	static void _fiber_start(void *task_scheduler) {
 		TaskScheduler *scheduler = (TaskScheduler *) task_scheduler;
 
+		ThreadLocalStorage &tls = scheduler->tls_array[tls_thread_index];
+
 		while (!__atomic_load_n(&scheduler->quit, __ATOMIC_ACQUIRE)) {
 			// Clean up from the last fiber to run on this thread
-			_cleanup_old_fiber(*scheduler);
+			_cleanup_old_fiber(tls, scheduler->free_fibers, scheduler->waiting_fibers);
 
 			// Check if any of the waiting tasks are ready
-			int waiting_fiber_index = FTL_INVALID_INDEX;
+			int waiting_fiber_index = INVALID_INDEX;
 
 			for (int i = 0; i < FIBER_POOL_SIZE; ++i) {
 				// TODO(kalle): Double lock, why??!
@@ -214,11 +549,10 @@ namespace {
 					continue;
 				}
 
-				// Found a waiting fiber
-				// Test if it's ready
+				// Found a waiting fiber. Test if it's ready
 				WaitingBundle &bundle = scheduler->waiting_bundles[i];
-				Job &job = scheduler->jobs[bundle.job_handle];
-				if (__atomic_load_n(&job.counter, __ATOMIC_RELAXED) != bundle.target) {
+				int *job = scheduler->jobs + bundle.job_handle;
+				if (__atomic_load_n(job, __ATOMIC_RELAXED) != bundle.target) {
 					continue;
 				}
 
@@ -229,32 +563,26 @@ namespace {
 				}
 			}
 
-			if (waiting_fiber_index != FTL_INVALID_INDEX) {
+			if (waiting_fiber_index != INVALID_INDEX) {
 				// Found a waiting task that is ready to continue
-				ThreadLocalStorage &tls = scheduler->tls_array[_current_thread_index(scheduler->threads, scheduler->thread_count)];
-
 				tls.previous_fiber_index = tls.current_fiber_index;
 				tls.current_fiber_index = waiting_fiber_index;
 				tls.previous_fiber_destination = FiberDestination_ToPool;
 
-				// Switch
 				fiber_switch(scheduler->fibers[tls.previous_fiber_index], scheduler->fibers[tls.current_fiber_index]);
-
-				// And we're back
 			} else {
 				// Get a new task from the queue, and execute it
 				TaskBundle next_task;
-				if (_scheduler_get_next_task(*scheduler, &next_task)) {
+				if (_scheduler_get_next_task(scheduler->tls_array, scheduler->thread_count, &next_task)) {
 					next_task.task.Function(scheduler, next_task.task.ArgData);
-					Job &job = scheduler->jobs[next_task.job_handle];
-					__atomic_fetch_sub(&job.counter, 1, __ATOMIC_SEQ_CST);
+					int *job = scheduler->jobs + next_task.job_handle;
+					__atomic_fetch_sub(job, 1, __ATOMIC_SEQ_CST);
 				}
 			}
 		}
 
 		// Start the quit sequence
 		// Switch to the thread fibers
-		ThreadLocalStorage &tls = scheduler->tls_array[_current_thread_index(scheduler->threads, scheduler->thread_count)];
 		fiber_switch(scheduler->fibers[tls.current_fiber_index], tls.thread_fiber);
 
 		// We should never get here
@@ -276,12 +604,9 @@ namespace {
 	    ASSERT(false, "Bundle storage empty!");
 	}
 
-	static int _generate_job_handle(TaskScheduler &scheduler) {
-		int thread_index = _current_thread_index(scheduler.threads, scheduler.thread_count);
-		ThreadLocalStorage &tls = scheduler.tls_array[thread_index];
-
+	static int _generate_job_handle(ThreadLocalStorage &tls) {
 		// TODO(kalle):  Need to check if job slots are free to use!!
-		int job_handle = thread_index * MAX_JOBS_PER_THREAD + tls.job_handle_counter++;
+		int job_handle = tls_thread_index * MAX_JOBS_PER_THREAD + tls.job_handle_counter++;
 
 		if (tls.job_handle_counter == MAX_JOBS_PER_THREAD) {
 			tls.job_handle_counter = 0;
@@ -291,21 +616,18 @@ namespace {
 	}
 }
 
-/**
- * Initializes the TaskScheduler and then starts executing 'main_task'
- *
- * NOTE: Run will "block" until 'main_task' returns. However, it doesn't block in the traditional sense; 'main_task' is created as a Fiber.
- * Therefore, the current thread will save it's current state, and then switch execution to the the 'main_task' fiber. When 'main_task'
- * finishes, the thread will switch back to the saved state, and Run() will return.
- */
+// Initializes the TaskScheduler and then starts executing 'main_task'
+// NOTE: scheduler_start will "block" until 'main_task' returns. However, it doesn't block in the traditional sense; 'main_task' is created as a Fiber.
+// Therefore, the current thread will save it's current state, and then switch execution to the the 'main_task' fiber. When 'main_task'
+// finishes, the thread will switch back to the saved state, and scheduler_start() will return.
 void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction main_task, void *main_task_arg = 0, int thread_pool_size = 0) {
 	for (int i = 0; i < FIBER_POOL_SIZE; ++i) {
-		fiber_setup(scheduler.fibers[i], 512000, _fiber_start, &scheduler);
+		setup_fiber(scheduler.fibers[i], 512000, _fiber_start, &scheduler);
 		scheduler.free_fibers[i] = true;
 		scheduler.waiting_fibers[i] = false;
 	}
 
-	int thread_count = thread_pool_size ? thread_pool_size : GetNumHardwareThreads();
+	int thread_count = thread_pool_size ? thread_pool_size : get_num_hardware_threads();
 	scheduler.thread_count = thread_count;
 
 	// Initialize all the things
@@ -313,36 +635,31 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 	scheduler.threads = PUSH_STRUCTS(arena, scheduler.thread_count, ThreadType);
 	ThreadArgs *thread_args = PUSH_STRUCTS(arena, thread_count, ThreadArgs);
 	scheduler.tls_array = PUSH_STRUCTS(arena, thread_count, ThreadLocalStorage, 16, true);
-	scheduler.jobs = PUSH_STRUCTS(arena, thread_count * MAX_JOBS_PER_THREAD, Job);
+	scheduler.jobs = PUSH_STRUCTS(arena, thread_count * MAX_JOBS_PER_THREAD, int);
 
 	for (int i = 0; i < thread_count; ++i) {
 		ThreadLocalStorage &tls = scheduler.tls_array[i];
 		tls.task_queue.array = PUSH_STRUCTS(arena, 256, int);
-		tls.current_fiber_index = FTL_INVALID_INDEX;
-		tls.previous_fiber_index = FTL_INVALID_INDEX;
+		tls.current_fiber_index = INVALID_INDEX;
+		tls.previous_fiber_index = INVALID_INDEX;
 	}
 
-	// Set the properties for the current thread
-	SetCurrentThreadAffinity(1);
-	scheduler.threads[0] = GetCurrentThread();
+	tls_thread_index = 0;
+	scheduler.threads[0] = get_current_thread();
 
 	// Create the remaining threads
 	for (int i = 1; i < thread_count; ++i) {
 		thread_args[i].scheduler = &scheduler;
 		thread_args[i].thread_index = i;
 
-		if (!CreateThread(524288, _thread_start, thread_args + i, (size_t)i, &scheduler.threads[i])) {
+		if (!create_thread(524288, _thread_start, thread_args + i, &scheduler.threads[i])) {
 			printf("Error: Failed to create all the worker threads");
 			return;
 		}
 	}
 
-	// Start the main task
-	printf("next_free_fiber_index\n"); fflush(stdout);
-
 	// Get a free fiber
 	int fiber_index = _next_free_fiber_index(scheduler);
-	printf("fiber_index %u\n", fiber_index); fflush(stdout);
 	Fiber &free_fiber = scheduler.fibers[fiber_index];
 
 	// Repurpose it as the main task fiber and switch to it
@@ -351,16 +668,14 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 	args.main_task = main_task;
 	args.data = main_task_arg;
 
-	fiber_reset(free_fiber, _main_fiber_start, &args);
+	reset_fiber(free_fiber, _main_fiber_start, &args);
 	scheduler.tls_array[0].current_fiber_index = fiber_index;
-	printf("Trying to switch\n"); fflush(stdout);
 	fiber_switch(scheduler.tls_array[0].thread_fiber, free_fiber);
-	printf("switched\n");
 
 	// And we're back
 	// Wait for the worker threads to finish
 	for (int i = 1; i < thread_count; ++i) {
-		JoinThread(scheduler.threads[i]);
+		join_thread(scheduler.threads[i]);
 	}
 
 	return;
@@ -368,10 +683,10 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 
 // Adds a group of tasks to the internal queue. Returns the index to the job containgin an atomic counter corresponding to the task group as a whole. Initially it will equal num_tasks. When each task completes, it will be decremented.
 int scheduler_add_tasks(TaskScheduler &scheduler, int task_count, Task *tasks) {
-	ThreadLocalStorage &tls = scheduler.tls_array[_current_thread_index(scheduler.threads, scheduler.thread_count)];
-	int job_handle = _generate_job_handle(scheduler);
-	Job &job = scheduler.jobs[job_handle];
-	job.counter = task_count;
+	ThreadLocalStorage &tls = scheduler.tls_array[tls_thread_index];
+	int job_handle = _generate_job_handle(tls);
+	scheduler.jobs[job_handle] = task_count;
+
 	for (int i = 0; i < task_count; ++i) {
 		_update_last_free_bundle(tls);
 
@@ -379,7 +694,7 @@ int scheduler_add_tasks(TaskScheduler &scheduler, int task_count, Task *tasks) {
 		bundle.task = tasks[i];
 		bundle.job_handle = job_handle;
 		bundle.occupied = true;
-		queue_push(&tls.task_queue, tls.last_free_bundle);
+		queue::push(&tls.task_queue, tls.last_free_bundle);
 	}
 
 	return job_handle;
@@ -387,13 +702,12 @@ int scheduler_add_tasks(TaskScheduler &scheduler, int task_count, Task *tasks) {
 
 // Yields execution to another task until job reaches target
 void scheduler_wait_for_job(TaskScheduler &scheduler, int job_handle, int target) {
-	Job &job = scheduler.jobs[job_handle];
-	// Fast out
-	if (__atomic_load_n(&job.counter, __ATOMIC_RELAXED) == target) {
+	int *job = scheduler.jobs + job_handle;
+	if (__atomic_load_n(job, __ATOMIC_RELAXED) == target) {
 		return;
 	}
 
-	ThreadLocalStorage &tls = scheduler.tls_array[_current_thread_index(scheduler.threads, scheduler.thread_count)];
+	ThreadLocalStorage &tls = scheduler.tls_array[tls_thread_index];
 
 	// Fill in the WaitingBundle data
 	WaitingBundle &bundle = scheduler.waiting_bundles[tls.current_fiber_index];
@@ -404,7 +718,7 @@ void scheduler_wait_for_job(TaskScheduler &scheduler, int job_handle, int target
 	int fiber_index = _next_free_fiber_index(scheduler);
 
 	// Clean up the old fiber
-	_cleanup_old_fiber(scheduler);
+	_cleanup_old_fiber(tls, scheduler.free_fibers, scheduler.waiting_fibers);
 
 	// Fill in tls
 	tls.previous_fiber_index = tls.current_fiber_index;
@@ -413,6 +727,4 @@ void scheduler_wait_for_job(TaskScheduler &scheduler, int job_handle, int target
 
 	// Switch
 	fiber_switch(scheduler.fibers[tls.previous_fiber_index], scheduler.fibers[fiber_index]);
-
-	// And we're back
 }

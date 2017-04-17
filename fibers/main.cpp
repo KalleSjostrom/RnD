@@ -1,20 +1,36 @@
+#include "../utils/common.h"
+#include "../utils/memory_arena.cpp"
 
-#define FTL_FIBER_STACK_GUARD_PAGES
+extern "C" {
+	#pragma clang diagnostic push
+		#pragma clang diagnostic ignored "-Wmissing-variable-declarations"
+		extern void * __stack_chk_guard = (void *)(0xDEADBEEF); // initialize guard variable
+	#pragma clang diagnostic pop
 
+	void __stack_chk_fail(void) { // called by stack checking code if guard variable is corrupted
+		ASSERT(false, "___stack_chk_fail");
+	}
+
+	void _exit(int status) {
+		(void) status;
+	}
+}
+
+#define FIBER_STACK_GUARD_PAGES
 #include "task_scheduler.cpp"
 
 struct NumberSubset {
-    uint64 id;
+	u64 id;
 
-	uint64 start;
-	uint64 end;
+	u64 start;
+	u64 end;
 
-	uint64 total;
+	u64 total;
 };
 
-void AddNumberSubset(TaskScheduler *scheduler, void *arg) {
+void add_subset(TaskScheduler *scheduler, void *arg) {
 	(void) scheduler;
-	NumberSubset *subset = reinterpret_cast<NumberSubset *>(arg);
+	NumberSubset *subset = (NumberSubset *)arg;
 	subset->total = 0;
 
 	while (subset->start != subset->end) {
@@ -25,44 +41,37 @@ void AddNumberSubset(TaskScheduler *scheduler, void *arg) {
 	subset->total += subset->end;
 }
 
-void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
+void triangle_number_main_task(TaskScheduler *scheduler, void *arg) {
 	MemoryArena arena = init_memory(32*MB);
 	(void)arg;
 
-	printf("Hello2\n"); fflush(stdout);
-
-// #if 0
 	// Define the constants to test
-	const uint64 triangle_num = 4759324;
-	const uint64 num_additions_per_task = 10000;
-	const uint64 num_tasks = (triangle_num + num_additions_per_task - 1) / num_additions_per_task;
+	const u64 triangle_num = 4759324;
+	const u64 num_additions_per_task = 10000;
+	const u64 num_tasks = (triangle_num + num_additions_per_task - 1) / num_additions_per_task;
 
 	// Create the tasks
 	Task *tasks = PUSH_STRUCTS(arena, num_tasks, Task);
+
 	// We have to declare this on the heap so other threads can access it
 	NumberSubset *subsets = PUSH_STRUCTS(arena, num_tasks, NumberSubset);
-	uint64 nextNumber = 1;
+	u64 next_number = 1;
 
-	printf("num tasks %llu\n", num_tasks);
-
-	for (uint64 i = 0; i < num_tasks; ++i) {
+	for (u64 i = 0; i < num_tasks; ++i) {
 		NumberSubset *subset = &subsets[i];
 
-        subset->id = i;
+		subset->id = i;
 
-		subset->start = nextNumber;
-		subset->end = nextNumber + num_additions_per_task - 1;
+		subset->start = next_number;
+		subset->end = next_number + num_additions_per_task - 1;
 		if (subset->end > triangle_num) {
 			subset->end = triangle_num;
 		}
 
-        ASSERT(subset->start <= subset->end, "End > start!");
-        // printf("%llu, %llu\n", subset->start, subset->end);
-
-		tasks[i].Function = AddNumberSubset;
+		tasks[i].Function = add_subset;
 		tasks[i].ArgData = subset;
 
-		nextNumber = subset->end + 1;
+		next_number = subset->end + 1;
 	}
 
 	// Schedule the tasks and wait for them to complete
@@ -75,41 +84,19 @@ void TriangleNumberMainTask(TaskScheduler *scheduler, void *arg) {
 	printf("Done waiting\n");
 
 	// Add the results
-	uint64 result = 0;
-	for (uint64 i = 0; i < num_tasks; ++i) {
+	u64 result = 0;
+	for (u64 i = 0; i < num_tasks; ++i) {
 		result += subsets[i].total;
 	}
 
 	printf("Hello (%llu) (%llu) (%llu)\n", triangle_num, triangle_num * (triangle_num + 1) / 2, result);
-
-	// Test
-	// GTEST_ASSERT_EQ(triangle_num * (triangle_num + 1ull) / 2ull, result);
-// #endif
 }
 
 int main(int argc, char **argv) {
 	(void) argc;
 	(void) argv;
 
-#if 0
-uint64 input = (uint64)atoi(argv[1]);
-uint64 output;
-
-asm("andq $-16, %0"
-    : "=r" (output)
-    : "r" (input));
-
-printf("%llu\n", output);
-
-uint64 hej = -16u;
-
-printf("%llu\n", input & hej);
-#endif
-
-#if 1
 	MemoryArena arena = init_memory(32*MB, true);
 	TaskScheduler scheduler = {};
-	printf("Hello\n");
-	scheduler_start(scheduler, arena, TriangleNumberMainTask);
-#endif
+	scheduler_start(scheduler, arena, triangle_number_main_task);
 }
