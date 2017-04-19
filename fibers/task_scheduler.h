@@ -48,6 +48,8 @@ struct ThreadLocalStorage {
 		  last_successful_steal(1) {
 	}
 
+	TaskBundle bundle_storage[4096];
+
 	/**
 	* Boost fibers require that fibers created from threads finish on the same thread where they started
 	*
@@ -57,8 +59,6 @@ struct ThreadLocalStorage {
 	* safely clean up.
 	*/
 	Fiber thread_fiber;
-
-	TaskBundle bundle_storage[4096];
 
 	// The queue of waiting tasks
 	WaitFreeQueue task_queue;
@@ -106,53 +106,4 @@ struct TaskScheduler {
 
 	int free_fiber_cursor;
 	int __padding;
-
-	void update_last_free_bundle(ThreadLocalStorage &tls);
-
-	/**
-	 * Initializes the TaskScheduler and then starts executing 'main_task'
-	 *
-	 * NOTE: Run will "block" until 'main_task' returns. However, it doesn't block in the traditional sense; 'main_task' is created as a Fiber.
-	 * Therefore, the current thread will save it's current state, and then switch execution to the the 'main_task' fiber. When 'main_task'
-	 * finishes, the thread will switch back to the saved state, and Run() will return.
-	 */
-	void run(MemoryArena &arena, TaskFunction main_task, void *main_task_arg = nullptr, int thread_pool_size = 0);
-
-	int generate_job_handle();
-
-	// Adds a group of tasks to the internal queue. Returns the index to the job containgin an atomic counter corresponding to the task group as a whole. Initially it will equal num_tasks. When each task completes, it will be decremented.
-	int add_tasks(int num_tasks, Task *tasks);
-
-	// Yields execution to another task until job reaches target
-	void wait_for_job(int job_handle, int target);
-
-	// Gets the 0-based index of the current thread. This is useful for tls[GetCurrentThreadIndex()]
-	int get_current_thread_index() {
-		#if defined(FTL_WIN32_THREADS)
-			DWORD threadId = GetCurrentThreadId();
-			for (int i = 0; i < thread_count; ++i) {
-				if (threads[i].Id == threadId) {
-					return i;
-				}
-			}
-		#elif defined(FTL_POSIX_THREADS)
-			pthread_t currentThread = pthread_self();
-			for (int i = 0; i < thread_count; ++i) {
-				if (pthread_equal(currentThread, threads[i])) {
-					return i;
-				}
-			}
-		#endif
-
-		return FTL_INVALID_INDEX;
-	}
-
-	// Pops the next task off the queue into nextTask. If there are no tasks in the the queue, it will return false.
-	bool get_next_task(TaskBundle *next_task);
-
-	// Gets the index of the next available fiber in the pool
-	int next_free_fiber_index();
-
-	// If necessary, moves the old fiber to the fiber pool or the waiting list. The old fiber is the last fiber to run on the thread before the current fiber
-	void cleanup_old_fiber();
 };

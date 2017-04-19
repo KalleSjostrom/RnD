@@ -12,7 +12,7 @@
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
 #define ASSERT_IN_BOUNDS(array, count) ASSERT(ARRAY_COUNT(array) > count, "Array index out of bounds!");
 
-#define __forceinline __attribute__((always_inline))
+// #define __forceinline __attribute__((always_inline))
 
 typedef unsigned long u64;
 typedef unsigned int u32;

@@ -37,76 +37,56 @@ extern "C" fcontext_t make_fcontext(void * stack_pointer, size_t size, void(*fun
 typedef void (*FiberRoutine)(void *arg);
 
 struct Fiber {
-	// Allocates a stack and sets it up to start executing 'routine' when first switched to
-	void setup(size_t wanted_stack_size, FiberRoutine routine, void *arguments) {
-		arg = arguments;
-		#if defined(FTL_FIBER_STACK_GUARD_PAGES)
-			system_page_size = get_page_size();
-		#else
-			system_page_size = 0;
-		#endif
-
-		stack_size = round_up(wanted_stack_size, system_page_size);
-		// We add a guard page both the top and the bottom of the stack
-		stack = aligned_allocation(system_page_size + stack_size + system_page_size, system_page_size);
-
-		// Setup the assembly stack with make_x86_64_sysv_macho_gas.S
-		// The stack grows "downwards" from high memory address to low, so set the start at the highest address.
-		char *stack_start = ((char *)stack) + system_page_size + stack_size;
-		context = make_fcontext(stack_start, stack_size, routine);
-
-		#if defined(FTL_FIBER_STACK_GUARD_PAGES)
-			memory_protect((char *)(stack), system_page_size);
-			memory_protect((char *)(stack) + system_page_size + stack_size, system_page_size);
-		#endif
-	}
-
-	void destroy() {
-		if (stack != NULL) {
-			if (system_page_size != 0) {
-				memory_unprotect((char *)(stack), system_page_size);
-				memory_unprotect((char *)(stack) + system_page_size + stack_size, system_page_size);
-			}
-			// FTL_VALGRIND_DEREGISTER();
-
-			aligned_free(stack);
-		}
-	}
-
 	void *stack;
 	size_t system_page_size;
 	size_t stack_size;
 	fcontext_t context;
 	void *arg;
-
-	// Saves the current stack context and then switches to the given fiber. Execution will resume here once another fiber switches to this fiber
-	void switch_to_fiber(Fiber *fiber) {
-		jump_fcontext(&context, fiber->context, fiber->arg);
-	}
-
-	// Re-initializes the stack with a new routine and arg
-	void reset(FiberRoutine routine, void *arguments) {
-		context = make_fcontext(((char *)stack) + system_page_size + stack_size, stack_size, routine);
-		arg = arguments;
-	}
-
-#if 0
-private:
-	/**
-	* Helper function for the move operators
-	* Swaps all the member variables
-	*
-	* @param first     The first fiber
-	* @param second    The second fiber
-	*/
-	void swap(Fiber &first, Fiber &second) {
-		using std::swap;
-
-		swap(first.stack, second.stack);
-		swap(first.system_page_size, second.system_page_size);
-		swap(first.stack_size, second.stack_size);
-		swap(first.context, second.context);
-		swap(first.arg, second.arg);
-	}
-#endif
 };
+
+// Allocates a stack and sets it up to start executing 'routine' when first switched to
+void fiber_setup(Fiber &fiber, size_t wanted_stack_size, FiberRoutine routine, void *arguments) {
+	fiber.arg = arguments;
+	#if defined(FTL_FIBER_STACK_GUARD_PAGES)
+		fiber.system_page_size = get_page_size();
+	#else
+		fiber.system_page_size = 0;
+	#endif
+
+	fiber.stack_size = round_up(wanted_stack_size, fiber.system_page_size);
+	// We add a guard page both the top and the bottom of the stack
+	fiber.stack = aligned_allocation(fiber.system_page_size + fiber.stack_size + fiber.system_page_size, fiber.system_page_size);
+
+	// Setup the assembly stack with make_x86_64_sysv_macho_gas.S
+	// The stack grows "downwards" from high memory address to low, so set the start at the highest address.
+	char *stack_start = ((char *)fiber.stack) + fiber.system_page_size + fiber.stack_size;
+	fiber.context = make_fcontext(stack_start, fiber.stack_size, routine);
+
+	#if defined(FTL_FIBER_STACK_GUARD_PAGES)
+		memory_protect((char *)(fiber.stack), fiber.system_page_size);
+		memory_protect((char *)(fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.system_page_size);
+	#endif
+}
+
+// Saves the current stack context and then switches to the given fiber. Execution will resume here once another fiber switches to this fiber
+void fiber_switch(Fiber &source, Fiber &dest) {
+	jump_fcontext(&source.context, dest.context, dest.arg);
+}
+
+// Re-initializes the stack with a new routine and arg
+void fiber_reset(Fiber &fiber, FiberRoutine routine, void *arguments) {
+	fiber.context = make_fcontext(((char *)fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.stack_size, routine);
+	fiber.arg = arguments;
+}
+
+void fiber_destroy(Fiber &fiber) {
+	if (fiber.stack != NULL) {
+		if (fiber.system_page_size != 0) {
+			memory_unprotect((char *)(fiber.stack), fiber.system_page_size);
+			memory_unprotect((char *)(fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.system_page_size);
+		}
+		// FTL_VALGRIND_DEREGISTER();
+
+		aligned_free(fiber.stack);
+	}
+}
