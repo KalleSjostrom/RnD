@@ -4,5 +4,28 @@
 		{
 			"path": "."
 		},
-	]
+	],
+	"build_systems":
+    [
+        {
+            "name": "RnD",
+			"windows": {
+            	"cmd": ["build.bat"],
+            },
+			"working_dir": "$project_path/",
+			"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)", // (file), (line), (column and message)
+			"syntax": "Packages/sublime_tools/cl.build-language",
+			"selector": "source.dosbatch",
+			"variants":
+			[
+				{
+					"name": "Fibers",
+					"working_dir": "$project_path/fibers/",
+					"windows": {
+						"cmd": ["build.bat"],
+					}
+				},
+			]
+        }
+    ]
 }
