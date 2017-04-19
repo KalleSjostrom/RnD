@@ -28,4 +28,5 @@
 *.app
 
 *.ppm
+*.sublime-workspace
 *.dSYM/
