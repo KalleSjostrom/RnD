@@ -3,23 +3,59 @@
 #include <pthread.h>
 #include <OpenGL/gl3.h>
 
-/*static void key_callback(GLWindowHandle* window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, GL_TRUE);
-		running = false;
-	}
-}*/
-
-typedef struct MYGLmonitor
+typedef struct MYGLMonitor
 {
 	CGDirectDisplayID display_id;
 	CGDisplayModeRef previous_mode;
-} MYGLmonitor;
+} MYGLMonitor;
+
+struct InputApi {
+	void (*key_down)(int key, int modifier_flags);
+	void (*key_up)(int key, int modifier_flags);
+};
+
+@interface MYGLView : NSView {
+	struct InputApi input_api;
+}
+@end
+
+@implementation MYGLView
+
+// - (BOOL)isOpaque { return YES; }
+// - (BOOL)canBecomeKeyView { return YES; }
+- (BOOL)acceptsFirstResponder { return YES; }
+
+- (void)setInputApi:(struct InputApi*) api
+{
+	input_api = *api;
+}
+
+- (void)keyDown:(NSEvent *)event
+{
+	if ([event isARepeat])
+		return;
+
+	const int key = [event keyCode];
+	const int mods = [event modifierFlags];
+	NSString* characters = [event characters];
+
+	input_api.key_down(key, mods);
+}
+
+- (void)keyUp:(NSEvent *)event
+{
+	const int key = [event keyCode];
+	const int mods = [event modifierFlags];
+
+	input_api.key_up(key, mods);
+}
+
+@end
 
 typedef struct BLAH GLWindowHandle;
-typedef struct MYGLWwindow
+typedef struct MYGLWindow
 {
-	MYGLmonitor *monitor;
+	MYGLMonitor *monitor;
 
 	// {_GLFWwindowNS ns;
 		id object;
@@ -31,14 +67,14 @@ typedef struct MYGLWwindow
 		id pixelFormat;
 		id context;
 	// };
-} MYGLWwindow;
+} MYGLWindow;
 
 typedef struct MYGLlibrary
 {
-	MYGLWwindow *window;
+	MYGLWindow *window;
 
 	int	monitor_count;
-	MYGLmonitor **monitors;
+	MYGLMonitor **monitors;
 
 	// { _GLFWlibraryNS   ns;
 		CGEventSourceRef event_source;
@@ -60,7 +96,7 @@ MYGLlibrary mygl_lib;
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
 {
-	MYGLWwindow* window = mygl_lib.window;
+	MYGLWindow* window = mygl_lib.window;
 	// _glfwInputWindowCloseRequest(window);
 	return NSTerminateCancel;
 }
@@ -104,7 +140,21 @@ static void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
 
-void mygl_init(void) {
+#define FBCONFIG_REDBITS       8
+#define FBCONFIG_GREENBITS     8
+#define FBCONFIG_BLUEBITS      8
+#define FBCONFIG_COLORBITS    (FBCONFIG_REDBITS + FBCONFIG_GREENBITS + FBCONFIG_BLUEBITS)
+#define FBCONFIG_ALPHABITS     8
+#define FBCONFIG_DEPTHBITS    24
+#define FBCONFIG_STENCILBITS   8
+#define FBCONFIG_STEREO        0
+#define FBCONFIG_SAMPLES       0
+#define FBCONFIG_DOUBLEBUFFER GL_TRUE
+
+#define WNDCONFIG_RESIZABLE   GL_TRUE
+#define WNDCONFIG_FLOATING    GL_FALSE
+
+GLWindowHandle* mygl_setup(int width, int height, const char* title) {
 	memset(&mygl_lib, 0, sizeof(mygl_lib));
 
 	{ // _glfwPlatformInit
@@ -124,25 +174,25 @@ void mygl_init(void) {
 			ASSERT(mygl_lib.framework); // "NSGL: Failed to locate OpenGL framework"
 		}
 
-		{ // MYGLmonitor** _glfwPlatformGetMonitors(int* count)
+		{ // MYGLMonitor** _glfwPlatformGetMonitors(int* count)
 			uint32_t found = 0;
-			uint32_t displayCount;
-			MYGLmonitor** monitors;
+			uint32_t display_count;
+			MYGLMonitor** monitors;
 			CGDirectDisplayID* displays;
 
-			CGGetOnlineDisplayList(0, NULL, &displayCount);
-			displays = calloc(displayCount, sizeof(CGDirectDisplayID));
-			monitors = calloc(displayCount, sizeof(MYGLmonitor*));
+			CGGetOnlineDisplayList(0, NULL, &display_count);
+			displays = calloc(display_count, sizeof(CGDirectDisplayID));
+			monitors = calloc(display_count, sizeof(MYGLMonitor*));
 
-			CGGetOnlineDisplayList(displayCount, displays, &displayCount);
+			CGGetOnlineDisplayList(display_count, displays, &display_count);
 			NSArray* screens = [NSScreen screens];
 
-			for (uint32_t i = 0; i < displayCount; i++) {
-				MYGLmonitor* monitor;
+			for (uint32_t i = 0; i < display_count; i++) {
+				MYGLMonitor* monitor;
 
-				CGDirectDisplayID screenDisplayID = CGDisplayMirrorsDisplay(displays[i]);
-				if (screenDisplayID == kCGNullDirectDisplay)
-					screenDisplayID = displays[i];
+				CGDirectDisplayID screen_display_id = CGDisplayMirrorsDisplay(displays[i]);
+				if (screen_display_id == kCGNullDirectDisplay)
+					screen_display_id = displays[i];
 
 				NSUInteger j;
 				for (j = 0; j < [screens count]; j++) {
@@ -150,7 +200,7 @@ void mygl_init(void) {
 					NSDictionary* dictionary = [screen deviceDescription];
 					NSNumber* number = [dictionary objectForKey:@"NSScreenNumber"];
 
-					if ([number unsignedIntegerValue] == screenDisplayID)
+					if ([number unsignedIntegerValue] == screen_display_id)
 						break;
 				}
 
@@ -160,7 +210,7 @@ void mygl_init(void) {
 
 				const CGSize size = CGDisplayScreenSize(displays[i]);
 				{ // _glfwAllocMonitor
-					monitor = calloc(1, sizeof(MYGLmonitor));
+					monitor = calloc(1, sizeof(MYGLMonitor));
 					/*monitor->name = "no_name (dep on IOKit)";
 					monitor->widthMM = size.width;
 					monitor->heightMM = size.height;*/
@@ -177,25 +227,11 @@ void mygl_init(void) {
 			mygl_lib.monitors = monitors;
 		}
 	}
-}
 
-#define FBCONFIG_REDBITS       8
-#define FBCONFIG_GREENBITS     8
-#define FBCONFIG_BLUEBITS      8
-#define FBCONFIG_COLORBITS    (FBCONFIG_REDBITS + FBCONFIG_GREENBITS + FBCONFIG_BLUEBITS)
-#define FBCONFIG_ALPHABITS     8
-#define FBCONFIG_DEPTHBITS    24
-#define FBCONFIG_STENCILBITS   8
-#define FBCONFIG_STEREO        0
-#define FBCONFIG_SAMPLES       0
-#define FBCONFIG_DOUBLEBUFFER GL_TRUE
-
-#define WNDCONFIG_RESIZABLE   GL_TRUE
-#define WNDCONFIG_FLOATING    GL_FALSE
-
-GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
-	MYGLWwindow *window = calloc(1, sizeof(MYGLWwindow));
+	MYGLWindow *window = calloc(1, sizeof(MYGLWindow));
 	mygl_lib.window = window;
+
+	window->monitor = mygl_lib.monitors[0];
 
 	// Open the actual window and create its context
 	{ // _glfwPlatformCreateWindow
@@ -218,11 +254,7 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 		}
 
 		{ // createWindow(_GLFWwindow* window, const _GLFWwndconfig* wndconfig)
-			/*window->delegate = [[GLFWWindowDelegate alloc] initWithGlfwWindow:window];
-			ASSERT(window->delegate); // "Cocoa: Failed to create window delegate"
-*/
 			unsigned int styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
-			// styleMask = NSBorderlessWindowMask;
 
 			if (WNDCONFIG_RESIZABLE)
 				styleMask |= NSWindowStyleMaskResizable;
@@ -244,12 +276,11 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 			if (WNDCONFIG_FLOATING)
 				[window->object setLevel:NSFloatingWindowLevel];
 
-			window->view = [[NSView alloc] init];
+			window->view = [[MYGLView alloc] init];
 
 			[window->view setWantsBestResolutionOpenGLSurface:YES];
 
 			[window->object setTitle:[NSString stringWithUTF8String:title]];
-			// [window->object setDelegate:window->delegate];
 			[window->object setAcceptsMouseMovedEvents:YES];
 			[window->object setContentView:window->view];
 
@@ -278,9 +309,14 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 			attributes[attribute_count++] = NSOpenGLPFAStencilSize;
 			attributes[attribute_count++] = FBCONFIG_STENCILBITS;
 
-#if FBCONFIG_STEREO
+			if (FBCONFIG_STEREO) {
+				// "NSOpenGLPFAStereo" is deprecated in the 10.12 SDK, suppress warning about its use.
+				// No explanation is given for the deprecation, and no alternative is suggested.
+				#pragma clang diagnostic push
+				#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 				attributes[attribute_count++] = NSOpenGLPFAStereo;
-#endif
+				#pragma clang diagnostic pop
+			}
 
 			if (FBCONFIG_DOUBLEBUFFER)
 				attributes[attribute_count++] = NSOpenGLPFADoubleBuffer;
@@ -303,9 +339,7 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 			window->pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
 			ASSERT(window->pixelFormat);
 
-			window->context =
-				[[NSOpenGLContext alloc] initWithFormat:window->pixelFormat
-										   shareContext:NULL];
+			window->context = [[NSOpenGLContext alloc] initWithFormat:window->pixelFormat shareContext:NULL];
 			ASSERT(window->context);
 		}
 
@@ -318,11 +352,11 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 	}
 
 	{ // void _glfwPlatformSwapInterval(int interval)
-		int interval = 0;
+		int interval = 1;
 		[window->context setValues:&interval forParameter:NSOpenGLCPSwapInterval];
 	}
 
-	{ // void _glfwPlatformShowWindow(MYGLWwindow* window)
+	{ // void _glfwPlatformShowWindow(MYGLWindow* window)
 		[NSApp activateIgnoringOtherApps:YES];
 		[window->object makeKeyAndOrderFront:nil];
 	}
@@ -330,12 +364,215 @@ GLWindowHandle* mygl_create_window(int width, int height, const char* title) {
 	return (GLWindowHandle*) window;
 }
 
+void mygl_set_input_api(GLWindowHandle *handle, struct InputApi *input_api) {
+	MYGLWindow *window = (MYGLWindow *)handle;
+	[window->view setInputApi:input_api];
+}
+
+void mygl_get_framebuffer_size(GLWindowHandle *handle, int* width, int* height) {
+	MYGLWindow *window = (MYGLWindow *)handle;
+	NSRect contentRect = [window->view frame];
+	NSRect framebufferRect = [window->view convertRectToBacking:contentRect];
+
+	if (width)
+		*width = (int) framebufferRect.size.width;
+	if (height)
+		*height = (int) framebufferRect.size.height;
+}
+
+// Enter full screen mode
+//
+/*
+GLboolean _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired)
+{
+	CFArrayRef modes;
+	CFIndex count, i;
+	CVDisplayLinkRef link;
+	CGDisplayModeRef native = NULL;
+	GLFWvidmode current;
+	const GLFWvidmode* best;
+
+	best = _glfwChooseVideoMode(monitor, desired);
+	_glfwPlatformGetVideoMode(monitor, &current);
+	if (_glfwCompareVideoModes(&current, best) == 0)
+		return GL_TRUE;
+
+	CVDisplayLinkCreateWithCGDisplay(monitor->ns.display_id, &link);
+
+	modes = CGDisplayCopyAllDisplayModes(monitor->ns.display_id, NULL);
+	count = CFArrayGetCount(modes);
+
+	for (i = 0;  i < count;  i++)
+	{
+		CGDisplayModeRef dm = (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
+		if (!modeIsGood(dm))
+			continue;
+
+		const GLFWvidmode mode = vidmodeFromCGDisplayMode(dm, link);
+		if (_glfwCompareVideoModes(best, &mode) == 0)
+		{
+			native = dm;
+			break;
+		}
+	}
+
+	if (native)
+	{
+		if (monitor->ns.previousMode == NULL)
+			monitor->ns.previousMode = CGDisplayCopyDisplayMode(monitor->ns.display_id);
+
+		CGDisplayFadeReservationToken token = beginFadeReservation();
+		CGDisplaySetDisplayMode(monitor->ns.display_id, native, NULL);
+		endFadeReservation(token);
+	}
+
+	CFRelease(modes);
+	CVDisplayLinkRelease(link);
+
+	if (!native)
+	{
+		_glfwInputError(GLFW_PLATFORM_ERROR,
+						"Cocoa: Monitor mode list changed");
+		return GL_FALSE;
+	}
+
+	return GL_TRUE;
+}
+void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode *mode)
+{
+	CGDisplayModeRef displayMode;
+	CVDisplayLinkRef link;
+	CVDisplayLinkCreateWithCGDisplay(monitor->ns.display_id, &link);
+	displayMode = CGDisplayCopyDisplayMode(monitor->ns.display_id);
+	*mode = vidmodeFromCGDisplayMode(displayMode, link);
+	CGDisplayModeRelease(displayMode);
+	CVDisplayLinkRelease(link);
+}
+void _glfwPlatformGetMonitorPos(_GLFWmonitor* monitor, int* xpos, int* ypos)
+{
+	const CGRect bounds = CGDisplayBounds(monitor->ns.display_id);
+
+	if (xpos)
+		*xpos = (int) bounds.origin.x;
+	if (ypos)
+		*ypos = (int) bounds.origin.y;
+}
+static GLboolean enterFullscreenMode(_GLFWwindow* window) {
+	GLFWvidmode mode;
+	GLboolean status;
+	int xpos, ypos;
+
+	status = _glfwSetVideoMode(window->monitor, &window->videoMode);
+
+	_glfwPlatformGetVideoMode(window->monitor, &mode);
+	_glfwPlatformGetMonitorPos(window->monitor, &xpos, &ypos);
+
+	[window->ns.object setFrame:NSMakeRect(xpos, ypos, mode.width, mode.height)
+						display:YES];
+
+	return status;
+}
+
+void _glfwRestoreVideoMode(_GLFWmonitor* monitor)
+{
+	if (monitor->ns.previousMode)
+	{
+		CGDisplayFadeReservationToken token = beginFadeReservation();
+		CGDisplaySetDisplayMode(monitor->ns.display_id,
+								monitor->ns.previousMode, NULL);
+		endFadeReservation(token);
+
+		CGDisplayModeRelease(monitor->ns.previousMode);
+		monitor->ns.previousMode = NULL;
+	}
+}
+
+static void leaveFullscreenMode(GLWindowHandle *handle) {
+	MYGLWindow *window = (MYGLWindow *)handle;
+	_glfwRestoreVideoMode(window->monitor);
+}
+// Check whether the display mode should be included in enumeration
+static GLboolean modeIsGood(CGDisplayModeRef mode)
+{
+	uint32_t flags = CGDisplayModeGetIOFlags(mode);
+	if (!(flags & kDisplayModeValidFlag) || !(flags & kDisplayModeSafeFlag))
+	    return GL_FALSE;
+
+	if (flags & kDisplayModeInterlacedFlag)
+	    return GL_FALSE;
+
+	if (flags & kDisplayModeStretchedFlag)
+	    return GL_FALSE;
+
+	return GL_TRUE;
+}
+*/
+
+void mygl_enter_fullscreen_mode(GLWindowHandle *handle) {
+	MYGLWindow *window = (MYGLWindow *)handle;
+	CGDirectDisplayID display_id = window->monitor->display_id;
+
+	// CGDisplayCapture(display_id);
+
+	/*
+	CFIndex count, i;
+	GLFWvidmode current;
+	const GLFWvidmode* best;*/
+
+	// CVDisplayLinkRef link;
+	// CVDisplayLinkCreateWithCGDisplay(display_id, &link);
+
+	// CGDisplayModeRef native = NULL;
+
+	// CFArrayRef modes = CGDisplayCopyAllDisplayModes(display_id, NULL);
+	// CFIndex count = CFArrayGetCount(modes);
+
+	// for (CFIndex i = 0;  i < count;  i++) {
+	// 	CGDisplayModeRef mode = (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
+
+	// 	int width = (int) CGDisplayModeGetWidth(mode);
+	// 	int height = (int) CGDisplayModeGetHeight(mode);
+	// 	int refresh_rate = (int) CGDisplayModeGetRefreshRate(mode);
+
+	// 	// if (refresh_rate == 0) {
+	// 	//     const CVTime time = CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
+	// 	//     if (!(time.flags & kCVTimeIsIndefinite))
+	// 	//         refresh_rate = (int) (time.timeScale / (double) time.timeValue);
+	// 	// }
+
+	// 	int a = 6;
+	// 	printf("%d %d %d\n", width, height, refresh_rate);
+
+	// 	// if (!modeIsGood(dm))
+	// 	//     continue;
+
+	// 	// const GLFWvidmode mode = vidmodeFromCGDisplayMode(dm, link);
+	// 	// if (_glfwCompareVideoModes(best, &mode) == 0)
+	// 	// {
+	// 	//     native = dm;
+	// 	//     break;
+	// 	// }
+	// }
+
+	// if (native) {
+	// 	window->monitor->previous_mode = CGDisplayCopyDisplayMode(display_id);
+
+	// 	// CGDisplayFadeReservationToken token = beginFadeReservation();
+	// 	CGDisplaySetDisplayMode(display_id, native, NULL);
+	// 	// endFadeReservation(token);
+	// }
+
+	// CFRelease(modes);
+	// CVDisplayLinkRelease(link);
+}
+
+
 void mygl_set_window_title(GLWindowHandle *handle, const char *title) {
-	MYGLWwindow *window = (MYGLWwindow *)handle;
+	MYGLWindow *window = (MYGLWindow *)handle;
 	[window->object setTitle:[NSString stringWithUTF8String:title]];
 }
 void mygl_swap_buffers(GLWindowHandle* handle) {
-	MYGLWwindow *window = (MYGLWwindow *)handle;
+	MYGLWindow *window = (MYGLWindow *)handle;
 	[window->context flushBuffer];
 }
 
@@ -357,15 +594,15 @@ void mygl_poll_events(void)
 }
 
 void mygl_destroy_window(GLWindowHandle *handle) {
-	MYGLWwindow *window = (MYGLWwindow *)handle;
+	MYGLWindow *window = (MYGLWindow *)handle;
 
 	ASSERT(window != pthread_getspecific(mygl_lib.context));
 
-	{ // void _glfwPlatformDestroyWindow(MYGLWwindow* window)
+	{ // void _glfwPlatformDestroyWindow(MYGLWindow* window)
 		[window->object orderOut:nil];
 
 		if (window->monitor) { // leaveFullscreenMode(window);
-			MYGLmonitor *monitor = window->monitor;
+			MYGLMonitor *monitor = window->monitor;
 			if (monitor->previous_mode) {
 				CGDisplayFadeReservationToken token = kCGDisplayFadeReservationInvalidToken;
 				{ // beginFadeReservation
@@ -387,7 +624,7 @@ void mygl_destroy_window(GLWindowHandle *handle) {
 			}
 		}
 
-		{ // void _glfwDestroyContext(MYGLWwindow* window)
+		{ // void _glfwDestroyContext(MYGLWindow* window)
 			[window->pixelFormat release];
 			window->pixelFormat = nil;
 
@@ -413,10 +650,10 @@ void mygl_terminate() {
 	if (mygl_lib.window)
 		mygl_destroy_window((GLWindowHandle *) mygl_lib.window);
 
-	{ // void _glfwFreeMonitors(MYGLmonitor** monitors, int count)
+	{ // void _glfwFreeMonitors(MYGLMonitor** monitors, int count)
 		for (int i = 0;  i < mygl_lib.monitor_count;  i++)
 		{ // _glfwFreeMonitor(mygl_lib.monitors[i]);
-			MYGLmonitor* monitor = mygl_lib.monitors[i];
+			MYGLMonitor* monitor = mygl_lib.monitors[i];
 			free(monitor);
 		}
 

@@ -1,12 +1,14 @@
 /* GIMP RGBA C-Source image dump (hatch.c) */
 
 static const struct {
-  unsigned int 	 width;
-  unsigned int 	 height;
-  unsigned int 	 bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
-  unsigned char	 pixel_data[256 * 256 * 4 + 1];
+  GLsizei width;
+  GLsizei height;
+  u32 bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */
+  u16 __padding;
+  u8 ___padding;
+  unsigned char pixel_data[256 * 256 * 4 + 1];
 } hatch = {
-  256, 256, 4,
+  256, 256, 4, 0, 0,
   "]\000\000\377]\000\000\377V\000\000\377]\000\000\377]\000\000\377]\000\000\377U\000\000\377Z\000\000\377"
   "Z\000\000\377U\000\000\377U\000\000\377Y\000\000\377Y\000\000\377Y\000\000\377Y\000\000\377U\000\000\377"
   "M\000\000\377M\000\000\377H\000\000\377B\000\000\377B\000\000\377B\000\000\377B\000\000\377L\000\000\377"

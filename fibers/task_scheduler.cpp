@@ -26,8 +26,8 @@
 	typedef u32(__stdcall *ThreadStartRoutine)(void *arg);
 	#define THREAD_FUNC_RETURN_TYPE u32
 
-	inline bool create_thread(u32 stackSize, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
-		HANDLE handle = reinterpret_cast<HANDLE>(_beginthreadex(0, stackSize, start_routine, arg, CREATE_SUSPENDED, 0));
+	inline bool create_thread(u32 stack_size, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
+		HANDLE handle = reinterpret_cast<HANDLE>(_beginthreadex(0, stack_size, start_routine, arg, CREATE_SUSPENDED, 0));
 
 		if (handle == 0) {
 			return false;
@@ -75,14 +75,16 @@
 	typedef void *(*ThreadStartRoutine)(void *arg);
 	#define THREAD_FUNC_RETURN_TYPE void *
 
-	inline bool create_thread(u32 stackSize, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
-		pthread_attr_t threadAttr;
-		pthread_attr_init(&threadAttr);
+	inline bool create_thread(u32 stack_size, ThreadStartRoutine start_routine, void *arg, ThreadType *out_thread) {
+		pthread_attr_t thread_attr;
+		pthread_attr_init(&thread_attr);
 
 		// Set stack size
-		pthread_attr_setstacksize(&threadAttr, stackSize);
+		pthread_attr_setstacksize(&thread_attr, stack_size);
+        // pthread_attr_setaffinity_np(&thread_attr, 0, 0);
 		int success = pthread_create(out_thread, NULL, start_routine, arg);
-		pthread_attr_destroy(&threadAttr);
+		printf("%lu\n", (uintptr_t)*out_thread);
+		pthread_attr_destroy(&thread_attr);
 
 		return success == 0;
 	}
@@ -331,7 +333,9 @@ struct Task {
 };
 
 #define INVALID_INDEX 0x7fffffff
-#define FIBER_POOL_SIZE 256
+#define FIBER_POOL_SIZE 256 // Naughty dog uses 160, 128 with 64 kb stack and 32 with 512 kb stack
+#define THREAD_STACK_SIZE 524288
+#define FIBER_STACK_SIZE 512000
 #define MAX_JOBS_PER_THREAD 256
 
 // Holds a counter that is being waited on. Specifically, until counter == target_value
@@ -374,15 +378,12 @@ struct ThreadLocalStorage {
 };
 
 struct TaskScheduler {
-	ThreadType *threads;
-
-	// C++ Thread Local Storage is, by definition, static/global. This poses some problems, such as multiple TaskScheduler instances. So we fake TLS.
-	// During initialization of the TaskScheduler, we create one ThreadLocalStorage instance per thread. Threads index into their storage using tls[GetCurrentThreadIndex()]
+	// TLS is not fiber safe on all platforms, so we fake thread local stoarge for each thread.
 	ThreadLocalStorage *tls_array;
-
-	// size of both threads and tls_array
-	int thread_count;
 	b32 quit;
+	int free_fiber_cursor;
+	int thread_count;
+	int __padding;
 
 	// The backing storage for the fiber pool
 	Fiber fibers[FIBER_POOL_SIZE];
@@ -394,9 +395,6 @@ struct TaskScheduler {
 	WaitingBundle waiting_bundles[FIBER_POOL_SIZE];
 
 	int *jobs;
-
-	int free_fiber_cursor;
-	int __padding;
 };
 
 struct ThreadArgs {
@@ -410,7 +408,43 @@ struct MainFiberArgs {
 	TaskScheduler *scheduler;
 };
 
-static __thread int tls_thread_index;
+#if defined(OS_WINDOWS)
+	static __thread int tls_thread_index;
+	static int get_thread_index(TaskScheduler &scheduler) {
+		return tls_thread_index;
+	}
+	static void set_thread_index(int index) {
+		tls_thread_index = index;
+	}
+#else
+	static __thread int tls_thread_index;
+
+	// To avoid the problem of tls optimization under clang, we lookup the current thread index...
+	static int tls_hax_thread_count;
+	static ThreadType *tls_hax_threads;
+
+	static int get_thread_index() {
+		pthread_t current_thread = pthread_self();
+		for (int i = 0; i < tls_hax_thread_count; ++i) {
+			if (pthread_equal(current_thread, tls_hax_threads[i])) {
+				ASSERT(i == tls_thread_index, "TLS optimization?");
+				return i;
+			}
+		}
+
+		printf("%d\n", tls_hax_thread_count);
+		printf("%lu\n", (uintptr_t) current_thread);
+		for (int i = 0; i < tls_hax_thread_count; ++i) {
+			printf("-- %lu\n", (uintptr_t) tls_hax_threads[i]);
+		}
+
+		ASSERT(false, "Could not find an entry in threads for the current running thread!");
+		return -1;
+	}
+	static void set_thread_index(int index) {
+		tls_thread_index = index;
+	}
+#endif
 
 namespace {
 	// Gets the index of the next available fiber in the pool
@@ -459,8 +493,10 @@ namespace {
 		ThreadArgs *args = (ThreadArgs *) thread_args;
 		TaskScheduler *scheduler = args->scheduler;
 		int index = args->thread_index;
+		set_thread_index(index);
 
-		tls_thread_index = index;
+		pthread_t current_thread = pthread_self();
+		while (!pthread_equal(current_thread, tls_hax_threads[index])) {};
 
 		// Get a free fiber to switch to
 		int fiber_index = _next_free_fiber_index(*scheduler);
@@ -485,7 +521,7 @@ namespace {
 		__atomic_store_n(&scheduler->quit, true, __ATOMIC_RELEASE);
 
 		// Switch to the thread fibers
-		ThreadLocalStorage &tls = scheduler->tls_array[tls_thread_index];
+		ThreadLocalStorage &tls = scheduler->tls_array[get_thread_index()];
 		fiber_switch(scheduler->fibers[tls.current_fiber_index], tls.thread_fiber);
 
 		// We should never get here
@@ -494,7 +530,7 @@ namespace {
 
 	// Pops the next task off the queue into nextTask. If there are no tasks in the the queue, it will return false.
 	static bool _scheduler_get_next_task(ThreadLocalStorage *tls_array, int thread_count, TaskBundle *next_task) {
-		ThreadLocalStorage &tls = tls_array[tls_thread_index];
+		ThreadLocalStorage &tls = tls_array[get_thread_index()];
 
 		// Try to pop from our own queue
 		int index;
@@ -510,7 +546,7 @@ namespace {
 				thread_index_to_steal_from = 0;
 			}
 
-			if (thread_index_to_steal_from == tls_thread_index) {
+			if (thread_index_to_steal_from == get_thread_index()) {
 				continue;
 			}
 
@@ -530,7 +566,7 @@ namespace {
 	static void _fiber_start(void *task_scheduler) {
 		TaskScheduler *scheduler = (TaskScheduler *) task_scheduler;
 
-		ThreadLocalStorage &tls = scheduler->tls_array[tls_thread_index];
+		ThreadLocalStorage &tls = scheduler->tls_array[get_thread_index()];
 
 		while (!__atomic_load_n(&scheduler->quit, __ATOMIC_ACQUIRE)) {
 			// Clean up from the last fiber to run on this thread
@@ -606,7 +642,7 @@ namespace {
 
 	static int _generate_job_handle(ThreadLocalStorage &tls) {
 		// TODO(kalle):  Need to check if job slots are free to use!!
-		int job_handle = tls_thread_index * MAX_JOBS_PER_THREAD + tls.job_handle_counter++;
+		int job_handle = get_thread_index() * MAX_JOBS_PER_THREAD + tls.job_handle_counter++;
 
 		if (tls.job_handle_counter == MAX_JOBS_PER_THREAD) {
 			tls.job_handle_counter = 0;
@@ -622,7 +658,7 @@ namespace {
 // finishes, the thread will switch back to the saved state, and scheduler_start() will return.
 void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction main_task, void *main_task_arg = 0, int thread_pool_size = 0) {
 	for (int i = 0; i < FIBER_POOL_SIZE; ++i) {
-		setup_fiber(scheduler.fibers[i], 512000, _fiber_start, &scheduler);
+		setup_fiber(scheduler.fibers[i], FIBER_STACK_SIZE, _fiber_start, &scheduler);
 		scheduler.free_fibers[i] = true;
 		scheduler.waiting_fibers[i] = false;
 	}
@@ -632,7 +668,7 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 
 	// Initialize all the things
 	scheduler.quit = false;
-	scheduler.threads = PUSH_STRUCTS(arena, scheduler.thread_count, ThreadType);
+	ThreadType *threads = PUSH_STRUCTS(arena, scheduler.thread_count, ThreadType);
 	ThreadArgs *thread_args = PUSH_STRUCTS(arena, thread_count, ThreadArgs);
 	scheduler.tls_array = PUSH_STRUCTS(arena, thread_count, ThreadLocalStorage, 16, true);
 	scheduler.jobs = PUSH_STRUCTS(arena, thread_count * MAX_JOBS_PER_THREAD, int);
@@ -644,15 +680,22 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 		tls.previous_fiber_index = INVALID_INDEX;
 	}
 
-	tls_thread_index = 0;
-	scheduler.threads[0] = get_current_thread();
+	set_thread_index(0);
+	threads[0] = get_current_thread();
+
+#ifndef OS_WINDOWS
+	tls_hax_threads = threads;
+	tls_hax_thread_count = thread_count;
+#endif
 
 	// Create the remaining threads
 	for (int i = 1; i < thread_count; ++i) {
 		thread_args[i].scheduler = &scheduler;
 		thread_args[i].thread_index = i;
 
-		if (!create_thread(524288, _thread_start, thread_args + i, &scheduler.threads[i])) {
+		// TODO(kalle): lock the thread to a core
+		// How do we determine the size of the stacks? Variable sized stacks?
+		if (!create_thread(THREAD_STACK_SIZE, _thread_start, thread_args + i, &threads[i])) {
 			printf("Error: Failed to create all the worker threads");
 			return;
 		}
@@ -675,7 +718,7 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 	// And we're back
 	// Wait for the worker threads to finish
 	for (int i = 1; i < thread_count; ++i) {
-		join_thread(scheduler.threads[i]);
+		join_thread(threads[i]);
 	}
 
 	return;
@@ -683,7 +726,7 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 
 // Adds a group of tasks to the internal queue. Returns the index to the job containgin an atomic counter corresponding to the task group as a whole. Initially it will equal num_tasks. When each task completes, it will be decremented.
 int scheduler_add_tasks(TaskScheduler &scheduler, int task_count, Task *tasks) {
-	ThreadLocalStorage &tls = scheduler.tls_array[tls_thread_index];
+	ThreadLocalStorage &tls = scheduler.tls_array[get_thread_index()];
 	int job_handle = _generate_job_handle(tls);
 	scheduler.jobs[job_handle] = task_count;
 
@@ -707,7 +750,7 @@ void scheduler_wait_for_job(TaskScheduler &scheduler, int job_handle, int target
 		return;
 	}
 
-	ThreadLocalStorage &tls = scheduler.tls_array[tls_thread_index];
+	ThreadLocalStorage &tls = scheduler.tls_array[get_thread_index()];
 
 	// Fill in the WaitingBundle data
 	WaitingBundle &bundle = scheduler.waiting_bundles[tls.current_fiber_index];

@@ -1,6 +1,7 @@
 #include "../utils/common.h"
 #include "../utils/memory_arena.cpp"
 
+#if 0
 extern "C" {
 	#pragma clang diagnostic push
 		#pragma clang diagnostic ignored "-Wmissing-variable-declarations"
@@ -15,6 +16,7 @@ extern "C" {
 		(void) status;
 	}
 }
+#endif
 
 #define FIBER_STACK_GUARD_PAGES
 #include "task_scheduler.cpp"

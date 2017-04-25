@@ -1,5 +1,5 @@
-// #include "../utils/string_utils.inl"
-#include "../utils/list_utils.inl"
+// #include "../utils/string_utils.h"
+#include "../utils/list_utils.h"
 
 #define MAX_STRING_LENGTH 256
 #define MAX_JOBS 1024
@@ -41,10 +41,16 @@ namespace gui {
 		Link dynamic_job_list[MAX_DYNAMIC_JOBS];
 	};
 
-	GUI *init(MemoryArena &persistent_arena, MemoryArena &transient_arena) {
+	struct GUISettings {
+		const char *font_path;
+		const char *text_vertex_shader;
+		const char *text_fragment_shader;
+	};
+
+	GUI *init(MemoryArena &persistent_arena, MemoryArena &transient_arena, GUISettings &settings) {
 		GUI *gui = (GUI *)allocate_memory(persistent_arena, sizeof(GUI));
 
-		font::load(persistent_arena, "assets/font.gamefont", &gui->font);
+		font::load(persistent_arena, settings.font_path, &gui->font);
 		gui->transient_arena = &transient_arena;
 		int width = gui->font.width;
 		int height = gui->font.height;
@@ -54,7 +60,7 @@ namespace gui {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, gui->font.pixels);
 
-		gui->program = gl_program_builder::create_from_source_file("./shaders/text.vert", "./shaders/text.frag");
+		gui->program = gl_program_builder::create_from_source_files(transient_arena, settings.text_vertex_shader, settings.text_fragment_shader, 0);
 		glUseProgram(gui->program);
 
 		gui->location_color = glGetUniformLocation(gui->program, "color");

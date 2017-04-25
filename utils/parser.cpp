@@ -1,7 +1,7 @@
 #include "common.h"
-#include "file_utils.inl"
+#include "file_utils.h"
 #include "memory_arena.cpp"
-#include "string_utils.inl"
+#include "string_utils.h"
 
 #define TokenType_Unknown 1
 #define TokenType_String 2
@@ -149,7 +149,7 @@ namespace parser {
 	}
 
 	Token next_token(Tokenizer *tok, bool verbatim = true) {
-		if (tok->debug_start != '\0') {
+		if (tok->debug_start[0] != '\0') {
 			int debug_current_size = tok->at - tok->debug_start;
 			ASSERT(debug_current_size <= tok->debug_size, "Tokenizer out of bounds!");
 		}

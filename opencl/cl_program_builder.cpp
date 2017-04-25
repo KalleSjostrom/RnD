@@ -1,3 +1,6 @@
+#include "utils/file_utils.h"
+#include "cl_errors.cpp"
+
 namespace cl_program_builder {
 	static void build(cl_program program, size_t num_devices, cl_device_id *devices, const char *build_options = 0) {
 		cl_int errcode_ret = clBuildProgram(program, num_devices, devices, build_options, 0, 0);

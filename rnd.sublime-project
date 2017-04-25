@@ -6,26 +6,55 @@
 		},
 	],
 	"build_systems":
-    [
-        {
-            "name": "RnD",
+	[
+		{
+			"name": "RnD",
 			"windows": {
-            	"cmd": ["build.bat"],
-            },
-			"working_dir": "$project_path/",
-			"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)", // (file), (line), (column and message)
+				"cmd": ["build.bat"],
+				"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)",
+			},
+			"osx": {
+				"shell_cmd": "./build.sh",
+				"file_regex": "(.*?):([0-9]+):([0-9]+):(.*)",
+			},
+			"working_dir": "${project_path}/",
 			"syntax": "Packages/sublime_tools/cl.build-language",
 			"selector": "source.dosbatch",
 			"variants":
 			[
 				{
+					"name": "Engine",
+					"working_dir": "${project_path}/engine/",
+				},
+				{
+					"name": "Game",
+					"working_dir": "${project_path}/Game/",
+				},
+				{
+					"name": "Roomba Collector",
+					"working_dir": "${project_path}/roomba/collector/",
+				},
+				{
+					"name": "Roomba Visualizer",
+					"working_dir": "${project_path}/roomba/visualizer/",
+				},
+				{
+					"name": "Fluid",
+					"working_dir": "${project_path}/fluid/",
+				},
+				{
 					"name": "Fibers",
-					"working_dir": "$project_path/fibers/",
-					"windows": {
-						"cmd": ["build.bat"],
-					}
+					"working_dir": "${project_path}/fibers/",
+				},
+				{
+					"name": "MyGL",
+					"working_dir": "${project_path}/mygl/",
+				},
+				{
+					"name": "Genome",
+					"working_dir": "${project_path}/genome/",
 				},
 			]
-        }
-    ]
+		}
+	]
 }

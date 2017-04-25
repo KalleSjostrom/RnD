@@ -14,15 +14,15 @@
 */
 
 typedef struct {
-	uint64_t cycle_count;
-	unsigned int hit_count;
+	u64 cycle_count;
+	u64 hit_count;
 	double elapsed_time;
 } PerfCounter;
 
-uint64_t rdtsc() {
+u64 rdtsc() {
 	unsigned int lo,hi;
 	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-	return ((uint64_t)hi << 32) | lo;
+	return ((u64)hi << 32) | lo;
 }
 double my_wtime() {
 	struct timeval tv;
@@ -30,7 +30,7 @@ double my_wtime() {
 	return (double) tv.tv_sec + (double) tv.tv_usec * 1E-6;
 }
 
-#define PROFILER_START(id) uint64_t __start_cycle_count##id = rdtsc(); double __start_time##id = my_wtime();
+#define PROFILER_START(id) u64 __start_cycle_count##id = rdtsc(); double __start_time##id = my_wtime();
 #define PROFILER_STOP(id) profilers[ProfilerScopes__##id].cycle_count += (rdtsc() - __start_cycle_count##id); profilers[ProfilerScopes__##id].hit_count++; profilers[ProfilerScopes__##id].elapsed_time += my_wtime() - __start_time##id;
 #define PROFILER_STOP_HITS(id, hits) profilers[ProfilerScopes__##id].cycle_count += (rdtsc() - __start_cycle_count##id); profilers[ProfilerScopes__##id].hit_count+=hits; profilers[ProfilerScopes__##id].elapsed_time += my_wtime() - __start_time##id;
 //#define PROFILER_PRINT(id) printf("[%-30s]\tcycles: %12llu,\t\thits: %10u,\t\tcycles/hit: %12llu,\t\ttime: %10f\n", #id, profilers[ProfilerScopes__##id].cycle_count, profilers[ProfilerScopes__##id].hit_count, profilers[ProfilerScopes__##id].hit_count > 0 ? profilers[ProfilerScopes__##id].cycle_count / profilers[ProfilerScopes__##id].hit_count : 0, profilers[ProfilerScopes__##id].elapsed_time);
@@ -56,4 +56,4 @@ enum ProfilerScopes {
 };
 */
 
-PerfCounter profilers[1024] = {0};
+static PerfCounter profilers[1024] = {};

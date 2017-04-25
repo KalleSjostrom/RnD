@@ -1,5 +1,5 @@
 // #include "../../utils/parser.cpp"
-// #include "../../utils/math.inl"
+// #include "../../utils/math.h"
 
 parser::Tokenizer make_tokenizer(char *text) {
 	parser::Tokenizer tok = { text };

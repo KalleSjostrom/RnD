@@ -1,7 +1,7 @@
 #include <immintrin.h>
-#include "../utils/profiler.c"
 #include "../utils/common.h"
-#include "../utils/string_utils.inl"
+#include "../utils/profiler.c"
+#include "../utils/string_utils.h"
 
 #include "strings.cpp"
 
@@ -10,19 +10,19 @@
 #define GRID_INDEX(row, col) ((row) * DIM + (col))
 #define CHAR_AT(row, col) (grid[GRID_INDEX(row, col)])
 
-void render_horizontal(char *grid, int row, int col, String *string) {
-	for (int i = 0; i < string->length; i++) {
+void render_horizontal(char *grid, i32 row, i32 col, String *string) {
+	for (i32 i = 0; i < string->length; i++) {
 		grid[GRID_INDEX(row, col+i)] = string->text[i];
 	}
 }
-void render_vertical(char *grid, int row, int col, String *string) {
-	for (int i = 0; i < string->length; i++) {
+void render_vertical(char *grid, i32 row, i32 col, String *string) {
+	for (i32 i = 0; i < string->length; i++) {
 		grid[GRID_INDEX(row+i, col)] = string->text[i];
 	}
 }
 
-bool fits_at_horizontal(char *grid, int row, int col, String *string) {
-	for (int i = 0; i < string->length; i++, col++) { // Advance to the right each step
+bool fits_at_horizontal(char *grid, i32 row, i32 col, String *string) {
+	for (i32 i = 0; i < string->length; i++, col++) { // Advance to the right each step
 		char c_middle = CHAR_AT(row, col);
 		if ((*string)[i] == c_middle)
 			continue;
@@ -53,8 +53,8 @@ bool fits_at_horizontal(char *grid, int row, int col, String *string) {
 	return true;
 }
 
-bool fits_at_vertical(char *grid, int row, int col, String *string) {
-	for (int i = 0; i < string->length; i++, row++) {
+bool fits_at_vertical(char *grid, i32 row, i32 col, String *string) {
+	for (i32 i = 0; i < string->length; i++, row++) {
 		char c_middle = CHAR_AT(row, col);
 		if ((*string)[i] == c_middle)
 			continue;
@@ -86,23 +86,23 @@ bool fits_at_vertical(char *grid, int row, int col, String *string) {
 }
 
 struct WordPosition {
-	int row;
-	int col;
-	bool horizontal;
+	i32 row;
+	i32 col;
+	b32 horizontal;
 };
 struct Choice {
-	int selected;
-	int options;
+	i32 selected;
+	i32 options;
 };
 
 // 78900352
-int test_string(char *grid, String *string, WordPosition *positions) {
-	int num_positions = 0;
+i32 test_string(char *grid, String *string, WordPosition *positions) {
+	i32 num_positions = 0;
 
-	for (int i = 0; i < string->length; i++) {
+	for (i32 i = 0; i < string->length; i++) {
 		char sc = (*string)[i];
-		for (int row = 0; row < DIM; row++) {
-			for (int col = 0; col < DIM; col++) {
+		for (i32 row = 0; row < DIM; row++) {
+			for (i32 col = 0; col < DIM; col++) {
 				char c = CHAR_AT(row, col);
 				if (c == sc) {
 					if (CHAR_AT(row, col+1) == EMPTY && CHAR_AT(row, col-1) == EMPTY) {
@@ -124,10 +124,10 @@ int test_string(char *grid, String *string, WordPosition *positions) {
 	return num_positions;
 }
 
-inline String *pick_word(int *words_left, int *words_left_size, Choice *choice) {
-	int size = *words_left_size;
-	int index = choice->selected == -1 ? (random() % size) : choice->selected;
-	int string_index = words_left[index];
+inline String *pick_word(i32 *words_left, i32 *words_left_size, Choice *choice) {
+	i32 size = *words_left_size;
+	i32 index = choice->selected == -1 ? (random() % size) : choice->selected;
+	i32 string_index = words_left[index];
 	words_left[index] = words_left[--size];
 	String *word = strings + string_index;
 	*words_left_size = size;
@@ -139,14 +139,15 @@ inline String *pick_word(int *words_left, int *words_left_size, Choice *choice) 
 }
 
 struct Genome {
-	Choice choices[ARRAY_SIZE(strings)*2];
-	u32 num_choices;
+	Choice choices[ARRAY_COUNT(strings)*2];
+	i32 num_choices;
 };
 
 struct Dunno {
 	Genome *genome;
 	Choice choice;
-	bool premade;
+	b32 premade;
+	i32 __padding;
 };
 
 inline void add_choice(Genome *genome, Dunno *dunno) {
@@ -154,7 +155,7 @@ inline void add_choice(Genome *genome, Dunno *dunno) {
 		genome->choices[genome->num_choices++] = dunno->choice;
 }
 
-void init_dunno(Dunno *dunno, int choice_tracker) {
+void init_dunno(Dunno *dunno, i32 choice_tracker) {
 	dunno->choice.selected = -1;
 	dunno->premade = false;
 	if (dunno->genome->num_choices > choice_tracker) {
@@ -163,15 +164,16 @@ void init_dunno(Dunno *dunno, int choice_tracker) {
 	}
 }
 
-int calculate_fitness(char *grid, Genome *genome, bool render = false) {
-	int words_left[ARRAY_SIZE(strings)];
-	int words_left_size = ARRAY_SIZE(strings);
-	for (int i = 0; i < ARRAY_SIZE(strings); ++i)
+i32 calculate_fitness(char *grid, Genome *genome, bool render = false) {
+	static const i32 string_length = (i32) ARRAY_COUNT(strings);
+	i32 words_left[string_length];
+	i32 words_left_size = string_length;
+	for (i32 i = 0; i < string_length; ++i)
 		words_left[i] = i;
 
 	Dunno dunno;
 	dunno.genome = genome;
-	int choice_tracker = 0;
+	i32 choice_tracker = 0;
 
 	init_dunno(&dunno, choice_tracker++);
 	String *word = pick_word(words_left, &words_left_size, &dunno.choice);
@@ -179,19 +181,19 @@ int calculate_fitness(char *grid, Genome *genome, bool render = false) {
 
 	render_horizontal(grid, DIM/2, (DIM - word->length)/2, word);
 
-	for (int i = 0; i < ARRAY_SIZE(strings)/2; i++) {
+	for (i32 i = 0; i < string_length/2; i++) {
 		init_dunno(&dunno, choice_tracker++);
 		word = pick_word(words_left, &words_left_size, &dunno.choice);
 		add_choice(genome, &dunno);
 
 		WordPosition positions[1024];
-		int num_positions = test_string(grid, word, positions);
+		i32 num_positions = test_string(grid, word, positions);
 
 		init_dunno(&dunno, choice_tracker++);
 
 		Choice &choice = dunno.choice;
 		if (num_positions > 0) {
-			int position_index = choice.selected == -1 ? (random() % num_positions) : choice.selected;
+			i32 position_index = choice.selected == -1 ? (random() % num_positions) : choice.selected;
 
 			choice.selected = position_index;
 			choice.options = num_positions;
@@ -214,12 +216,12 @@ int calculate_fitness(char *grid, Genome *genome, bool render = false) {
 	}
 
 #if 0
-	int mincol = DIM;
-	int maxcol = -DIM;
-	int minrow = DIM;
-	int maxrow = -DIM;
-	for (int row = 0; row < DIM; row++) {
-		for (int col = 0; col < DIM; col++) {
+	i32 mincol = DIM;
+	i32 maxcol = -DIM;
+	i32 minrow = DIM;
+	i32 maxrow = -DIM;
+	for (i32 row = 0; row < DIM; row++) {
+		for (i32 col = 0; col < DIM; col++) {
 			char c = CHAR_AT(row, col);
 			if (c != EMPTY) {
 				mincol = col < mincol ? col : mincol;
@@ -230,24 +232,24 @@ int calculate_fitness(char *grid, Genome *genome, bool render = false) {
 		}
 	}
 #else
-	int mincol = 0;
-	int maxcol = DIM-1;
-	int minrow = 0;
-	int maxrow = DIM-1;
+	i32 mincol = 0;
+	i32 maxcol = DIM-1;
+	i32 minrow = 0;
+	i32 maxrow = DIM-1;
 #endif
 
-	u32 num_empty = 0;
-	for (int row = minrow; row <= maxrow; row++) {
-		for (int col = mincol; col <= maxcol; col++) {
+	i32 num_empty = 0;
+	for (i32 row = minrow; row <= maxrow; row++) {
+		for (i32 col = mincol; col <= maxcol; col++) {
 			char c = CHAR_AT(row, col);
 			num_empty += (c == EMPTY);
 		}
 	}
 
 	if (render) {
-		for (int row = minrow; row <= maxrow; row++) {
+		for (i32 row = minrow; row <= maxrow; row++) {
 			printf("%2d ", row);
-			for (int col = mincol; col <= maxcol; col++) {
+			for (i32 col = mincol; col <= maxcol; col++) {
 				putc(grid[GRID_INDEX(row, col)], stdout);
 				putc(',', stdout);
 			}
@@ -260,59 +262,56 @@ int calculate_fitness(char *grid, Genome *genome, bool render = false) {
 
 #define MAX_ITERATIONS 1
 #define POPULATION_SIZE 200
-#define MUTATION_PROBABILITY 0.1f
-static u32 NR_MUTATIONS = (u32)(POPULATION_SIZE * MUTATION_PROBABILITY);
 
-int main(int argc, char const *argv[]) {
-	int seed = rdtsc();
-	printf("%d\n", seed);
-	srandom(seed);
+i32 main(i32 argc, char const *argv[]) {
+	(void)argc;
+	(void)argv;
+	u64 seed = rdtsc();
+	printf("%llu\n", seed);
+	srandom((u32) seed);
 
 	Genome *population        = (Genome*)malloc(POPULATION_SIZE * sizeof(Genome));
 	Genome *population_buffer = (Genome*)malloc(POPULATION_SIZE * sizeof(Genome));
 
-	int *fitness  = (int*)malloc(POPULATION_SIZE * sizeof(int));
-	u32 *selected = (u32*)malloc(POPULATION_SIZE * sizeof(u32));
+	i32 *fitness  = (i32*)malloc(POPULATION_SIZE * sizeof(i32));
+	i32 *selected = (i32*)malloc(POPULATION_SIZE * sizeof(i32));
 
-	for (int i = 0; i < POPULATION_SIZE; i++) {
+	for (i32 i = 0; i < POPULATION_SIZE; i++) {
 		population[i].num_choices = 0;
 		population_buffer[i].num_choices = 0;
 	}
 
 	char *grid = (char*)malloc(DIM*DIM*sizeof(char));
 
-	for (int j = 0; j < MAX_ITERATIONS; ++j)
+	for (i32 j = 0; j < MAX_ITERATIONS; ++j)
 	{
 		printf("Iteration: %d\n", j);
 
-		int min = 1000000;
-		int max = 0;
-		for (int i = 0; i < POPULATION_SIZE; i++) {
-
+		i32 min = 1000000;
+		i32 max = 0;
+		for (i32 i = 0; i < POPULATION_SIZE; i++) {
 			// Prepare grid
-			for (int i = 0; i < DIM*DIM; i++) {
-				grid[i] = EMPTY;
-			}
+			memset(grid, EMPTY, DIM*DIM);
 
 			// Try it out!
-			int f = calculate_fitness(grid, population + i);
+			i32 f = calculate_fitness(grid, population + i);
 			min = f < min ? f : min;
 			max = f > max ? f : max;
 			fitness[i] = f;
 		}
 
 		// Selection
-		u32 selected_size = 0;
+		i32 selected_size = 0;
 		float cutoff = min + (max-min)*0.5f; // lerp(min, max, 0.5f)
-		for (int i = 0; i < POPULATION_SIZE; i++) {
+		for (i32 i = 0; i < POPULATION_SIZE; i++) {
 			if (fitness[i] <= cutoff) {
 				selected[selected_size++] = i;
 			}
 		}
 
 		// Reproduction
-		for (int i = 0; i < POPULATION_SIZE; i++) {
-			u32 index = selected[random() % selected_size];
+		for (i32 i = 0; i < POPULATION_SIZE; i++) {
+			i32 index = selected[random() % selected_size];
 
 			Genome *individual = population + index;
 
@@ -321,7 +320,7 @@ int main(int argc, char const *argv[]) {
 
 			// ...with mutation
 			Genome &child = population_buffer[i];
-			int point = random() % child.num_choices;
+			i32 point = random() % child.num_choices;
 			child.num_choices = point;
 		}
 
@@ -330,16 +329,14 @@ int main(int argc, char const *argv[]) {
 		population = temp;
 	}
 
-	for (int i = 0; i < POPULATION_SIZE; i++) {
+	for (i32 i = 0; i < POPULATION_SIZE; i++) {
 		// Prepare grid
-		for (int i = 0; i < DIM*DIM; i++) {
-			grid[i] = EMPTY;
-		}
+		memset(grid, EMPTY, DIM*DIM);
 
 		// Print it out
 		if (fitness[i] <= 10000) {
 			printf("------------ %d ------------\n", fitness[i]);
-			int f = calculate_fitness(grid, population_buffer + i, true);
+			calculate_fitness(grid, population_buffer + i, true);
 		}
 	}
 

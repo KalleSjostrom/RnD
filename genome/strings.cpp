@@ -1,4 +1,4 @@
-String strings[] = {
+static String strings[] = {
 MAKE_STRING("justice"),
 MAKE_STRING("whose"),
 MAKE_STRING("transformative"),

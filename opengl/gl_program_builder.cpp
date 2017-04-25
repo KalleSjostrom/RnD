@@ -1,16 +1,11 @@
-namespace gl_program_builder {
-	static GLuint load_and_compile(GLenum shader_type, const char *filename) {
-		size_t size;
-		FILE *file = open_file(filename, &size);
-		char source_buffer[size];
-		fread(source_buffer, sizeof(char), size, file);
-		fclose(file);
-		source_buffer[size] = '\0';
+#include "utils/file_utils.h"
+#include "gl_errors.cpp"
 
+namespace gl_program_builder {
+	static GLuint compile(GLenum shader_type, const char *shader_source) {
 		GLuint shader = glCreateShader(shader_type);
 		GL_CHECK_ERROR(glCreateShader);
 
-		const char *shader_source = source_buffer;
 		glShaderSource(shader, 1, &shader_source, NULL);
 		GL_CHECK_ERROR(glShaderSource);
 		glCompileShader(shader);
@@ -20,23 +15,85 @@ namespace gl_program_builder {
 		GLsizei length;
 		glGetShaderInfoLog(shader, 2048, &length, buffer);
 		GL_CHECK_ERROR(glGetShaderInfoLog);
-		printf("Shader compile results: %s\n", buffer);
+		if (length > 0) {
+			printf("Failed compiling Shades!: %s\n\n%s\n", buffer, shader_source);
+		} else {
+			printf("Shader compile successful!\n");
+		}
 
 		return shader;
 	}
 
-	GLuint create_from_source_file(const char *vertex_shader_filename, const char *fragment_shader_filename) {
-		GLuint vs = load_and_compile(GL_VERTEX_SHADER, vertex_shader_filename);
-		GLuint fs = load_and_compile(GL_FRAGMENT_SHADER, fragment_shader_filename);
+	static GLuint load_and_compile(MemoryArena &arena, GLenum shader_type, const char *filename) {
+		size_t size;
+		FILE *file = open_file(filename, &size);
+		char *source_buffer = (char*)PUSH_SIZE(arena, size);
+		fread(source_buffer, sizeof(char), (size_t)size, file);
+		fclose(file);
+		source_buffer[size] = '\0';
 
+		return compile(shader_type, source_buffer);
+	}
+
+	GLuint create_from_source_files(MemoryArena &arena, const char *vertex_shader_filename, const char *fragment_shader_filename, const char *geometry_shader_filename) {
 		GLuint program = glCreateProgram();
 		GL_CHECK_ERROR_RETVAL(glCreateProgram, program);
 
+		MemoryBlockHandle handle = begin_block(arena);
+			GLuint vs = load_and_compile(arena, GL_VERTEX_SHADER, vertex_shader_filename);
+			glAttachShader(program, vs);
+			GL_CHECK_ERROR(glAttachShader);
+
+			GLuint fs = load_and_compile(arena, GL_FRAGMENT_SHADER, fragment_shader_filename);
+			glAttachShader(program, fs);
+			GL_CHECK_ERROR(glAttachShader);
+
+			if (geometry_shader_filename) {
+				GLuint gs = load_and_compile(arena, GL_GEOMETRY_SHADER, geometry_shader_filename);
+				glAttachShader(program, gs);
+				GL_CHECK_ERROR(glAttachShader);
+			}
+		end_block(arena, handle);
+
+		glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+		GL_CHECK_ERROR(glProgramParameteri);
+
+		glLinkProgram(program);
+		GL_CHECK_ERROR(glLinkProgram);
+
+		GLint link_status;
+		glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+		GL_CHECK_ERROR(glGetProgramiv);
+
+		if (link_status == GL_TRUE) {
+			printf("Gl link successful!\n");
+		} else {
+			GLchar info_log[2048];
+			glGetProgramInfoLog(program, 2048, 0, info_log);
+			GL_CHECK_ERROR(glGetProgramInfoLog);
+			printf("glGetProgramInfoLog: %s\n", info_log);
+		}
+
+		return program;
+	}
+
+	GLuint create_from_strings(const char *vertex_shader_source, const char *fragment_shader_source, const char *geometry_shader_source) {
+		GLuint program = glCreateProgram();
+		GL_CHECK_ERROR_RETVAL(glCreateProgram, program);
+
+		GLuint vs = compile(GL_VERTEX_SHADER, vertex_shader_source);
+		glAttachShader(program, vs);
+		GL_CHECK_ERROR(glAttachShader);
+
+		GLuint fs = compile(GL_FRAGMENT_SHADER, fragment_shader_source);
 		glAttachShader(program, fs);
 		GL_CHECK_ERROR(glAttachShader);
 
-		glAttachShader(program, vs);
-		GL_CHECK_ERROR(glAttachShader);
+		if (geometry_shader_source) {
+			GLuint gs = compile(GL_GEOMETRY_SHADER, geometry_shader_source);
+			glAttachShader(program, gs);
+			GL_CHECK_ERROR(glAttachShader);
+		}
 
 		glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		GL_CHECK_ERROR(glProgramParameteri);
@@ -61,6 +118,7 @@ namespace gl_program_builder {
 	}
 
 	GLuint create_from_binary_file(const char *filename) {
+		(void)filename;
 		printf("create_from_binary_file not implemented!\n");
 		return 0;
 	}
@@ -92,7 +150,7 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		GLenum binary_format;
-		char *binary = (char*)allocate_memory(arena, binary_length);
+		char *binary = (char*)allocate_memory(arena, (u32)binary_length);
 		glGetProgramBinary(program, binary_length, 0, &binary_format, binary);
 		GL_CHECK_ERROR(glGetProgramBinary);
 
@@ -100,7 +158,7 @@ namespace gl_program_builder {
 			FILE *file = fopen(filename, "w");
 			fwrite(&binary_format, sizeof(GLenum), 1, file);
 			fwrite(&binary_length, sizeof(GLint), 1, file);
-			fwrite(&binary, sizeof(char), binary_length, file);
+			fwrite(&binary, sizeof(char), (u32)binary_length, file);
 			fclose(file);
 		}
 

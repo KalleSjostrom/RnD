@@ -1,2 +1,4 @@
 #!/bin/bash
-clang -ggdb -mavx bonza.cpp -o bonza
+source ../common.sh
+
+clang $common bonza.cpp -o bonza

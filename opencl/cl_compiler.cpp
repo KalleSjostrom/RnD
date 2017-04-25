@@ -3,7 +3,7 @@
 
 #include "cl_settings.h"
 
-#include "../utils/file_utils.inl"
+#include "../utils/file_utils.h"
 #include "../utils/memory_arena.cpp"
 #include "cl_errors.cpp"
 #include "cl_program_builder.cpp"

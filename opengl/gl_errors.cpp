@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
 static void print_error_glGetProgramBinary(GLenum errcode) {
 	switch (errcode) {
 		case GL_INVALID_OPERATION:
@@ -113,6 +115,7 @@ static void print_error_glValidateProgram(GLenum errcode) {
 		default: printf("UNKNONW ERROR!\n"); break;
 	}
 }
+#pragma clang diagnostic pop
 
 #ifdef GL_ERROR_CHECKING
 #define GL_CHECK_ERROR(id) { GLenum errcode = glGetError(); if (errcode != GL_NO_ERROR) { printf("gl error [%s]: %d (%s:%d)\n", #id, errcode, __FILE__, __LINE__); print_error_##id(errcode); } }

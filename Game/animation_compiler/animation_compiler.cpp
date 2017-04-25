@@ -1,6 +1,6 @@
 #include "utils/common.h"
 #include "utils/parser.cpp"
-#include "utils/math.inl"
+#include "utils/math.h"
 
 struct Keyframes {
 	int count;
