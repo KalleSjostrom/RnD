@@ -1,2 +1,3 @@
 #!/bin/bash
-clang -ggdb quick_sort_benchmark.cpp -o quick_sort_benchmark
+source ../../common.sh
+clang $release $common -I../../ quick_sort_benchmark.cpp -o quick_sort_benchmark

@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "../../utils/common.h"
-#include "../../utils/profiler.c"
+#include "engine/utils/common.h"
+#include "engine/utils/profiler.c"
 
-#include "../../utils/quick_sort.cpp"
+#include "engine/utils/quick_sort.cpp"
 
 enum ProfilerScopes {
 	ProfilerScopes__alloc,
@@ -15,7 +15,7 @@ enum ProfilerScopes {
 	ProfilerScopes__quick_sort,
 	ProfilerScopes__assertion,
 
-	ProfilerScopes__count,
+	ProfilerScopes__count
 };
 
 inline void *alloc(size_t align, size_t SIZE) {
@@ -24,7 +24,7 @@ inline void *alloc(size_t align, size_t SIZE) {
 	return p;
 }
 
-#define SIZE 50000000
+#define SIZE 5000000
 void profile_sort_elements() {
 	PROFILER_START(alloc);
 
@@ -36,17 +36,17 @@ void profile_sort_elements() {
 
 	char *a = (char*)entries;
 	char *b = (char*)entries2;
-	for (int i = 0; i < SIZE*sizeof(SortElement); i++) {
+	for (i32 i = 0; i < SIZE*sizeof(SortElement); i++) {
 		a[i] = *(char*)(b+i);
 	}
 	PROFILER_START(manualcpy2);
-	for (int i = 0; i < SIZE; i++) {
+	for (i32 i = 0; i < SIZE; i++) {
 		entries[i] = entries2[i];
 	}
 	PROFILER_STOP(manualcpy2);
 
 	PROFILER_START(manualcpy);
-	for (int i = 0; i < SIZE*sizeof(SortElement); i++) {
+	for (i32 i = 0; i < SIZE*sizeof(SortElement); i++) {
 		a[i] = *(char*)(b+i);
 	}
 	PROFILER_STOP(manualcpy);
@@ -56,10 +56,10 @@ void profile_sort_elements() {
 	PROFILER_STOP(memcpy);
 #else
 	PROFILER_START(generation);
-	int seed = rdtsc();
-	srandom(seed);
-	for (int i = 0; i < SIZE; i++) {
-		entries[i].value = random();
+	u64 seed = rdtsc();
+	srandom((u32)seed);
+	for (i32 i = 0; i < SIZE; i++) {
+		entries[i].value = (u32)random();
 	}
 	PROFILER_STOP(generation);
 
@@ -67,13 +67,13 @@ void profile_sort_elements() {
 	quick_sort(entries, SIZE);
 	PROFILER_STOP(quick_sort);
 
-	/*for (int i = 0; i < SIZE; i++) {
+	/*for (i32 i = 0; i < SIZE; i++) {
 		printf("%u\n", entries[i].value);
 	}*/
 
 	PROFILER_START(assertion);
-	for (int i = 1; i < SIZE; i++) {
-		ASSERT_MSG_VAR(entries[i].value >= entries[i-1].value, "%u, %u, %d %d", entries[i].value, entries[i-1].value, i, seed);
+	for (i32 i = 1; i < SIZE; i++) {
+		ASSERT(entries[i].value >= entries[i-1].value, "%u, %u, %d %llu", entries[i].value, entries[i-1].value, i, seed);
 	}
 	PROFILER_STOP(assertion);
 #endif
@@ -86,6 +86,6 @@ void profile_sort_elements() {
 	PROFILER_PRINT(assertion);
 }
 
-int main() {
+i32 main() {
 	profile_sort_elements();
 }

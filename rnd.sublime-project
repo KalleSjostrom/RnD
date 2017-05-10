@@ -54,6 +54,30 @@
 					"name": "Genome",
 					"working_dir": "${project_path}/genome/",
 				},
+				{
+					"name": "Test - Mandlebrot",
+					"working_dir": "${project_path}/testing and benchmarks/mandelbrot/",
+				},
+				{
+					"name": "Test - Math",
+					"working_dir": "${project_path}/testing and benchmarks/math_benchmarks/",
+				},
+				{
+					"name": "Test - Matrix Multiplication",
+					"working_dir": "${project_path}/testing and benchmarks/matrix_multiplication/",
+				},
+				{
+					"name": "Test - Memory",
+					"working_dir": "${project_path}/testing and benchmarks/memory/",
+				},
+				{
+					"name": "Test - Perlin",
+					"working_dir": "${project_path}/testing and benchmarks/perlin/",
+				},
+				{
+					"name": "Test - Sorting",
+					"working_dir": "${project_path}/testing and benchmarks/sorting/",
+				},
 			]
 		}
 	]

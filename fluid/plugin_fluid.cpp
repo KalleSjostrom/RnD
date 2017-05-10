@@ -15,8 +15,8 @@
 #include "settings.h"
 
 #define USE_INTRINSICS 1
-#include "utils/math.h"
-#include "utils/parser.cpp"
+#include "engine/utils/math/math.h"
+#include "engine/utils/parser.cpp"
 
 #define CL_ERROR_CHECKING 1
 #define GL_ERROR_CHECKING 1
@@ -29,7 +29,7 @@
 #include "generated/setup_vertex_array.cpp"
 #include "opengl/gl_manager.cpp"
 
-#include "utils/profiler.c"
+#include "engine/utils/profiler.c"
 #include "engine/utils/font_loader.cpp"
 
 #include "../external tools/obj_compiler/obj_compiler.cpp"

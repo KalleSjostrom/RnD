@@ -1,6 +1,7 @@
 #include <stdio.h>
+#include "engine/utils/common.h"
 #include "immintrin.h"
-#include "../../utils/profiler.c"
+#include "engine/utils/profiler.c"
 
 enum ProfilerScopes {
 	ProfilerScopes__random_generation,
@@ -13,6 +14,8 @@ enum ProfilerScopes {
 
 	ProfilerScopes__count,
 };
+
+#define USE_LOOKUP 1
 
 #if USE_LOOKUP
 static int random_lookup[] =
@@ -118,68 +121,46 @@ double perlin(double x, double y)
 	return lerp(n0, n1, u);
 }
 
-
-
 #define WIDTH 256
 #define HEIGHT 256
 #define SIZE (WIDTH * HEIGHT)
 
-int main() {
-	/*FILE *file = fopen("perlin.ppm", "w");
+i32 main() {
+	FILE *file = fopen("perlin.ppm", "w");
 	fprintf(file, "P6\n");
 	fprintf(file, "%i %i\n", WIDTH, HEIGHT);
 	fprintf(file, "255\n");
-	char *buf = (char *) calloc(SIZE*3, sizeof(char));
+	u8 *buf = (u8 *) calloc(SIZE*3, sizeof(u8));
 
-	int index = 0;
-	for (int x = 0; x < WIDTH; x++) {
-		for (int y = 0; y < HEIGHT; y++) {
-			double p = perlin(x/25.5f, y/25.5f);
-			double c = ((p+1)/2) * 255.0f;
-			buf[index++] = c;
-			buf[index++] = c;
-			buf[index++] = c;
+	i32 index = 0;
+	for (i32 x = 0; x < WIDTH; x++) {
+		for (i32 y = 0; y < HEIGHT; y++) {
+			f64 p = perlin(x/20.0, y/20.0);
+			f64 c = ((p+1.0)/2.0) * 255.0;
+			buf[index++] = (u8)c;
+			buf[index++] = (u8)c;
+			buf[index++] = (u8)c;
 		}
 	}
 
 	fwrite(buf, 1, SIZE*3, file);
 	fclose(file);
-	free(buf);*/
-
-
-	/*printf("%.3f\n", perlin(-0.9999f, 0.9999f));
-	printf("%.3f\n", perlin(0.9999f, -0.9999f));
-	printf("%.3f\n", perlin(-0.9999f, -0.9999f));
-	printf("%.3f\n", perlin(-0.5f, -0.5f));*/
-	// printf("%.3f\n", perlin(0.0f, 0.0f));
-	// printf("%.3f\n", perlin(0.25f, 0.25f));
-	// printf("%.3f\n", perlin(0.25f, 0.5f));
-	// printf("%.3f\n", perlin(0.5f, 0.25f));
-	// printf("%.3f\n", perlin(0.5f, 0.5f));
-	// printf("%.3f\n", perlin(0.75f, 0.5f));
-	// printf("%.3f\n", perlin(0.75f, 0.75f));
-	// printf("%.3f\n", perlin(0.9999f, 0.9999f));
+	free(buf);
 
 	// printf("%.10f\n", perlin(0.5f, 1-0.70710678118f));
-	printf("%.10f\n", perlin(0.5f, 0.70710678118f));
-	printf("%.10f\n", perlin(0.6f, 0.70710678118f));
-	printf("%.10f\n", perlin(0.999f, 0.999f));
-	printf("%.10f\n", perlin(0.001f, 0.001f));
-	printf("%.10f\n", perlin(0.001f, 0.999f));
-	printf("%.10f\n", perlin(0.5f, 0.5f));
-	printf("%.10f\n", perlin(0.5f, 0.999f));
-	printf("%.10f\n", perlin(0.5f, 0.75f));
-
-	printf("%.10f\n", perlin(0.5f, 0.80f));
-
-	// cos(theta) = sqrt(2)/2
-	// |a||b| * cos(45) > 0.70710678118f
-
-	// printf("%.10f\n", perlin(1-0.70710678118f, 0.5f));
-	// printf("%.10f\n", perlin(0.70710678118f, 0.5f));
+	printf("%.10f\n", perlin(0.5, 0.70710678118));
+	printf("%.10f\n", perlin(0.6, 0.70710678118));
+	printf("%.10f\n", perlin(0.999, 0.999));
+	printf("%.10f\n", perlin(0.001, 0.001));
+	printf("%.10f\n", perlin(0.001, 0.999));
+	printf("%.10f\n", perlin(0.5, 0.5));
+	printf("%.10f\n", perlin(0.5, 0.999));
+	printf("%.10f\n", perlin(0.5, 0.75));
+	printf("%.10f\n", perlin(0.5, 0.80));
 
 	double max = -1000;
-	double maxy, maxx;
+	double maxy = 0;
+	double maxx = 0;
 	int size = 10240;
 	for (int x = 0; x < size; ++x) {
 		for (int y = 0; y < size; ++y) {
@@ -191,29 +172,17 @@ int main() {
 			}
 		}
 	}
-	// [0.3491210938,0.5000000000] 0.5352764377
 	printf("[%.10f,%.10f] %.10f\n", maxx, maxy, max);
+	printf("%.10f\n", perlin(0.5, 0.6508789062));
 
-
-	printf("%.10f\n", perlin(0.5f, 0.6508789062));
-
-	printf("%.10f\n", smooth(0.640564f));
+	printf("%.10f\n", smooth(0.640564));
 	printf("%.10f\n", smooth(0.6508789062));
 
 	// Wolfram
-	printf("%.10f\n", perlin(0.5f, 0.640564f));
+	printf("%.10f\n", perlin(0.5, 0.640564));
 
-	printf("%.10f\n", perlin(0.5f, 0.7661937076)); // 0.5622377638
-	printf("%.10f\n", perlin(0.5f, 0.75)); // 0.5625000000
-
-// 0.5352287292
-// 0.5351409912
-
-
-	/*for (int i = 0; i < 256; ++i)
-	{
-		printf("%d, ", i);
-	}*/
+	printf("%.10f\n", perlin(0.5, 0.7661937076)); // 0.5622377638
+	printf("%.10f\n", perlin(0.5, 0.75)); // 0.5625000000
 
 	return 0;
 }

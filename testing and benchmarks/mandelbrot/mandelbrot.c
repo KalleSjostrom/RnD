@@ -1,5 +1,6 @@
 #include <string.h>
-#include "../../utils/profiler.c"
+#include "engine/utils/common.h"
+#include "engine/utils/profiler.c"
 
 /*
 sysctl -a | grep machdep.cpu
@@ -26,7 +27,7 @@ enum ProfilerScopes {
 	ProfilerScopes__count,
 };
 
-#include "../../utils/vectorization.h"
+#include "engine/utils/math/vectorization.h"
 
 #define WIDTH 10240
 #define HEIGHT 7680
@@ -50,10 +51,7 @@ enum ProfilerScopes {
 #define IACA_END
 #endif
 
-void sequential_vector(float *colors) {
-	vec width = v_set((float) WIDTH);
-	vec height = v_set((float) HEIGHT);
-
+void sequential_vector(f32 *colors) {
 	vec xmin = v_set(X_MIN);
 	vec x_it = v_set(X_IT_VAL);
 
@@ -61,7 +59,7 @@ void sequential_vector(float *colors) {
 	vec two = v_set(2.0f);
 
 	vec two55_over_max_it = v_set(TWO55_OVER_MAX_IT);
-	vec threshold = v_set((float)THRESHOLD);
+	vec threshold = v_set((f32)THRESHOLD);
 
 	vec max_it = v_set(MAX_IT);
 	vec inc = v_mul(x_it, v_set(VECTOR_WIDTH));
@@ -69,23 +67,22 @@ void sequential_vector(float *colors) {
 	vector_indices = v_mul(x_it, vector_indices);
 
 	PROFILER_START(sequential_vector_inner);
-	for (int y = 0; y < HEIGHT; ++y) {
+	for (i32 y = 0; y < HEIGHT; ++y) {
 		vec cImag = v_set(Y_MIN + Y_IT_VAL * y);
-		int ywidth =  y * WIDTH;
+		i32 ywidth =  y * WIDTH;
 		vec x_x4 = vector_indices;
-		for (int x = 0; x < WIDTH; x += VECTOR_WIDTH) {
+		for (i32 x = 0; x < WIDTH; x += VECTOR_WIDTH) {
 			IACA_START;
 			x_x4 = v_add(x_x4, inc);
 			vec cReal = v_add(xmin, x_x4);
 
 			vec real = zero;
 			vec imaginary = zero;
-			vec orig_indices = zero;
 			vec indices = zero;
 
 			vec cmp_result = zero;
 
-			int iterations = MAX_IT - 1;
+			i32 iterations = MAX_IT - 1;
 			do {
 				vec r2 = v_mul(real, real);
 				vec i2 = v_mul(imaginary, imaginary);
@@ -109,7 +106,7 @@ void sequential_vector(float *colors) {
 			cmp_result = v_cmp_gt(indices, zero);
 			indices = v_sub(max_it, indices);
 			indices = v_and(indices, cmp_result);
-			int index = ywidth + x;
+			i32 index = ywidth + x;
 			v_store(colors + index, v_mul(indices, two55_over_max_it));
 		}
 		IACA_END;
@@ -117,20 +114,20 @@ void sequential_vector(float *colors) {
 	PROFILER_STOP_HITS(sequential_vector_inner, HEIGHT * (WIDTH/VECTOR_WIDTH));
 }
 
-void sequential_scalar(float *colors) {
+void sequential_scalar(f32 *colors) {
 	PROFILER_START(sequential_scalar_inner);
-	for (int y = 0; y < HEIGHT; y++) {
-		int ywidth = y * WIDTH;
-		float cImag = Y_MIN + Y_IT_VAL * y;
-		for (int x = 0; x < WIDTH; x++) {
-			float cReal = X_MIN + X_IT_VAL * x;
+	for (i32 y = 0; y < HEIGHT; y++) {
+		i32 ywidth = y * WIDTH;
+		f32 cImag = Y_MIN + Y_IT_VAL * y;
+		for (i32 x = 0; x < WIDTH; x++) {
+			f32 cReal = X_MIN + X_IT_VAL * x;
 
-			float real = 0;
-			float imaginary = 0;
-			int i = 0;
+			f32 real = 0;
+			f32 imaginary = 0;
+			i32 i = 0;
 			for (; i < MAX_IT; ++i) {
-				float r2 = real * real;
-				float i2 = imaginary * imaginary;
+				f32 r2 = real * real;
+				f32 i2 = imaginary * imaginary;
 
 				if (r2+i2 > THRESHOLD)
 					break;
@@ -141,7 +138,7 @@ void sequential_scalar(float *colors) {
 			}
 
 			if (i < MAX_IT) {
-				int index = ywidth + x;
+				i32 index = ywidth + x;
 				colors[index] = TWO55_OVER_MAX_IT * (i-1);
 			}
 		}
@@ -153,8 +150,9 @@ void sequential_scalar(float *colors) {
 typedef PTHREAD_TASK(pthread_task_t);
 
 typedef struct {
-	float *colors;
-	int index;
+	f32 *colors;
+	i32 index;
+	i32 __padding;
 } Job;
 
 #define NUMBER_OF_THREADS 64
@@ -163,14 +161,11 @@ typedef struct {
 
 PTHREAD_TASK(pthread_vector_task) {
 	Job j = *(Job*) job;
-	float *colors = j.colors;
+	f32 *colors = j.colors;
 
-	int h = HEIGHT / NUMBER_OF_THREADS;
-	int start_height = j.index * h;
-	int end_height = start_height + h;
-
-	vec width = v_set((float) WIDTH);
-	vec height = v_set((float) h);
+	i32 h = HEIGHT / NUMBER_OF_THREADS;
+	i32 start_height = j.index * h;
+	i32 end_height = start_height + h;
 
 	vec xmin = v_set(X_MIN);
 	vec x_it = v_set(X_IT_VAL);
@@ -180,21 +175,20 @@ PTHREAD_TASK(pthread_vector_task) {
 	vec vector_indices = VECTOR_INDICES;
 
 	vec two55_over_max_it = v_set(TWO55_OVER_MAX_IT);
-	vec threshold = v_set((float)THRESHOLD);
+	vec threshold = v_set((f32)THRESHOLD);
 
-	for (int y = start_height; y < end_height; ++y) {
+	for (i32 y = start_height; y < end_height; ++y) {
 		vec cImag = v_set(Y_MIN + Y_IT_VAL * y);
-		int ywidth =  y * WIDTH;
-		for (int x = 0; x < WIDTH; x += VECTOR_WIDTH) {
+		i32 ywidth =  y * WIDTH;
+		for (i32 x = 0; x < WIDTH; x += VECTOR_WIDTH) {
 			vec x_x4 = v_add(v_set(x), vector_indices);
 			vec cReal = v_add(xmin, v_mul(x_it, x_x4));
 
 			vec real = zero;
 			vec imaginary = zero;
-			vec orig_indices = zero;
 			vec indices = zero;
 
-			for (int i = 0; i < MAX_IT; ++i) {
+			for (i32 i = 0; i < MAX_IT; ++i) {
 				vec r2 = v_mul(real, real);
 				vec i2 = v_mul(imaginary, imaginary);
 
@@ -204,7 +198,7 @@ PTHREAD_TASK(pthread_vector_task) {
 				vec current = v_set(MAX_IT - i - 1);
 				indices = v_max(v_and(current, cmp_result), indices);
 
-				int mask = v_movemask(cmp_result);
+				i32 mask = v_movemask(cmp_result);
 				if (mask == (1<<VECTOR_WIDTH)-1) {
 					break;
 				}
@@ -219,7 +213,7 @@ PTHREAD_TASK(pthread_vector_task) {
 			vec cmp_result = v_cmp_gt(indices, zero);
 			indices = v_sub(v_set(MAX_IT), indices);
 			indices = v_and(indices, cmp_result);
-			int index = ywidth + x;
+			i32 index = ywidth + x;
 			v_store(colors + index, v_mul(indices, two55_over_max_it));
 		}
 	}
@@ -229,24 +223,24 @@ PTHREAD_TASK(pthread_vector_task) {
 PTHREAD_TASK(pthread_scalar_task) {
 	Job j = *(Job*) job;
 
-	float *colors = j.colors;
+	f32 *colors = j.colors;
 
-	int height = HEIGHT / NUMBER_OF_THREADS;
-	int start_height = j.index * height;
-	int end_height = start_height + height;
+	i32 height = HEIGHT / NUMBER_OF_THREADS;
+	i32 start_height = j.index * height;
+	i32 end_height = start_height + height;
 
-	for (int y = start_height; y < end_height; y++) {
-		int ywidth = y * WIDTH;
-		float cImag = Y_MIN + Y_IT_VAL * y;
-		for (int x = 0; x < WIDTH; x++) {
-			float cReal = X_MIN + X_IT_VAL * x;
+	for (i32 y = start_height; y < end_height; y++) {
+		i32 ywidth = y * WIDTH;
+		f32 cImag = Y_MIN + Y_IT_VAL * y;
+		for (i32 x = 0; x < WIDTH; x++) {
+			f32 cReal = X_MIN + X_IT_VAL * x;
 
-			float real = 0;
-			float imaginary = 0;
-			int i = 0;
+			f32 real = 0;
+			f32 imaginary = 0;
+			i32 i = 0;
 			for (; i < MAX_IT; ++i) {
-				float r2 = real * real;
-				float i2 = imaginary * imaginary;
+				f32 r2 = real * real;
+				f32 i2 = imaginary * imaginary;
 
 				if (r2+i2 > THRESHOLD)
 					break;
@@ -255,22 +249,22 @@ PTHREAD_TASK(pthread_scalar_task) {
 				real = r2-i2 + cReal;
 			}
 
-			int index = ywidth + x;
+			i32 index = ywidth + x;
 			colors[index] = TWO55_OVER_MAX_IT * (i-1);
 		}
 	}
 	return NULL;
 }
-void run_pthread_task(pthread_task_t *task, float* colors) {
+void run_pthread_task(pthread_task_t *task, f32* colors) {
 	pthread_t *threads = (pthread_t*) calloc(NUMBER_OF_THREADS, sizeof(pthread_t));
 
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-	Job jobs[NUMBER_OF_THREADS] = { 0 };
+	Job jobs[NUMBER_OF_THREADS] = {};
 
-	for (int i = 0; i < LAST_THREAD_INDEX; i++) {
+	for (i32 i = 0; i < LAST_THREAD_INDEX; i++) {
 		jobs[i].colors = colors;
 		jobs[i].index = i;
 		if (pthread_create(&threads[i], &attr, task, (void *) (jobs + i))) {
@@ -282,7 +276,7 @@ void run_pthread_task(pthread_task_t *task, float* colors) {
 	task((void *) (jobs + LAST_THREAD_INDEX));
 
 	pthread_attr_destroy(&attr);
-	for (int i = 0; i < LAST_THREAD_INDEX; i++) {
+	for (i32 i = 0; i < LAST_THREAD_INDEX; i++) {
 		if (pthread_join(threads[i], NULL)) {
 			fprintf(stderr, "Failed to join a thread\n");
 		}
@@ -291,23 +285,23 @@ void run_pthread_task(pthread_task_t *task, float* colors) {
 	free(threads);
 }
 
-void write_ppm(float *colors, const char *filename) {
+void write_ppm(f32 *colors, const char *filename) {
 	FILE *file = fopen(filename, "w");
 	fprintf(file, "P6\n");
 	fprintf(file, "%i %i\n", WIDTH, HEIGHT);
 	fprintf(file, "255\n");
 
-	char *buf = (char *) calloc(SIZE*3, sizeof(char));
-	for (int i = 0; i < SIZE; i++) {
-		buf[i*3] = (unsigned char)colors[i]; // We only calculate the red channel
+	u8 *buf = (u8 *) calloc(SIZE*3, sizeof(u8));
+	for (i32 i = 0; i < SIZE; i++) {
+		buf[i*3] = (u8)colors[i]; // We only calculate the red channel
 	}
  	fwrite(buf, 1, SIZE*3, file);
 	fclose(file);
 }
 
-int main() {
-	float *colors;
-	posix_memalign((void*)&colors, VECTOR_WIDTH * sizeof(float), SIZE * sizeof(float));
+i32 main() {
+	f32 *colors;
+	posix_memalign((void*)&colors, VECTOR_WIDTH * sizeof(f32), SIZE * sizeof(f32));
 
 
 	TIME_IT(sequential_vector, sequential_vector(colors));

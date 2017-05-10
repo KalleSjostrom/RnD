@@ -6,12 +6,12 @@ typedef uint16_t GLindex;
 #define GL_INDEX GL_UNSIGNED_SHORT
 
 #include "engine/plugin.h"
-#include "utils/memory_arena.cpp"
-#include "utils/file_utils.h"
+#include "engine/utils/memory/memory_arena.cpp"
+#include "engine/utils/file_utils.h"
 #include "opengl/gl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
-#include "utils/math.h"
+#include "engine/utils/math/math.h"
 
 #include "engine/utils/audio_manager.cpp"
 #include "engine/utils/camera.cpp"

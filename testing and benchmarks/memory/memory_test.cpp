@@ -1,19 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "../../utils/common.h"
+#include "engine/utils/common.h"
 
-#define MSPACES 1
-#define ONLY_MSPACES 1
+// #define MSPACES 1
+// #define ONLY_MSPACES 1
 #define DEBUG 1
-#define HAVE_MMAP 0
-#define NO_MALLINFO 1
+// #define HAVE_MMAP 0
+// #define NO_MALLINFO 1
 
-#include "../../utils/dlmalloc.c"
-#include "../../utils/profiler.c"
+#include "engine/utils/memory/dlmalloc.c"
+#include "engine/utils/profiler.c"
 
 enum ProfilerScopes {
-	ProfilerScopes__count,
+	ProfilerScopes__count
 };
 
 int main() {
@@ -21,10 +21,6 @@ int main() {
 	memset(memory, 0, 1024*1024);
 
 	mspace myspace = create_mspace_with_base(memory, 512*1024);
-
-	unsigned test = TOP_FOOT_SIZE;
-
-	mstate ms = (mstate)myspace;
 
 	void *blocks[] = {
 		mspace_malloc(myspace, 64),
@@ -42,23 +38,23 @@ int main() {
 		mspace_malloc(myspace, 256),
 	};
 
-	intptr_t address[ARRAY_SIZE(blocks)];
-	for (int i = 0; i < ARRAY_SIZE(blocks); ++i) {
+	intptr_t address[ARRAY_COUNT(blocks)];
+	for (u32 i = 0; i < ARRAY_COUNT(blocks); ++i) {
 		address[i] = (intptr_t)blocks[i];
 	}
 
-	intptr_t offsets[ARRAY_SIZE(blocks)];
-	for (int i = 0; i < ARRAY_SIZE(blocks); ++i) {
+	intptr_t offsets[ARRAY_COUNT(blocks)];
+	for (u32 i = 0; i < ARRAY_COUNT(blocks); ++i) {
 		offsets[i] = (intptr_t)blocks[i] - (intptr_t)memory;
 	}
 
-	malloc_chunk *chunks[ARRAY_SIZE(blocks)];
-	for (int i = 0; i < ARRAY_SIZE(blocks); ++i) {
+	malloc_chunk *chunks[ARRAY_COUNT(blocks)];
+	for (u32 i = 0; i < ARRAY_COUNT(blocks); ++i) {
 		chunks[i] = mem2chunk(blocks[i]);
 	}
 
-	size_t sizes[ARRAY_SIZE(blocks)];
-	for (int i = 0; i < ARRAY_SIZE(blocks); ++i) {
+	size_t sizes[ARRAY_COUNT(blocks)];
+	for (u32 i = 0; i < ARRAY_COUNT(blocks); ++i) {
 		sizes[i] = chunksize(chunks[i]);
 	}
 
@@ -75,6 +71,4 @@ int main() {
 	mspace_free(myspace, blocks[9]);
 	mspace_free(myspace, blocks[10]);
 	mspace_free(myspace, blocks[11]);
-
-	printf("Hello\n");
 }

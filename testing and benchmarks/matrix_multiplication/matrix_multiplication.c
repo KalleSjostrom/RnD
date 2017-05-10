@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "immintrin.h"
-#include "../../utils/profiler.c"
+#include "engine/utils/common.h"
+#include "engine/utils/profiler.c"
 
 #define _mm256_set_m128(va, vb) \
 	    _mm256_insertf128_ps(_mm256_castps128_ps256(vb), va, 1)
@@ -15,7 +16,7 @@ enum ProfilerScopes {
 	ProfilerScopes__count,
 };
 
-void mm_vector_128(float *am, float *bm, float *cm) {
+void mm_vector_128(f32 *am, f32 *bm, f32 *cm) {
 	__m128 col_a0 = _mm_load_ps(&am[0]);
 	__m128 col_a1 = _mm_load_ps(&am[4]);
 	__m128 col_a2 = _mm_load_ps(&am[8]);
@@ -47,11 +48,10 @@ void mm_vector_128(float *am, float *bm, float *cm) {
 	_mm_store_ps(cm + 12, col_c3);
 }
 #if 1
-void mm_vector_256(float *am, float *bm, float *cm) {
+void mm_vector_256(f32 *am, f32 *bm, f32 *cm) {
 	__m256 col0 = _mm256_load_ps(&am[0]);
 	__m256 col1 = _mm256_load_ps(&am[8]);
 
-	float zero = 0;
 	for (int block = 0; block < 2; ++block) {
 		int bi = block * 8;
 
@@ -72,7 +72,7 @@ void mm_vector_256(float *am, float *bm, float *cm) {
 	}
 }
 #else
-void mm_vector_256(float *am, float *bm, float *cm) {
+void mm_vector_256(f32 *am, f32 *bm, f32 *cm) {
 	__m256 col[4] = {
 		_mm256_load_ps(&am[0]),
 		_mm256_load_ps(&am[4]),
@@ -80,7 +80,7 @@ void mm_vector_256(float *am, float *bm, float *cm) {
 		_mm256_insertf128_ps(_mm256_load_ps(&am[12]), _mm_load_ps(&am[0]), 1)
 	};
 
-	float zero = 0;
+	f32 zero = 0;
 	for (int block = 0; block < 2; ++block) {
 		int bi = block * 8;
 		__m256 col_result = _mm256_broadcast_ss(&zero);
@@ -93,7 +93,7 @@ void mm_vector_256(float *am, float *bm, float *cm) {
 }
 #endif
 
-void mm_scalar_unrolled(float *am, float *bm, float *cm) {
+void mm_scalar_unrolled(f32 *am, f32 *bm, f32 *cm) {
 	cm[0] = am[0]*bm[0] + am[4]*bm[1] + am[8]*bm[2] + am[12]*bm[3];
 	cm[1] = am[1]*bm[0] + am[5]*bm[1] + am[9]*bm[2] + am[13]*bm[3];
 	cm[2] = am[2]*bm[0] + am[6]*bm[1] + am[10]*bm[2] + am[14]*bm[3];
@@ -115,13 +115,12 @@ void mm_scalar_unrolled(float *am, float *bm, float *cm) {
 	cm[15] = am[3]*bm[12] + am[7]*bm[13] + am[11]*bm[14] + am[15]*bm[15];
 }
 #define INDEX(row, col) col*4+row
-void mm_scalar_loop(float *am, float *bm, float *cm) {
+void mm_scalar_loop(f32 *am, f32 *bm, f32 *cm) {
 	int index = 0;
 	for (int col = 0; col < 4; ++col) {
-		int col_index = col * 4;
 		for (int row = 0; row < 4; ++row) {
 			// This is the dot product of a row of 'a' and a col of 'b'.
-			float row_col_dot =
+			f32 row_col_dot =
 				am[INDEX(row, 0)] * bm[INDEX(0, col)] +
 				am[INDEX(row, 1)] * bm[INDEX(1, col)] +
 				am[INDEX(row, 2)] * bm[INDEX(2, col)] +
@@ -135,47 +134,47 @@ void mm_scalar_loop(float *am, float *bm, float *cm) {
 #define NR_MATRICES 100000000
 #define SIZE (NR_MATRICES*16)
 
-void test_mm_vector_256(float *memory) {
+void test_mm_vector_256(f32 *memory) {
 	for (int i = 0; i < SIZE-2*16; i+=16) {
 		mm_vector_256(memory + i, memory + i+16, memory + i+32);
 	}
 }
-void test_mm_vector_128(float *memory) {
+void test_mm_vector_128(f32 *memory) {
 	for (int i = 0; i < SIZE-2*16; i+=16) {
 		mm_vector_128(memory + i, memory + i+16, memory + i+32);
 	}
 }
-void test_mm_scalar_unrolled(float *memory) {
+void test_mm_scalar_unrolled(f32 *memory) {
 	for (int i = 0; i < SIZE-2*16; i+=16) {
 		mm_scalar_unrolled(memory + i, memory + i+16, memory + i+32);
 	}
 }
-void test_mm_scalar_loop(float *memory) {
+void test_mm_scalar_loop(f32 *memory) {
 	for (int i = 0; i < SIZE-2*16; i+=16) {
 		mm_scalar_loop(memory + i, memory + i+16, memory + i+32);
 	}
 }
 
 void unit_test() {
-	float a[16] __attribute__((aligned(16))) = {
+	f32 a[16] __attribute__((aligned(16))) = {
 		0.0f, 1.0f, 2.0f, 3.0f,
 		4.0f, 5.0f, 6.0f, 7.0f,
 		9.0f, 10.0f, 11.0f, 12.0f,
 		13.0f, 14.0f, 15.0f, 16.0f,
 	};
-	float b[16] __attribute__((aligned(16))) = {
+	f32 b[16] __attribute__((aligned(16))) = {
 		0.0f, 1.0f, 2.0f, 3.0f,
 		4.0f, 5.0f, 6.0f, 7.0f,
 		9.0f, 10.0f, 11.0f, 12.0f,
 		13.0f, 14.0f, 15.0f, 16.0f,
 	};
-	float c[16] = { 0 };
+	f32 c[16] = { 0 };
 
 
 	mm_vector_256(a, b, c);
 	for (int row = 0; row < 4; ++row) {
 		for (int col = 0; col < 4; ++col) {
-			printf("%.1f ", c[row * 4 + col]);
+			printf("%.1f ", (f64)c[row * 4 + col]);
 		}
 		printf("\n");
 	}
@@ -185,7 +184,7 @@ void unit_test() {
 	mm_vector_128(a, b, c);
 	for (int row = 0; row < 4; ++row) {
 		for (int col = 0; col < 4; ++col) {
-			printf("%.1f ", c[row * 4 + col]);
+			printf("%.1f ", (f64)c[row * 4 + col]);
 		}
 		printf("\n");
 	}
@@ -195,7 +194,7 @@ void unit_test() {
 	mm_scalar_unrolled(a, b, c);
 	for (int row = 0; row < 4; ++row) {
 		for (int col = 0; col < 4; ++col) {
-			printf("%.1f ", c[row * 4 + col]);
+			printf("%.1f ", (f64)c[row * 4 + col]);
 		}
 		printf("\n");
 	}
@@ -205,7 +204,7 @@ void unit_test() {
 	mm_scalar_loop(a, b, c);
 	for (int row = 0; row < 4; ++row) {
 		for (int col = 0; col < 4; ++col) {
-			printf("%.1f ", c[row * 4 + col]);
+			printf("%.1f ", (f64)c[row * 4 + col]);
 		}
 		printf("\n");
 	}
@@ -215,8 +214,8 @@ int main() {
 #if 0
 	unit_test();
 #else
-	float *memory;
-	posix_memalign((void*)&memory, 8 * sizeof(float), SIZE * sizeof(float));
+	f32 *memory;
+	posix_memalign((void*)&memory, 8 * sizeof(f32), SIZE * sizeof(f32));
 
 	PROFILER_START(random_generation);
 	for (int i = 0; i < SIZE; ++i) {

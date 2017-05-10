@@ -1,5 +1,5 @@
 #include "engine/utils/platform.h"
-#include "engine/utils/threading.cpp"
+#include "engine/utils/threading/threading.cpp"
 
 /// Includes for running with guard pages
 #if defined(FIBER_STACK_GUARD_PAGES)

@@ -1,6 +1,7 @@
 #include <stdio.h>
+#include "engine/utils/common.h"
 #include "immintrin.h"
-#include "../../utils/profiler.c"
+#include "engine/utils/profiler.c"
 
 enum ProfilerScopes {
 	ProfilerScopes__random_generation,
@@ -14,8 +15,10 @@ enum ProfilerScopes {
 	ProfilerScopes__count,
 };
 
+#define USE_LOOKUP 0
+
 #if USE_LOOKUP
-static int random_lookup[] =
+static i32 random_lookup[] =
 {
 	151,160,137,91,90,15,
 	131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
@@ -47,7 +50,7 @@ static int random_lookup[] =
 };
 #endif
 
-static float basis[12][3] = {
+static f32 basis[12][3] = {
 	{  1, 1, 0 },
 	{ -1, 1, 0 },
 	{  1,-1, 0 },
@@ -65,97 +68,96 @@ static unsigned char indices[16] = {
 	0,1,2,3,4,5,6,7,8,9,10,11,
 	0,9,1,11,
 };
-static float gradient_dot(int hash, float x, float y, float z) {
-	float *grad = basis[indices[hash & 15]];
+static f32 gradient_dot(i32 hash, f32 x, f32 y, f32 z) {
+	f32 *grad = basis[indices[hash & 15]];
 	return grad[0]*x + grad[1]*y + grad[2]*z;
 }
 
 #define lerp(a, b, t) (a + (b-a) * t)
 #define smooth(a) (((a*6-15)*a + 10) * a * a * a)
 
-float perlin(float x, float y, float z)
+f32 perlin(f32 x, f32 y, f32 z)
 {
-	int x0 = (int)x;
-	int y0 = (int)y;
-	int z0 = (int)z;
+	i32 x0 = (i32)x;
+	i32 y0 = (i32)y;
+	i32 z0 = (i32)z;
 
-	int x1 = (x0+1);
-	int y1 = (y0+1);
-	int z1 = (z0+1);
+	i32 x1 = (x0+1);
+	i32 y1 = (y0+1);
+	i32 z1 = (z0+1);
 
-	float xf = x - x0;
-	float yf = y - y0;
-	float zf = z - z0;
+	f32 xf = x - x0;
+	f32 yf = y - y0;
+	f32 zf = z - z0;
 
-	float u = smooth(xf);
-	float v = smooth(yf);
-	float w = smooth(zf);
+	f32 u = smooth(xf);
+	f32 v = smooth(yf);
+	f32 w = smooth(zf);
 
 #if USE_LOOKUP
-	int r0 = random_lookup[x0];
-	int r1 = random_lookup[x1];
+	i32 r0 = random_lookup[x0];
+	i32 r1 = random_lookup[x1];
 
-	int r00 = random_lookup[r0+y0];
-	int r01 = random_lookup[r0+y1];
-	int r10 = random_lookup[r1+y0];
-	int r11 = random_lookup[r1+y1];
+	i32 r00 = random_lookup[r0+y0];
+	i32 r01 = random_lookup[r0+y1];
+	i32 r10 = random_lookup[r1+y0];
+	i32 r11 = random_lookup[r1+y1];
 
-	float n000 = gradient_dot(random_lookup[r00+z0], xf  , yf  , zf	);
-	float n001 = gradient_dot(random_lookup[r00+z1], xf  , yf  , zf-1 );
-	float n010 = gradient_dot(random_lookup[r01+z0], xf  , yf-1, zf	);
-	float n011 = gradient_dot(random_lookup[r01+z1], xf  , yf-1, zf-1 );
-	float n100 = gradient_dot(random_lookup[r10+z0], xf-1, yf  , zf	);
-	float n101 = gradient_dot(random_lookup[r10+z1], xf-1, yf  , zf-1 );
-	float n110 = gradient_dot(random_lookup[r11+z0], xf-1, yf-1, zf	);
-	float n111 = gradient_dot(random_lookup[r11+z1], xf-1, yf-1, zf-1 );
+	f32 n000 = gradient_dot(random_lookup[r00+z0], xf  , yf  , zf	);
+	f32 n001 = gradient_dot(random_lookup[r00+z1], xf  , yf  , zf-1 );
+	f32 n010 = gradient_dot(random_lookup[r01+z0], xf  , yf-1, zf	);
+	f32 n011 = gradient_dot(random_lookup[r01+z1], xf  , yf-1, zf-1 );
+	f32 n100 = gradient_dot(random_lookup[r10+z0], xf-1, yf  , zf	);
+	f32 n101 = gradient_dot(random_lookup[r10+z1], xf-1, yf  , zf-1 );
+	f32 n110 = gradient_dot(random_lookup[r11+z0], xf-1, yf-1, zf	);
+	f32 n111 = gradient_dot(random_lookup[r11+z1], xf-1, yf-1, zf-1 );
 #else
 	// hash = (P1 ∗ cell.x xor P2 ∗ cell.y xor P3 ∗ cell.z) mod N
 	#define P1 73856093
 	#define P2 19349663
 	#define P3 83492791
 
-	float n000 = gradient_dot((P1*x0 ^ P2*y0 ^ P3*z0) % 255, xf  , yf  , zf	  );
-	float n001 = gradient_dot((P1*x0 ^ P2*y0 ^ P3*z1) % 255, xf  , yf  , zf-1 );
-	float n010 = gradient_dot((P1*x0 ^ P2*y1 ^ P3*z0) % 255, xf  , yf-1, zf	  );
-	float n011 = gradient_dot((P1*x0 ^ P2*y1 ^ P3*z1) % 255, xf  , yf-1, zf-1 );
-	float n100 = gradient_dot((P1*x1 ^ P2*y0 ^ P3*z0) % 255, xf-1, yf  , zf	  );
-	float n101 = gradient_dot((P1*x1 ^ P2*y0 ^ P3*z1) % 255, xf-1, yf  , zf-1 );
-	float n110 = gradient_dot((P1*x1 ^ P2*y1 ^ P3*z0) % 255, xf-1, yf-1, zf	  );
-	float n111 = gradient_dot((P1*x1 ^ P2*y1 ^ P3*z1) % 255, xf-1, yf-1, zf-1 );
+	f32 n000 = gradient_dot((P1*x0 ^ P2*y0 ^ P3*z0) & 0xFF, xf  , yf  , zf	  );
+	f32 n001 = gradient_dot((P1*x0 ^ P2*y0 ^ P3*z1) & 0xFF, xf  , yf  , zf-1 );
+	f32 n010 = gradient_dot((P1*x0 ^ P2*y1 ^ P3*z0) & 0xFF, xf  , yf-1, zf	  );
+	f32 n011 = gradient_dot((P1*x0 ^ P2*y1 ^ P3*z1) & 0xFF, xf  , yf-1, zf-1 );
+	f32 n100 = gradient_dot((P1*x1 ^ P2*y0 ^ P3*z0) & 0xFF, xf-1, yf  , zf	  );
+	f32 n101 = gradient_dot((P1*x1 ^ P2*y0 ^ P3*z1) & 0xFF, xf-1, yf  , zf-1 );
+	f32 n110 = gradient_dot((P1*x1 ^ P2*y1 ^ P3*z0) & 0xFF, xf-1, yf-1, zf	  );
+	f32 n111 = gradient_dot((P1*x1 ^ P2*y1 ^ P3*z1) & 0xFF, xf-1, yf-1, zf-1 );
 #endif
 
-	float n00 = lerp(n000, n001, w);
-	float n01 = lerp(n010, n011, w);
-	float n10 = lerp(n100, n101, w);
-	float n11 = lerp(n110, n111, w);
+	f32 n00 = lerp(n000, n001, w);
+	f32 n01 = lerp(n010, n011, w);
+	f32 n10 = lerp(n100, n101, w);
+	f32 n11 = lerp(n110, n111, w);
 
-	float n0 = lerp(n00, n01, v);
-	float n1 = lerp(n10, n11, v);
+	f32 n0 = lerp(n00, n01, v);
+	f32 n1 = lerp(n10, n11, v);
 
 	return lerp(n0, n1, u);
 }
-
 
 
 #define WIDTH 256
 #define HEIGHT 256
 #define SIZE (WIDTH * HEIGHT)
 
-int main() {
+i32 main() {
 	FILE *file = fopen("perlin.ppm", "w");
 	fprintf(file, "P6\n");
 	fprintf(file, "%i %i\n", WIDTH, HEIGHT);
 	fprintf(file, "255\n");
-	char *buf = (char *) calloc(SIZE*3, sizeof(char));
+	u8 *buf = (u8 *) calloc(SIZE*3, sizeof(u8));
 
-	int index = 0;
-	for (int x = 0; x < WIDTH; x++) {
-		for (int y = 0; y < HEIGHT; y++) {
-			float p = perlin(x/20.0f, y/20.0f, 1.1f);
-			float c = ((p+1)/2) * 255.0f;
-			buf[index++] = c;
-			buf[index++] = c;
-			buf[index++] = c;
+	i32 index = 0;
+	for (i32 x = 0; x < WIDTH; x++) {
+		for (i32 y = 0; y < HEIGHT; y++) {
+			f32 p = perlin(x/20.0f, y/20.0f, 1.1f);
+			f32 c = ((p+1.0f)/2.0f) * 255.0f;
+			buf[index++] = (u8)c;
+			buf[index++] = (u8)c;
+			buf[index++] = (u8)c;
 		}
 	}
 
@@ -163,7 +165,7 @@ int main() {
 	fclose(file);
 	free(buf);
 
-	/*for (int i = 0; i < 256; ++i)
+	/*for (i32 i = 0; i < 256; ++i)
 	{
 		printf("%d, ", i);
 	}*/

@@ -1,12 +1,12 @@
 #include <time.h>
 #include <mach/mach_time.h>
 #include "../sci.h"
-#include "utils/common.h"
+#include "engine/utils/common.h"
 
 #include "../tcp_socket.cpp"
 
 #include "engine/utils/platform.h"
-#include "engine/utils/threading.cpp"
+#include "engine/utils/threading/threading.cpp"
 
 // #define DEFAULT_IP   "10.0.0.1"
 

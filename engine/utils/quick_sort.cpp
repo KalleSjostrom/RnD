@@ -16,8 +16,8 @@ void quick_sort(SortElement *list, u32 size) {
 
 	u32 pivot = calculate_pivot(list, size);
 
-	int right = size;
-	int left = -1;
+	i32 right = (i32)size;
+	i32 left = -1;
 
 	while (1) {
 		do {
@@ -35,6 +35,6 @@ void quick_sort(SortElement *list, u32 size) {
 			break;
 		}
 	}
-	quick_sort(list, left);
-	quick_sort(list+right+1, size-(right+1));
+	quick_sort(list, (u32)left);
+	quick_sort(list+right+1, (size-((u32)right+1)));
 }

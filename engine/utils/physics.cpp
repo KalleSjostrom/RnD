@@ -191,7 +191,7 @@ struct Ray {
 	v3 delta;
 	v2 inv_delta;
 };
-#include "intersection.cpp"
+#include "math/intersection.cpp"
 
 FORCE_INLINE Ray make_ray(v3 &from, v3 &to) {
 	Ray r;
