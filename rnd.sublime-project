@@ -31,12 +31,12 @@
 					"working_dir": "${project_path}/Game/",
 				},
 				{
-					"name": "Roomba Collector",
-					"working_dir": "${project_path}/roomba/collector/",
+					"name": "Roomba Mock Server",
+					"working_dir": "${project_path}/roomba/server/",
 				},
 				{
-					"name": "Roomba Visualizer",
-					"working_dir": "${project_path}/roomba/visualizer/",
+					"name": "Roomba Client",
+					"working_dir": "${project_path}/roomba/client/",
 				},
 				{
 					"name": "Fluid",

@@ -3,14 +3,14 @@ struct Buffer {
 	cl_mem mem;
 };
 inline v2 zero(int i) {
-	return V2(0.0f, 0.0f);
+	return V2_f32(0.0f, 0.0f);
 }
 inline v2 gen_random_pos(int i) {
 	float x = (float)random()/RAND_MAX;
 	x *= 9;
 	float y = (float)random()/RAND_MAX;
 	y *= 9;
-	return V2(x, y);
+	return V2_f32(x, y);
 }
 
 inline v2 gen_pos(int i) {
@@ -19,7 +19,7 @@ inline v2 gen_pos(int i) {
 
 	ASSERT(y <= 20, "Position out of bounds");
 	ASSERT(x <= 20, "Position out of bounds");
-	return V2(x, y);
+	return V2_f32(x, y);
 }
 Buffer gen_buffer(cl_context context, v2 (*f)(int i)) {
 	Buffer buffer = {};

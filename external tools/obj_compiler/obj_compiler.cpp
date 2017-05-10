@@ -72,7 +72,7 @@ VertexData read_pot()
 				// vt - texture coordinates
 				else if (parser::is_equal(token, TOKENIZE("vt"))) {
 					ASSERT(tex_coord_count < 1024, "tex_coord_count out of bounds");
-					tex_coords[tex_coord_count++] = V2(
+					tex_coords[tex_coord_count++] = V2_f32(
 						next_number(&tok),
 						next_number(&tok));
 				}

@@ -1,3 +1,4 @@
+#pragma once
 
 struct String {
 	char *text;
@@ -27,7 +28,7 @@ inline String make_string(char *string) {
 
 inline void null_terminate(String s) { s.text[s.length] = '\0'; }
 
-inline bool string_is_equal(String a, String b) {
+inline bool is_equal(String a, String b) {
 	if (a.length != b.length)
 		return false;
 

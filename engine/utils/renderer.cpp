@@ -46,6 +46,8 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 
 				Renderable &re = *p.renderables[j];
 
+				// set_translation(re.pose, V3(0.2f, 0, 0));
+
 				glUniformMatrix4fv(p.model_location, 1, GL_FALSE, (GLfloat*)(re.pose.m));
 
 				glBindVertexArray(re.vertex_array_object);

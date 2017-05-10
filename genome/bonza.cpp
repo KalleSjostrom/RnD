@@ -1,7 +1,7 @@
 #include <immintrin.h>
 #include "../utils/common.h"
 #include "../utils/profiler.c"
-#include "../utils/string_utils.h"
+#include "engine/utils/string.h"
 
 #include "strings.cpp"
 

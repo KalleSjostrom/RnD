@@ -156,14 +156,14 @@ void setup(RenderPipe &r, int screen_width, int screen_height) {
 	r.light_colors[0] = V3(0.55f, 0.4f, 0.4f); r.light_colors[1] = V3(0.4f, 0.4f, 0.55f);
 	r.light_colors[2] = V3(0.4f, 0.55f, 0.4f); r.light_colors[3] = V3(0.55f, 0.55f, 0.4f);
 
-	r.light_positions[0] = V2(0, -0.8f); r.light_positions[1] = V2(0.8f, 0);
-	r.light_positions[2] = V2(0, 0.8f); r.light_positions[3] = V2(-0.8f, 0);
+	r.light_positions[0] = V2_f32(0, -0.8f); r.light_positions[1] = V2_f32(0.8f, 0);
+	r.light_positions[2] = V2_f32(0, 0.8f); r.light_positions[3] = V2_f32(-0.8f, 0);
 }
 
 void set_light_position(RenderPipe &r, Camera &camera, v3 light_position) {
 	camera.view_projection = camera.projection * camera.view;
 	v3 lp = multiply_perspective(camera.view_projection, light_position);
-	r.light_positions[0] = V2(lp.x, lp.y);
+	r.light_positions[0] = V2_f32(lp.x, lp.y);
 }
 
 void render_bloom(RenderPipe &r) {

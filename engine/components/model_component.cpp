@@ -61,6 +61,11 @@ namespace model_component {
 			set_translation(instance.renderable.pose, position);
 		}
 
+		inline v3 get_position(i32 id) {
+			Instance &instance = instances[id];
+			return translation(instance.renderable.pose);
+		}
+
 		inline void rotate_around(i32 id, float angle, float x, float y) {
 			Instance &instance = instances[id];
 
@@ -99,6 +104,22 @@ namespace model_component {
 			instance.renderable.pose *= rotation;
 		}
 
+		inline void set_rotatation(i32 id, float angle) {
+			Instance &instance = instances[id];
+
+			float ca = cosf(angle);
+			float sa = sinf(angle);
+
+			m4 &rotation = instance.renderable.pose;
+
+			rotation.m[INDEX(0, 0)] = ca;
+			rotation.m[INDEX(0, 1)] = -sa;
+			rotation.m[INDEX(1, 0)] = sa;
+			rotation.m[INDEX(1, 1)] = ca;
+
+			// instance.renderable.pose = rotation;
+		}
+
 		void update_vertices(i32 id, v3 *vertices) {
 			Instance &instance = instances[id];
 
@@ -128,15 +149,13 @@ namespace model_component {
 		}
 
 		void render(i32 id, GLint model_location) {
-			Renderable &renderable = instances[id].renderable;
+			Renderable &re = instances[id].renderable;
 
-			glUniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)(renderable.pose.m));
+			glUniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)(re.pose.m));
 
-			glBindVertexArray(renderable.vertex_array_object);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderable.element_array_buffer);
-			glDrawElements(renderable.draw_mode, renderable.index_count, GL_INDEX, (void*)0);
-
-			// renderer.push_renderable(instance.renderable);
+			glBindVertexArray(re.vertex_array_object);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, re.element_array_buffer);
+			glDrawElements(re.draw_mode, re.index_count, GL_INDEX, (void*)0);
 		}
 	};
 }

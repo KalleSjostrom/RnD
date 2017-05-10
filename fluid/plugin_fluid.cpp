@@ -30,7 +30,7 @@
 #include "opengl/gl_manager.cpp"
 
 #include "utils/profiler.c"
-#include "utils/font_loader.cpp"
+#include "engine/utils/font_loader.cpp"
 
 #include "../external tools/obj_compiler/obj_compiler.cpp"
 
@@ -48,7 +48,7 @@ enum ProfilerScopes {
 	ProfilerScopes__count,
 };
 
-#include "utils/gui.cpp"
+#include "engine/utils/gui.cpp"
 
 //@ reloadable_struct
 struct AppMemory {
@@ -65,7 +65,7 @@ struct AppMemory {
 	MemoryArena persistent_arena;
 	MemoryArena transient_arena;
 
-	gui::GUI *gui;
+	gui::GUI gui;
 
 	char *fps_string;
 	u16 fps_job_handle;
@@ -190,7 +190,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		settings.text_vertex_shader = "../shaders/text.vert";
 		settings.text_fragment_shader = "../shaders/text.frag";
 
-		am->gui = gui::init(am->persistent_arena, am->transient_arena, settings);
+		gui::init(am->gui, am->persistent_arena, am->transient_arena, settings);
 
 		am->fps_string = allocate_memory(am->persistent_arena, 32);
 		sprintf(am->fps_string, "Framerate: N/A");

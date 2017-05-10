@@ -105,7 +105,6 @@ EXPORT PLUGIN_UPDATE(update) {
 	Game &game = *(Game*) memory;
 	if (!game.initialized) {
 		game.initialized = true;
-		// TEST(sizeof(i32) == 4);
 
 		game.persistent_arena = init_from_existing((char*)memory + sizeof(Game), PERSISTENT_ARENA_SIZE);
 		globals::transient_arena = init_memory(TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
@@ -140,7 +139,8 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		// CALL(game.entities[game.entity_count-1], model, set_rotation_around, 1, 50, 50);
 
-		setup_camera(game.camera, ASPECT_RATIO, V3(0, 0, 500));
+		#define ASPECT_RATIO ((float)RES_WIDTH/(float)RES_HEIGHT)
+		setup_camera(game.camera, V3(0, 0, 500), ASPECT_RATIO);
 
 		if (!gl_program_builder::validate_program(default_program))
 			return -1;
@@ -150,7 +150,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 	{ // Update the game
 		// Input handling
-		if (IS_HELD(input, InputKey_Jump)) {
+		if (IS_HELD(input, InputKey_Space)) {
 			time += dt;
 		}
 
@@ -194,19 +194,18 @@ EXPORT PLUGIN_UPDATE(update) {
 		CALL(game.entities[game.entity_count-2], model, rotate, 0.01f);
 		CALL(game.entities[game.entity_count-1], model, rotate, 0.02f);
 
-
 		Entity &avatar = game.entities[0];
-		v2 direction = V2(0, 0);
-		if (IS_HELD(input, InputKey_Right)) {
+		v2 direction = V2_f32(0, 0);
+		if (IS_HELD(input, InputKey_D)) {
 			direction.x = 1;
 		}
-		if (IS_HELD(input, InputKey_Left)) {
+		if (IS_HELD(input, InputKey_A)) {
 			direction.x = -1;
 		}
-		if (IS_HELD(input, InputKey_Up)) {
+		if (IS_HELD(input, InputKey_W)) {
 			direction.y = 1;
 		}
-		if (IS_HELD(input, InputKey_Down)) {
+		if (IS_HELD(input, InputKey_S)) {
 			direction.y = -1;
 		}
 		direction = normalize_or_zero(direction);

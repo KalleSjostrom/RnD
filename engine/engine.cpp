@@ -32,6 +32,10 @@ struct Plugin {
 };
 static bool running = false;
 
+static void quit() {
+	running = false;
+}
+
 static time_t get_timestamp(const char *path) {
 	struct stat statbuf;
 	if (stat(path, &statbuf) != -1) {
@@ -119,7 +123,7 @@ static void run(const char *plugin_path) {
 	mygl_get_framebuffer_size(window, &width, &height);
 	printf("%d, %d\n", width, height);
 
-	char const *lockfile_path = "./out/__lockfile";
+	char const *lockfile_path = "./__lockfile";
 
 	Plugin plugin = load_plugin_code(plugin_path, get_timestamp(lockfile_path));
 
@@ -143,6 +147,8 @@ static void run(const char *plugin_path) {
 	engine.audio_queued_size = audio::queued_size;
 	engine.audio_free = audio::free;
 	engine.audio_set_playing = audio::set_playing;
+
+	engine.quit = quit;
 
 	engine.audio_set_playing(true);
 

@@ -576,6 +576,11 @@ void mygl_swap_buffers(GLWindowHandle* handle) {
 	[window->context flushBuffer];
 }
 
+void mygl_set_swap_interval(GLWindowHandle* handle, int interval) {
+	MYGLWindow *window = (MYGLWindow *)handle;
+	[window->context setValues:&interval forParameter:NSOpenGLCPSwapInterval];
+}
+
 void mygl_poll_events(void)
 {
 	for (;;) {

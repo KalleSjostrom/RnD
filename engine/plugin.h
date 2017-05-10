@@ -3,8 +3,6 @@
 #define RES_WIDTH 1024
 #define RES_HEIGHT 768
 
-#define ASPECT_RATIO ((float)RES_WIDTH/(float)RES_HEIGHT)
-
 #define EXPORT extern "C" __attribute__((visibility("default")))
 
 struct EngineApi {
@@ -13,16 +11,50 @@ struct EngineApi {
 	uint32_t (*audio_queued_size)();
 	void (*audio_free)(int16_t *buffer);
 	void (*audio_set_playing)(bool playing);
+
+	void (*quit)();
 };
 
 enum InputKey {
-	InputKey_Left = 0,
-	InputKey_Right,
-	InputKey_Up,
-	InputKey_Down,
+	InputKey_A = 0,
+	InputKey_B,
+	InputKey_C,
+	InputKey_D,
+	InputKey_E,
+	InputKey_F,
+	InputKey_G,
+	InputKey_H,
+	InputKey_I,
+	InputKey_J,
+	InputKey_K,
+	InputKey_L,
+	InputKey_M,
+	InputKey_N,
+	InputKey_O,
+	InputKey_P,
+	InputKey_Q,
+	InputKey_R,
+	InputKey_S,
+	InputKey_T,
+	InputKey_U,
+	InputKey_V,
+	InputKey_W,
+	InputKey_X,
+	InputKey_Y,
+	InputKey_Z,
 
-	InputKey_Action,
-	InputKey_Jump,
+	InputKey_Space,
+	InputKey_Enter,
+	InputKey_Escape,
+	InputKey_Tab,
+	InputKey_Command,
+	InputKey_Shift,
+	InputKey_Option,
+	InputKey_Control,
+	InputKey_RightShift,
+	InputKey_RightOption,
+	InputKey_RightControl,
+	InputKey_Function,
 
 	InputKey_Count
 };

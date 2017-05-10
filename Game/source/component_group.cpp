@@ -32,8 +32,6 @@ struct Entity {
 	i32 actor_id;
 };
 
-
-
 enum EntityType : u32 {
 	EntityType_Avatar = 0,
 	EntityType_BlockAvatar,

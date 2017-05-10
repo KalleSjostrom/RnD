@@ -27,7 +27,9 @@ struct Entity {
 };
 
 enum EntityType : u32 {
-	EntityType_Block = 0,
+	EntityType_Roomba = 0,
+	EntityType_Block,
+	EntityType_Ruler,
 
 	EntityType_Count,
 };
@@ -38,12 +40,35 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, i
 	entity.type = type;
 
 	switch (type) {
+		case EntityType_Roomba: {
+			static v3 vertex_buffer_data[] = {
+				{ 0.0f, 0.0f, 0.0f },
+			};
+
+			// Model
+			entity.model_id = components.model.add(position, (GLindex*)quad_vertex_indices, ARRAY_COUNT(quad_vertex_indices), vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data), GL_STATIC_DRAW, GL_POINTS);
+			add_to_program(components.renderer, program_id, &components.model.instances[entity.model_id].renderable);
+		} break;
+
+		case EntityType_Ruler: {
+			static v3 vertex_buffer_data[] = {
+				{ 0.0f, 0.0f, 0.0f },
+				{ 0.0f, 2.0f, 0.0f },
+			};
+
+			short vertex_indices[] = { 0, 1 };
+
+			// Model
+			entity.model_id = components.model.add(position, (GLindex*)vertex_indices, ARRAY_COUNT(vertex_indices), vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data), GL_DYNAMIC_DRAW, GL_LINE_STRIP);
+			add_to_program(components.renderer, program_id, &components.model.instances[entity.model_id].renderable);
+		} break;
+
 		case EntityType_Block: {
 			static v3 vertex_buffer_data[] = {
-				{   0.0f,   0.0f, 0.0f },
-				{ 100.0f,   0.0f, 0.0f },
-				{   0.0f, 100.0f, 0.0f },
-				{ 100.0f, 100.0f, 0.0f },
+				{ 0.0f, 0.0f, 0.0f },
+				{ 1.0f, 0.0f, 0.0f },
+				{ 0.0f, 1.0f, 0.0f },
+				{ 1.0f, 1.0f, 0.0f },
 			};
 
 			// Model

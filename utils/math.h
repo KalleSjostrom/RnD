@@ -23,87 +23,12 @@ FORCE_INLINE f32 clamp(f32 value, f32 low, f32 high) {
 	return value;
 }
 
-struct v2 {
-	f32 x, y;
-};
+#define ELEMENT_TYPE f32
+#include "math_v2.h"
+typedef v2_f32 v2;
 
-FORCE_INLINE v2 V2(f32 x, f32 y) {
-	v2 result = {x, y};
-	return result;
-}
-FORCE_INLINE v2 random_v2() {
-	f32 x = (f32)random()/RAND_MAX;
-	x = x*2.0f - 1.0f;
-	f32 y = (f32)random()/RAND_MAX;
-	y = y*2.0f - 1.0f;
-	return V2(x, y);
-}
-
-FORCE_INLINE v2 operator*(f32 a, v2 b) {
-	return V2(a * b.x, a * b.y);
-}
-FORCE_INLINE v2 operator*(v2 a, f32 b) {
-	return b * a;
-}
-FORCE_INLINE v2 & operator*=(v2 &a, f32 b) {
-	a = a * b;
-	return a;
-}
-
-FORCE_INLINE v2 operator/(v2 a, f32 b) {
-	return V2(a.x/b, a.y/b);
-}
-FORCE_INLINE v2 & operator/=(v2 &a, f32 b) {
-	a = a/b;
-	return a;
-}
-
-FORCE_INLINE v2 operator+(v2 a, v2 b) {
-	return V2(a.x + b.x, a.y + b.y);
-}
-FORCE_INLINE v2 & operator+=(v2 &a, v2 b) {
-	a = a + b;
-	return a;
-}
-
-FORCE_INLINE v2 operator-(v2 a) {
-	return V2(-a.x, -a.y);
-}
-FORCE_INLINE v2 operator-(v2 a, v2 b) {
-	return V2(a.x - b.x, a.y - b.y);
-}
-FORCE_INLINE v2 & operator-=(v2 &a, v2 b) {
-	a = a - b;
-	return a;
-}
-
-FORCE_INLINE v2 hadamard(v2 a, v2 b) {
-	return V2(a.x * b.x, a.y * b.y);
-}
-FORCE_INLINE f32 dot(v2 a, v2 b) {
-	return a.x * b.x + a.y * b.y;
-}
-FORCE_INLINE f32 length_squared(v2 a) {
-	return dot(a, a);
-}
-FORCE_INLINE f32 length(v2 a) {
-	return sqrtf(length_squared(a));
-}
-FORCE_INLINE v2 normalize(v2 a) {
-	f32 l = length(a);
-	return (1.0f/l) * a;
-}
-FORCE_INLINE v2 normalize_or_zero(v2 a) {
-	f32 l = length(a);
-	return l > 0 ? (1.0f/l) * a : V2(0,0);
-}
-FORCE_INLINE f32 cross(v2 a, v2 b) {
-	return (a.x*b.y) - (a.y*b.x);
-}
-FORCE_INLINE v2 cross(v2 a) {
-	return V2(-a.y, a.x);
-}
-
+#define ELEMENT_TYPE f64
+#include "math_v2.h"
 
 struct v3 {
 	f32 x, y, z;
@@ -168,6 +93,10 @@ FORCE_INLINE f32 length(v3 a) {
 FORCE_INLINE v3 normalize(v3 a) {
 	f32 l = length(a);
 	return (1.0f/l) * a;
+}
+FORCE_INLINE v3 normalize_or_zero(v3 a) {
+	f32 l = length(a);
+	return l > 0 ? (1.0f/l) * a : V3(0, 0, 0);
 }
 FORCE_INLINE v3 cross(v3 a, v3 b) {
 	f32 x = a.y*b.z - a.z*b.y;

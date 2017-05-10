@@ -1,11 +1,11 @@
 struct Link {
-	u16 next;
-	u16 prev;
+	i16 next;
+	i16 prev;
 };
 
 struct ListHeader {
 	i16 first_active;
-	u16 first_free;
+	i16 first_free;
 };
 
 inline void remove_from_list(Link *list, i16 id) {
@@ -28,12 +28,12 @@ inline void insert_in_list(Link *list, i16 at, i16 id) {
 	left.next = id;
 }
 
-inline void initiate_list(Link *list, int max, ListHeader &header) {
+inline void initiate_list(Link *list, i16 max, ListHeader &header) {
 	header.first_active = -1;
 	header.first_free = 0;
 	list[0].prev = max-1;
 	list[0].next = 1;
-	for (int i = 1; i < max-1; i++) {
+	for (i16 i = 1; i < max-1; i++) {
 		Link &link = list[i];
 		link.prev = i-1;
 		link.next = i+1;
@@ -43,7 +43,7 @@ inline void initiate_list(Link *list, int max, ListHeader &header) {
 }
 
 inline void activate_first_free(Link *list, ListHeader &header) {
-	u16 handle = header.first_free;
+	i16 handle = header.first_free;
 	Link &link = list[handle];
 	header.first_free = link.next;
 
@@ -60,7 +60,7 @@ inline void activate_first_free(Link *list, ListHeader &header) {
 	header.first_active = handle;
 }
 
-inline void free_active(Link *list, u16 active_id, ListHeader &header) {
+inline void free_active(Link *list, i16 active_id, ListHeader &header) {
 	Link &link = list[active_id];
 	header.first_active = link.prev == active_id ? -1 : link.prev;
 	remove_from_list(list, active_id);

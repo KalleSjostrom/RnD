@@ -1,7 +1,7 @@
 #include "common.h"
 #include "file_utils.h"
 #include "memory_arena.cpp"
-#include "string_utils.h"
+#include "engine/utils/string.h"
 
 #define TokenType_Unknown 1
 #define TokenType_String 2
@@ -48,7 +48,7 @@ namespace parser {
 	};
 
 	inline bool is_equal(Token a, Token b) {
-		return string_is_equal(a.string, b.string);
+		return is_equal(a.string, b.string);
 	}
 
 	inline Tokenizer make_tokenizer(char *at, size_t debug_size) {

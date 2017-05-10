@@ -24,6 +24,7 @@ void mygl_get_framebuffer_size(GLWindowHandle *handle, int* width, int* height);
 void mygl_set_window_title(GLWindowHandle *handle, const char *title);
 
 void mygl_swap_buffers(GLWindowHandle* handle);
+void mygl_set_swap_interval(GLWindowHandle* handle, int interval);
 void mygl_poll_events(void);
 
 void mygl_enter_fullscreen_mode(GLWindowHandle* handle);
