@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/utils/platform.h"
+
 #define KB 1024
 #define MB 1024 * KB
 #define GB 1024 * MB
@@ -38,3 +40,7 @@ typedef int b32;
 		*(volatile int*)0 = 5; \
 	} \
 }
+
+#ifdef OS_WINDOWS
+#define snprintf _snprintf
+#endif

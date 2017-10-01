@@ -69,7 +69,7 @@ void iterate(Compiler &compiler, String directory_path) {
 		stat(*file_path_string, &file_attributes);
 		if ((file_attributes.st_mode & S_IFMT) == S_IFDIR) {
 			if (!ignored_directory(file_path_string, file_path_id, filename_string, filename_id)) {
-				bool any_active = false;
+				b32 any_active = false;
 				for (i32 i = 0; i < array_count(compiler.generator_array); ++i) {
 					Generator &generator = compiler.generator_array[i];
 					if (generator.active) {
@@ -101,6 +101,8 @@ void iterate(Compiler &compiler, String directory_path) {
 			}
 		}
 	}
+
+	closedir(dfd);
 }
 
 ////////// ADD NEW GENERATORS HERE //////////
@@ -151,7 +153,8 @@ void run(TaskScheduler *scheduler, void *arg) {
 				CacheEntry &entry = cache.entries[i];
 				if (!cache.touched[i] && entry.key) { // If this cache entry wasn't touched, the file that produced it have been removed.
 					// file_infos[i].filepath = entry.filepath;
-                    compiler.file_system.file_infos[i].filepath = {};
+					String filepath = {};
+                    compiler.file_system.file_infos[i].filepath = filepath;
 					compiler.file_system.file_infos[i].state = CacheState_Removed;
 					compiler.file_system.file_infos[i].filetype = entry.filetype;
 					compiler.file_system.file_infos[i].key = entry.key;

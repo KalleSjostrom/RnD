@@ -1,73 +1,6 @@
-#include "engine/utils/platform.h"
 #include "engine/utils/threading/threading.cpp"
-
-/// Includes for running with guard pages
-#if defined(FIBER_STACK_GUARD_PAGES)
-	#if defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
-		#include <sys/mman.h>
-	#elif defined(OS_WINDOWS)
-		#define WIN32_LEAN_AND_MEAN
-		#include <windows.h>
-	#endif
-#else
-	inline void protect_memory(void *, size_t) { }
-	inline void unprotect_memory(void *, size_t) { }
-#endif
-
-
-/// Wrap os memory handling
-#if defined(OS_WINDOWS)
-	#if defined(FIBER_STACK_GUARD_PAGES)
-		inline void protect_memory(void *memory, size_t bytes) {
-			DWORD ignored;
-			BOOL result = VirtualProtect(memory, bytes, PAGE_NOACCESS, &ignored);
-			ASSERT(result, "Error in protect_memory");
-		}
-
-		inline void unprotect_memory(void *memory, size_t bytes) {
-			DWORD ignored;
-			BOOL result = VirtualProtect(memory, bytes, PAGE_READWRITE, &ignored);
-			ASSERT(result, "Error in unprotect_memory");
-		}
-	#endif
-
-	inline size_t get_page_size() {
-		SYSTEM_INFO sysInfo;
-		GetSystemInfo(&sysInfo);
-		return sysInfo.dwPageSize;
-	}
-	inline void *aligned_allocation(size_t size, size_t alignment) {
-		return _aligned_malloc(size, alignment);
-	}
-	inline void aligned_free(void *block) {
-		_aligned_free(block);
-	}
-#elif defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
-	#if defined(FIBER_STACK_GUARD_PAGES)
-		inline void protect_memory(void *memory, size_t bytes) {
-			i32 result = mprotect(memory, bytes, PROT_NONE);
-			ASSERT(!result, "Error in protect_memory");
-		}
-
-		inline void unprotect_memory(void *memory, size_t bytes) {
-			i32 result = mprotect(memory, bytes, PROT_READ | PROT_WRITE);
-			ASSERT(!result, "Error in unprotect_memory");
-		}
-	#endif
-
-	inline size_t get_page_size() {
-		i32 page_size = getpagesize();
-		return (size_t)page_size;
-	}
-	inline void *aligned_allocation(size_t size, size_t alignment) {
-		void *returnPtr;
-		posix_memalign(&returnPtr, alignment, size);
-		return returnPtr;
-	}
-	inline void aligned_free(void *block) {
-		free(block);
-	}
-#endif
+#include "engine/utils/threading/atomics.cpp"
+#include "engine/utils/memory/memory_arena.cpp"
 
 inline size_t round_up(size_t number, size_t multiple) {
 	if (multiple == 0) {
@@ -80,7 +13,6 @@ inline size_t round_up(size_t number, size_t multiple) {
 
 	return number + multiple - remainder;
 }
-
 
 /// Fibers
 typedef void *FiberContext;
@@ -103,7 +35,7 @@ struct Fiber {
 void setup_fiber(Fiber &fiber, size_t wanted_stack_size, FiberRoutine routine, void *arguments) {
 	fiber.arg = arguments;
 	#if defined(FIBER_STACK_GUARD_PAGES)
-		fiber.system_page_size = get_page_size();
+		fiber.system_page_size = get_pagesize();
 	#else
 		fiber.system_page_size = 0;
 	#endif
@@ -136,22 +68,23 @@ void reset_fiber(Fiber &fiber, FiberRoutine routine, void *arguments) {
 
 void destroy_fiber(Fiber &fiber) {
 	if (fiber.stack != NULL) {
+#if defined(FIBER_STACK_GUARD_PAGES)
 		if (fiber.system_page_size != 0) {
 			unprotect_memory((char *)(fiber.stack), fiber.system_page_size);
 			unprotect_memory((char *)(fiber.stack) + fiber.system_page_size + fiber.stack_size, fiber.system_page_size);
 		}
+#endif
 
 		aligned_free(fiber.stack);
 	}
 }
 
-
 /// Lock free queue
 namespace queue {
 	struct Queue {
-		i32 *array;
-		i32 bottom;
-		i32 top;
+		ai32 *array;
+		ai32 bottom;
+		ai32 top;
 	};
 
 	#define MAX_ARRAY_SIZE 1024
@@ -159,7 +92,7 @@ namespace queue {
 
 	b32 take(Queue *q, i32 &value) {
 		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED) - 1;
-		i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
+		// i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
 		__atomic_store_n(&q->bottom, b, __ATOMIC_RELAXED);
 
 		__atomic_thread_fence(__ATOMIC_SEQ_CST);
@@ -168,10 +101,10 @@ namespace queue {
 		b32 result = 1;
 		if (t <= b) {
 			// Non-empty queue.
-			value = __atomic_load_n(&a[b & ARRAY_MASK], __ATOMIC_RELAXED);
+			value = __atomic_load_n(&q->array[b & ARRAY_MASK], __ATOMIC_RELAXED);
 			if (t == b) {
 				/* Single last element in queue. */
-				if (!__atomic_compare_exchange_n(&q->top, &t, t + 1, false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+				if (!__atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
 					/* Failed race. */
 					result = false;
 				}
@@ -187,11 +120,11 @@ namespace queue {
 	void push(Queue *q, i32 x) {
 		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED);
 		i32 t = __atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
-		i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED);
+		// i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
 		if (b - t > MAX_ARRAY_SIZE - 1) { /* Full queue. */
 			ASSERT(false, "Queue full!");
 		}
-		__atomic_store_n(&a[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
+		__atomic_store_n(&q->array[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
 		__atomic_thread_fence(__ATOMIC_RELEASE);
 		__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
 	}
@@ -202,9 +135,9 @@ namespace queue {
 		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_ACQUIRE);
 		if (t < b) {
 			// Non-empty queue.
-			i32 *a = __atomic_load_n(&q->array, __ATOMIC_CONSUME);
-			value = __atomic_load_n(&a[t & ARRAY_MASK], __ATOMIC_RELAXED);
-			if (!__atomic_compare_exchange_n(&q->top, &t, t + 1, false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+			// i32 *a = __atomic_load_n(&q->array, __ATOMIC_CONSUME);
+			value = __atomic_load_n(&q->array[t & ARRAY_MASK], __ATOMIC_RELAXED);
+			if (!__atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
 				return false; // Failed race.
 			}
 	        return true;
@@ -270,7 +203,7 @@ struct ThreadLocalStorage {
 struct TaskScheduler {
 	// TLS is not fiber safe on all platforms, so we fake thread local stoarge for each thread.
 	ThreadLocalStorage *tls_array;
-	b32 quit;
+	ai32 quit;
 	i32 free_fiber_cursor;
 	i32 thread_count;
 	i32 __padding;
@@ -278,13 +211,13 @@ struct TaskScheduler {
 	// The backing storage for the fiber pool
 	Fiber fibers[FIBER_POOL_SIZE];
 	// An array of atomics, which signify if a fiber is available to be used. The indices of free_fibers correspond 1 to 1 with fibers. So, if free_fibers[i] == true, then fibers[i] can be used. Each atomic acts as a lock to ensure that threads do not try to use the same fiber at the same time
-	bool free_fibers[FIBER_POOL_SIZE];
+	abool free_fibers[FIBER_POOL_SIZE];
 	// An array of atomics, which signify if a fiber is waiting for a counter. The indices of waiting_fibers correspond 1 to 1 with fibers. So, if waiting_fibers[i] == true, then fibers[i] is waiting for a counter
-	bool waiting_fibers[FIBER_POOL_SIZE];
+	abool waiting_fibers[FIBER_POOL_SIZE];
 	// An array of WaitingBundles, which correspond 1 to 1 with waiting_fibers. If waiting_fibers[i] == true, waiting_bundles[i] will contain the data for the waiting fiber in fibers[i].
 	WaitingBundle waiting_bundles[FIBER_POOL_SIZE];
 
-	i32 *jobs;
+	ai32 *jobs;
 };
 
 struct ThreadArgs {
@@ -299,7 +232,7 @@ struct MainFiberArgs {
 };
 
 #if defined(OS_WINDOWS)
-	static __thread i32 tls_thread_index;
+	static __declspec(thread) i32 tls_thread_index;
 	static i32 get_thread_index() {
 		return tls_thread_index;
 	}
@@ -346,7 +279,8 @@ namespace {
 				if (cursor == FIBER_POOL_SIZE)
 					cursor = 0;
 
-				if (__sync_bool_compare_and_swap(&scheduler.free_fibers[cursor], true, false)) {
+				bool expected = true;
+				if (__atomic_compare_exchange_weak_n(&scheduler.free_fibers[cursor], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
 	                // NOTE(kalle): The 'free_fiber_cursor' is a hint and we dont care enought to sync it between threads.
 	                scheduler.free_fiber_cursor = cursor;
 					return cursor;
@@ -357,7 +291,7 @@ namespace {
 	}
 
 	// If necessary, moves the old fiber to the fiber pool or the waiting list. The old fiber is the last fiber to run on the thread before the current fiber
-	static void _cleanup_old_fiber(ThreadLocalStorage &tls, bool *free_fibers, bool *waiting_fibers) {
+	static void _cleanup_old_fiber(ThreadLocalStorage &tls, abool *free_fibers, abool *waiting_fibers) {
 		// When switching between fibers, there's the innate problem of tracking the fibers. For example, let's say we discover a waiting fiber that's ready. We need to put the currently running fiber back into the fiber pool, and then switch to the waiting fiber. However, we can't just do the equivalent of:
 		//     fibers.Push(currentFiber)
 		//     currentFiber.switch_to_fiber(waitingFiber) In the time between us adding the current fiber to the fiber pool and switching to the waiting fiber, another thread could come along and pop the current fiber from the fiber pool and try to run it. This leads to stack corruption and/or other undefined behavior.
@@ -385,8 +319,10 @@ namespace {
 		i32 index = args->thread_index;
 		set_thread_index(index);
 
-		pthread_t current_thread = pthread_self();
-		while (!pthread_equal(current_thread, tls_hax_threads[index])) {};
+#ifndef OS_WINDOWS
+		ThreadType current_thread = get_current_thread();
+		while (!threads_equal(current_thread, tls_hax_threads[index])) {};
+#endif // OS_WINDOWS
 
 		// Get a free fiber to switch to
 		i32 fiber_index = _next_free_fiber_index(*scheduler);
@@ -408,7 +344,7 @@ namespace {
 		args->main_task(scheduler, args->data);
 
 		// Request that all the threads quit
-		__atomic_store_n(&scheduler->quit, true, __ATOMIC_RELEASE);
+		__atomic_store_n(&scheduler->quit, 1, __ATOMIC_RELEASE);
 
 		// Switch to the thread fibers
 		ThreadLocalStorage &tls = scheduler->tls_array[get_thread_index()];
@@ -477,13 +413,13 @@ namespace {
 
 				// Found a waiting fiber. Test if it's ready
 				WaitingBundle &bundle = scheduler->waiting_bundles[i];
-				i32 *job = scheduler->jobs + bundle.job_handle;
+				ai32 *job = scheduler->jobs + bundle.job_handle;
 				if (__atomic_load_n(job, __ATOMIC_RELAXED) != bundle.target) {
 					continue;
 				}
 
 				bool expected = true;
-				if (__atomic_compare_exchange_n(&scheduler->waiting_fibers[i], &expected, false, true, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
+				if (__atomic_compare_exchange_strong_n(&scheduler->waiting_fibers[i], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
 					waiting_fiber_index = i;
 					break;
 				}
@@ -501,7 +437,7 @@ namespace {
 				TaskBundle next_task;
 				if (_scheduler_get_next_task(scheduler->tls_array, scheduler->thread_count, &next_task)) {
 					next_task.task.function(scheduler, next_task.task.argument);
-					i32 *job = scheduler->jobs + next_task.job_handle;
+					ai32 *job = scheduler->jobs + next_task.job_handle;
 					__atomic_fetch_sub(job, 1, __ATOMIC_SEQ_CST);
 				}
 			}
@@ -560,12 +496,12 @@ void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction 
 	scheduler.quit = false;
 	ThreadType *threads = PUSH_STRUCTS(arena, thread_count, ThreadType);
 	ThreadArgs *thread_args = PUSH_STRUCTS(arena, thread_count, ThreadArgs);
-	scheduler.tls_array = PUSH_STRUCTS(arena, thread_count, ThreadLocalStorage, 16, true);
-	scheduler.jobs = PUSH_STRUCTS(arena, thread_count * MAX_JOBS_PER_THREAD, i32, true);
+	scheduler.tls_array = PUSH_STRUCTS(arena, thread_count, ThreadLocalStorage, true, 16);
+	scheduler.jobs = PUSH_STRUCTS(arena, thread_count * MAX_JOBS_PER_THREAD, ai32, true);
 
 	for (i32 i = 0; i < thread_count; ++i) {
 		ThreadLocalStorage &tls = scheduler.tls_array[i];
-		tls.task_queue.array = PUSH_STRUCTS(arena, 256, i32);
+		tls.task_queue.array = PUSH_STRUCTS(arena, 256, ai32);
 		tls.current_fiber_index = INVALID_INDEX;
 		tls.previous_fiber_index = INVALID_INDEX;
 	}
@@ -635,7 +571,7 @@ i32 scheduler_add_tasks(TaskScheduler &scheduler, i32 task_count, Task *tasks) {
 
 // Yields execution to another task until job reaches target
 void scheduler_wait_for_job(TaskScheduler &scheduler, i32 job_handle, i32 target) {
-	i32 *job = scheduler.jobs + job_handle;
+	ai32 *job = scheduler.jobs + job_handle;
 	if (__atomic_load_n(job, __ATOMIC_RELAXED) == target) {
 		return;
 	}

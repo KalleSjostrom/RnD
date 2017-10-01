@@ -40,14 +40,14 @@ static void generate_layout() {
 	fprintf(output, "	ReloadType_BaseType,\n");
 	fprintf(output, "	ReloadType_ComponentGroup,\n");
 	fprintf(output, "	ReloadType_Entity,\n");
+	fprintf(output, "	ReloadType_Reloader,\n");
 	fprintf(output, "	ReloadType_Game,\n");
+	fprintf(output, "	ReloadType_Buffer,\n");
 	fprintf(output, "	ReloadType_Keyframes,\n");
 	fprintf(output, "	ReloadType_AnimationData,\n");
 	fprintf(output, "	ReloadType_AnimationDataArray,\n");
-	fprintf(output, "	ReloadType_Reloader,\n");
 	fprintf(output, "	ReloadType_FBO,\n");
 	fprintf(output, "	ReloadType_RenderPipe,\n");
-	fprintf(output, "	ReloadType_Buffer,\n");
 	fprintf(output, "}; \n");
 	fprintf(output, "#define __RELOAD_SIZE__int 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__bool 1\n");
@@ -55,7 +55,7 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_SIZE__char 1\n");
 	fprintf(output, "#define __RELOAD_SIZE__float 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__double 8\n");
-	fprintf(output, "#define __RELOAD_SIZE__long 8\n");
+	fprintf(output, "#define __RELOAD_SIZE__long 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__ComponentGroup %zu\n", sizeof(ComponentGroup));
 	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_animation %zu\n", offsetof(ComponentGroup, animation));
 	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_mover %zu\n", offsetof(ComponentGroup, mover));
@@ -70,6 +70,7 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__Entity_mover_id %zu\n", offsetof(Entity, mover_id));
 	fprintf(output, "#define __RELOAD_OFFSET__Entity_model_id %zu\n", offsetof(Entity, model_id));
 	fprintf(output, "#define __RELOAD_OFFSET__Entity_actor_id %zu\n", offsetof(Entity, actor_id));
+	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
 	fprintf(output, "#define __RELOAD_SIZE__Game %zu\n", sizeof(Game));
 	fprintf(output, "#define __RELOAD_OFFSET__Game_persistent_arena %zu\n", offsetof(Game, persistent_arena));
 	fprintf(output, "#define __RELOAD_OFFSET__Game_transient_arena %zu\n", offsetof(Game, transient_arena));
@@ -85,6 +86,9 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__Game_ray_program_id %zu\n", offsetof(Game, ray_program_id));
 	fprintf(output, "#define __RELOAD_OFFSET__Game_entity_count %zu\n", offsetof(Game, entity_count));
 	fprintf(output, "#define __RELOAD_OFFSET__Game_entities %zu\n", offsetof(Game, entities));
+	fprintf(output, "#define __RELOAD_SIZE__Buffer %zu\n", sizeof(Buffer));
+	fprintf(output, "#define __RELOAD_OFFSET__Buffer_fill_method %zu\n", offsetof(Buffer, fill_method));
+	fprintf(output, "#define __RELOAD_OFFSET__Buffer_buffer_name %zu\n", offsetof(Buffer, buffer_name));
 	fprintf(output, "#define __RELOAD_SIZE__Keyframes %zu\n", sizeof(Keyframes));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_count %zu\n", offsetof(Keyframes, count));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_transforms %zu\n", offsetof(Keyframes, transforms));
@@ -98,7 +102,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_SIZE__AnimationDataArray %zu\n", sizeof(AnimationDataArray));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_count %zu\n", offsetof(AnimationDataArray, count));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_entries %zu\n", offsetof(AnimationDataArray, entries));
-	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
 	fprintf(output, "#define __RELOAD_SIZE__FBO %zu\n", sizeof(FBO));
 	fprintf(output, "#define __RELOAD_OFFSET__FBO_framebuffer_object %zu\n", offsetof(FBO, framebuffer_object));
 	fprintf(output, "#define __RELOAD_OFFSET__FBO_count %zu\n", offsetof(FBO, count));
@@ -138,9 +141,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_programs %zu\n", offsetof(RenderPipe, programs));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_program_count %zu\n", offsetof(RenderPipe, program_count));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe___padding %zu\n", offsetof(RenderPipe, __padding));
-	fprintf(output, "#define __RELOAD_SIZE__Buffer %zu\n", sizeof(Buffer));
-	fprintf(output, "#define __RELOAD_OFFSET__Buffer_fill_method %zu\n", offsetof(Buffer, fill_method));
-	fprintf(output, "#define __RELOAD_OFFSET__Buffer_buffer_name %zu\n", offsetof(Buffer, buffer_name));
 
 	fclose(output);
 }

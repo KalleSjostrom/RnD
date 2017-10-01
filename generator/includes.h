@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <stdint.h> // Windows
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
 #include <stdarg.h>
-#include <dirent.h>
+#include <dirent.h> // for windows, dirent.h is in local include
+#include <direct.h>
 #include <sys/stat.h>
 #include <time.h>
 

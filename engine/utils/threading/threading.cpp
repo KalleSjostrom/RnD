@@ -1,8 +1,9 @@
 /// Wrap os threading
 #if defined(OS_WINDOWS)
+	#include <process.h>
 	struct Win32Thread {
-		HANDLE Handle;
-		DWORD Id;
+		HANDLE handle;
+		DWORD id;
 	};
 	typedef Win32Thread ThreadType;
 
@@ -16,8 +17,8 @@
 			return false;
 		}
 
-		out_thread->Handle = handle;
-		out_thread->Id = GetThreadId(handle);
+		out_thread->handle = handle;
+		out_thread->id = GetThreadId(handle);
 		ResumeThread(handle);
 
 		return true;
@@ -30,12 +31,12 @@
 
 	// Blocking until 'thread' finishes
 	inline void join_thread(ThreadType thread) {
-		WaitForSingleObject(thread.Handle, INFINITE);
+		WaitForSingleObject(thread.handle, INFINITE);
 	}
 
 	// Get the current thread
 	inline ThreadType get_current_thread() {
-		Win32Thread result{
+		Win32Thread result = {
 			::GetCurrentThread(),
 			::GetCurrentThreadId()
 		};
@@ -48,6 +49,10 @@
 		SYSTEM_INFO sysinfo;
 		GetSystemInfo(&sysinfo);
 		return sysinfo.dwNumberOfProcessors;
+	}
+
+	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
+		return thread_a.id == thread_b.id;
 	}
 #elif defined(OS_MAC) || defined(OS_iOS) || defined(OS_LINUX)
 	#include <pthread.h>
@@ -92,5 +97,8 @@
 	// Get the number of hardware threads. This should take Hyperthreading, etc. into account
 	inline int get_num_hardware_threads() {
 		return (int) sysconf(_SC_NPROCESSORS_ONLN);
+	}
+	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
+		return pthread_equal(thread_a, thread_b);
 	}
 #endif

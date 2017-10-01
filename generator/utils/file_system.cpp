@@ -76,7 +76,8 @@ void init_ending(Ending *ending, char *string, u32 length, u32 index) {
 }
 
 void init_filesystem(FileSystem &file_system, char *source_folder, char *output_folder, MemoryArena &arena) {
-	file_system.cache = {};
+	Cache c = {};
+	file_system.cache = c;
 	file_system.cache.max_count = 8192;
 	file_system.cache.entries = PUSH_STRUCTS(arena, file_system.cache.max_count, CacheEntry, true);
 	file_system.cache.touched = PUSH_STRUCTS(arena, file_system.cache.max_count, bool, true);
@@ -86,7 +87,7 @@ void init_filesystem(FileSystem &file_system, char *source_folder, char *output_
 
 	struct stat st;
 	if (stat(output_folder, &st) == -1) {
-		mkdir(output_folder, 0700);
+		_mkdir(output_folder);
 	}
 
 	file_system.file_infos = PUSH_STRUCTS(arena, file_system.cache.max_count, FileInfo);

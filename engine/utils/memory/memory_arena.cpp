@@ -1,3 +1,5 @@
+#pragma once
+
 struct MemoryBlock {
 	size_t offset;
 	size_t blocksize;
@@ -16,11 +18,71 @@ struct MemoryBlockHandle {
 	size_t offset;
 };
 
-#include <sys/mman.h>
-#include <unistd.h>
+#if defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
+	#include <sys/mman.h>
+#elif defined(OS_WINDOWS)
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+#endif
+
+/// Wrap os memory handling
+#if defined(OS_WINDOWS)
+	inline void protect_memory(void *memory, size_t bytes) {
+		DWORD ignored;
+		BOOL result = VirtualProtect(memory, bytes, PAGE_NOACCESS, &ignored);
+		ASSERT(result, "Error in protect_memory");
+	}
+	inline void unprotect_memory(void *memory, size_t bytes) {
+		DWORD ignored;
+		BOOL result = VirtualProtect(memory, bytes, PAGE_READWRITE, &ignored);
+		ASSERT(result, "Error in unprotect_memory");
+	}
+	inline size_t get_pagesize() {
+		SYSTEM_INFO sysInfo;
+		GetSystemInfo(&sysInfo);
+		return sysInfo.dwPageSize;
+	}
+	inline void *virtual_allocation(size_t blocksize) {
+		void *chunk = VirtualAlloc(0, blocksize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		return chunk;
+	}
+	inline void *aligned_allocation(size_t size, size_t alignment) {
+		return _aligned_malloc(size, alignment);
+	}
+	inline void aligned_free(void *block) {
+		_aligned_free(block);
+	}
+#elif defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
+	inline void protect_memory(void *memory, size_t bytes) {
+		i32 result = mprotect(memory, bytes, PROT_NONE);
+		ASSERT(!result, "Error in protect_memory");
+	}
+	inline void unprotect_memory(void *memory, size_t bytes) {
+		i32 result = mprotect(memory, bytes, PROT_READ | PROT_WRITE);
+		ASSERT(!result, "Error in unprotect_memory");
+	}
+	inline size_t get_pagesize() {
+		i32 page_size = getpagesize();
+		return (size_t)page_size;
+	}
+	inline void *virtual_allocation(size_t blocksize) {
+		void *chunk = mmap(0, blocksize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		return chunk;
+	}
+	inline void *aligned_allocation(size_t size, size_t alignment) {
+		void *returnPtr;
+		posix_memalign(&returnPtr, alignment, size);
+		return returnPtr;
+	}
+	inline void aligned_free(void *block) {
+		free(block);
+	}
+#endif
+
+// #include <unistd.h>
 
 inline MemoryBlock *_allocate_block(size_t blocksize) {
-	void *chunk = mmap(0, blocksize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	void *chunk = virtual_allocation(blocksize);
 
 	MemoryBlock *block = (MemoryBlock*)chunk;
 
@@ -75,7 +137,7 @@ inline size_t get_effective_size_for(MemoryBlock *block, size_t size, unsigned a
 }
 
 inline void *_push_size(MemoryArena &arena, size_t size, bool clear_to_zero = false, unsigned alignment = 4) {
-	static const size_t pagesize = (size_t) sysconf(_SC_PAGESIZE);
+	size_t pagesize = get_pagesize();
 
 	size_t alignment_offset = 0;
 	size_t offset = 0;
