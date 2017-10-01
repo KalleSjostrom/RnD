@@ -68,7 +68,7 @@
 		}
         // pthread_attr_setaffinity_np(&thread_attr, 0, 0);
 		int success = pthread_create(out_thread, NULL, start_routine, arg);
-		printf("%lu\n", (uintptr_t)*out_thread);
+		// printf("Thread: %lu\n", (uintptr_t)*out_thread);
 		pthread_attr_destroy(&thread_attr);
 
 		return success == 0;

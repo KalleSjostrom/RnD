@@ -1,3 +1,5 @@
+#pragma once
+
 struct SortElement {
 	u32 value;
 	u32 index;

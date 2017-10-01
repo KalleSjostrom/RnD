@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEFAULT_PORT 12347
+#define DEFAULT_PORT 9001
 
 enum Sensor {
 	Sensor_Bumpwheeldrops = 0,

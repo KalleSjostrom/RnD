@@ -1,45 +1,9 @@
-#include <OpenGL/gl3.h>
-#include <OpenGL/opengl.h>
-
-#define GLSL(src) "#version 410\n" #src
-typedef uint16_t GLindex;
-#define GL_INDEX GL_UNSIGNED_SHORT
-
-#include "engine/plugin.h"
-#include "engine/utils/memory/memory_arena.cpp"
-#include "engine/utils/file_utils.h"
-#include "opengl/gl_program_builder.cpp"
-
-#define USE_INTRINSICS 1
-#include "engine/utils/math/math.h"
-
-#include "engine/utils/audio_manager.cpp"
-#include "engine/utils/camera.cpp"
-#include "engine/utils/animation.h"
-
-///// GAME SPECIFICS
-namespace globals {
-	static MemoryArena transient_arena;
-	static void *components;
-};
-#define SCRATCH_ALLOCATE_STRUCT(type, count) (type*)allocate_memory(globals::transient_arena, sizeof(type)*count)
-
-#define CALL(owner, compname, command, ...) ((ComponentGroup*)globals::components)->compname.command(owner.compname ## _id, ## __VA_ARGS__)
-#define GET(owner, compname, member) ((ComponentGroup*)globals::components)->compname.instances[owner.compname ## _id].member
-
-/////// ASSETS
-	#include "../assets/hatch.c"
-	#include "../generated/animations.generated.cpp"
-	#include "shaders/default.shader.cpp"
-	#include "shaders/avatar.shader.cpp"
-
-#include "component_group.cpp"
-#include "render_pipe.cpp"
+#include "includes.h"
 
 struct Game {
 	MemoryArena persistent_arena;
+	MemoryArena transient_arena;
 
-	i64 ___padding;
 	ComponentGroup components;
 	AudioManager audio_manager;
 	RenderPipe render_pipe;
@@ -59,12 +23,13 @@ struct Game {
 };
 
 #define TRANSIENT_ARENA_SIZE (MB*32)
-#define PERSISTENT_ARENA_SIZE (MB*32)
+// #define PERSISTENT_ARENA_SIZE (MB*32)
 
 EXPORT PLUGIN_RELOAD(reload) {
 	Game &game = *(Game*) memory;
 
-	globals::transient_arena = init_memory(TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
+	globals::transient_arena = &game.transient_arena;
+	setup_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
 
 	globals::components = &game.components;
 
@@ -103,11 +68,18 @@ static float time = 0;
 
 EXPORT PLUGIN_UPDATE(update) {
 	Game &game = *(Game*) memory;
+
+	if (!game.initialized) {
+		game.persistent_arena = {}; // init_from_existing((char*)memory + sizeof(Game), PERSISTENT_ARENA_SIZE);
+		setup_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
+	}
+
+	TempAllocator ta(&game.transient_arena);
+	globals::transient_arena = &game.transient_arena;
+
 	if (!game.initialized) {
 		game.initialized = true;
 
-		game.persistent_arena = init_from_existing((char*)memory + sizeof(Game), PERSISTENT_ARENA_SIZE);
-		globals::transient_arena = init_memory(TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
 		globals::components = &game.components;
 		game.engine = &engine;
 
@@ -217,7 +189,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		// Handle component/component communication.
 		component_glue::update(game.entities, game.entity_count, dt);
 
-		game.audio_manager.update(globals::transient_arena, game.engine, dt);
+		game.audio_manager.update(*globals::transient_arena, game.engine, dt);
 	}
 
 	{ // Render
@@ -229,7 +201,5 @@ EXPORT PLUGIN_UPDATE(update) {
 		render_bloom(game.render_pipe);
 		render_combine(game.render_pipe);
 	}
-
-	globals::transient_arena.offset = 0;
 	return 0;
 }

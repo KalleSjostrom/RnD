@@ -1,15 +1,3 @@
-#include <time.h>
-#include <mach/mach_time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-
-#include "engine/utils/common.h"
-#include "../sci.h"
-#include "../tcp_socket.cpp"
-
 enum ConnectionMode {
 	ConnectionMode_Server,
 	ConnectionMode_Playback,
@@ -73,10 +61,16 @@ void set_sensor_data(SensorData &sensor_data, u8 *buffer) {
 	sensor_data.ChargingState     = buffer[Sensor_ChargingState];
 	sensor_data.Temperature       = (i8) buffer[Sensor_Temperature];
 
-	sensor_data.distance = (i16)(((u32)buffer[Sensor_DistanceMSB] << 8) | (u32)buffer[Sensor_DistanceLSB]);
-	sensor_data.angle    = (i16)(((u32)buffer[Sensor_AngleMSB] << 8) | (u32) buffer[Sensor_AngleLSB]);
+	sensor_data.distance = (i16)((buffer[Sensor_DistanceMSB] << 8) | buffer[Sensor_DistanceLSB]);
+	sensor_data.angle    = (i16)((buffer[Sensor_AngleMSB] << 8) | buffer[Sensor_AngleLSB]);
 	sensor_data.voltage  = buffer[Sensor_VoltageMSB]  << 8 | buffer[Sensor_VoltageLSB];
 	sensor_data.current  = buffer[Sensor_CurrentMSB]  << 8 | buffer[Sensor_CurrentLSB];
+
+	printf("----\n");
+	printf("%d\n", buffer[Sensor_DistanceMSB]);
+	printf("%d\n", buffer[Sensor_DistanceLSB]);
+	printf("%d\n", (i32)(buffer[Sensor_DistanceLSB] << 8 | buffer[Sensor_DistanceMSB]));
+	printf("%d\n", (i32)(buffer[Sensor_DistanceMSB] << 8 | buffer[Sensor_DistanceLSB]));
 
 	i32 Charge = buffer[Sensor_ChargeMSB]   << 8 | buffer[Sensor_ChargeLSB];
 	i32 Capacity = buffer[Sensor_CapacityMSB] << 8 | buffer[Sensor_CapacityLSB];
@@ -84,7 +78,7 @@ void set_sensor_data(SensorData &sensor_data, u8 *buffer) {
 	sensor_data.BatteryLevel = (f32) Charge / (f32) Capacity;
 }
 
-static void send_command(RoombaConnection &connection, u8 header, u8 *data, i32 size) {
+static void send_command(RoombaConnection &connection, u8 header, u8 *data = 0, i32 size = 0) {
 	if (connection.mode == ConnectionMode_Server) {
 		u32 buffer_count = 0;
 		static u8 send_buffer[512];
@@ -104,21 +98,22 @@ static void send_command(RoombaConnection &connection, u8 header, u8 *data, i32 
 static void update_transmit(RoombaConnection &connection) {
 	if (connection.mode == ConnectionMode_Server) {
 		u8 data = 0;
-		send_command(connection, COMMAND_SENSORS, &data, 1);
+		send_command(connection, COMMAND_SENSORS, &data, 0);
 	}
 }
 
-static void update_recieve(RoombaConnection &connection, i32 &distance, i32 &angle) {
+static bool update_recieve(RoombaConnection &connection, i32 &distance, i32 &angle, SensorData &sensor_data) {
 	if (connection.mode == ConnectionMode_Server) {
 		static u8 receive_buffer[512];
 		i32 recieved_size = recieve_socket(connection.socket_handle, receive_buffer, ARRAY_COUNT(receive_buffer));
 		if (recieved_size <= 0) {
 			distance = 0;
 			angle = 0;
-			return;
+			return false;
 		}
 
-		SensorData sensor_data;
+		printf("%d\n", recieved_size);
+
 		set_sensor_data(sensor_data, receive_buffer);
 
 		distance = sensor_data.distance;
@@ -170,9 +165,12 @@ static void update_recieve(RoombaConnection &connection, i32 &distance, i32 &ang
 			angle = data;
 		}
 	}
+
+	return true;
 }
 
-#define DEFAULT_IP   "127.0.0.1"
+// #define DEFAULT_IP "127.0.0.1"
+#define DEFAULT_IP "10.0.0.1"
 
 void setup_connection(RoombaConnection &connection, ConnectionMode mode, MemoryArena &arena) {
 	connection.mode = mode;
@@ -188,7 +186,7 @@ void setup_connection(RoombaConnection &connection, ConnectionMode mode, MemoryA
 		file_descriptor_flags |= O_NONBLOCK;
 		fcntl(connection.socket_handle, F_SETFL, file_descriptor_flags);
 	}
-	connection.output_stream = allocate_memory(arena, 128*MB);
+	connection.output_stream = (char*)PUSH_SIZE(arena, 128*MB);
 	connection.output_cursor = 0;
 
 	if (mode == ConnectionMode_Playback) {

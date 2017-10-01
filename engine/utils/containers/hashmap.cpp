@@ -1,146 +1,159 @@
-#include "common.h"
-#include "profiler.c"
+#include "hashmap.h"
 
-#define MAX_AVATARS 48
-// NOTE(kalle): Must be a power of two!
-#define AVATAR_HASH_SIZE next_power_of_2(MAX_AVATARS)
-#define AVATAR_HASH_MASK (AVATAR_HASH_SIZE-1)
-
-enum ProfilerScopes {
-	ProfilerScopes__add,
-	ProfilerScopes__remove,
-	ProfilerScopes__simulation,
-
-	ProfilerScopes__count,
-};
-
-/*
-Based on the "Hacker's Delight" version:
-unsigned clp2(unsigned x) {
-   x = x - 1;
-   x = x | (x >> 1);
-   x = x | (x >> 2);
-   x = x | (x >> 4);
-   x = x | (x >> 8);
-   x = x | (x >>16);
-   return x + 1;
-}*/
-#define b2(x)   (   (x) | (   (x) >> 1))
-#define b4(x)   ( b2(x) | ( b2(x) >> 2))
-#define b8(x)   ( b4(x) | ( b4(x) >> 4))
-#define b16(x)  ( b8(x) | ( b8(x) >> 8))
-#define b32(x)  (b16(x) | (b16(x) >>16))
-#define next_power_of_2(x)(b32(x-1) + 1)
-
-// We want to avoid high load factor so we use a BUCKET_SIZE > 1
-// TODO(kalle): Make this a property of the HashMap?
-#define BUCKET_SIZE 2
-
-
-namespace testa {
-	#define TKEY uint64_t
-	#define TVALUE uint64_t
-	#include "hashmap.h"
-	#undef TKEY
-	#undef TVALUE
-}
-typedef testa::HashEntry HashEntry64;
-typedef testa::HashMap HashMap64;
-HashMap<uint64_t, void*>
-
-
-namespace test {
-	#define TKEY unsigned
-	#define TVALUE unsigned
-	#include "hashmap.h"
-	#undef TKEY
-	#undef TVALUE
-}
-typedef test::HashEntry HashEntry;
-typedef test::HashMap HashMap;
-
-#define hash_size (AVATAR_HASH_SIZE*BUCKET_SIZE)
-
-inline void test_add(HashMap &hashmap, unsigned *keys, unsigned &num_entries, unsigned i) {
-	add(hashmap, i, 0);
-	keys[num_entries++] = i;
-}
-inline void test_remove(HashMap &hashmap, unsigned *keys, unsigned &num_entries, unsigned &i, unsigned rand) {
-	unsigned index = rand % num_entries;
-	remove(hashmap, keys[index]);
-	i--;
-	keys[index] = keys[--num_entries];
-}
-
-
-int main(int argc, char const *argv[]) {
-	HashEntry entries[hash_size] = {};
-	HashMap hashmap;
+// NOTE(kalle): We want to avoid high load factor so, by default, we use a bucket_size > 1
+void hash_init(HashMap &hashmap, HashEntry *entries, u32 count, u32 invalid_key, u32 bucket_size = DEFAULT_BUCKET_SIZE) {
 	hashmap.entries = entries;
-	hashmap.count = hash_size;
-	hashmap.invalid_key = 0;
+	hashmap.count = count;
+	hashmap.invalid_key = invalid_key;
+	hashmap.bucket_size = bucket_size;
 
-	unsigned num_keys = 65536*512;
-
-	unsigned num_entries = 0;
-	unsigned *keys = (unsigned*)malloc(MAX_AVATARS*sizeof(unsigned));
-
-	bool *choices = (bool*)malloc(num_keys*sizeof(bool));
-	for (unsigned i = 1; i < num_keys; ++i) {
-		choices[i] = random()%256 < 128;
+	if (invalid_key) { // Assumes that the memory pointed to by entries is already zeroed
+		for (u32 i = 0; i < count; ++i) {
+			entries[i].key = invalid_key;
+		}
 	}
+}
 
-	unsigned *randoms = (unsigned*)malloc(num_keys*sizeof(unsigned));
-	for (unsigned i = 1; i < num_keys; ++i) {
-		randoms[i] = random();
-	}
+// Returns the entry with the given key, if previously added or a free slot in which to insert something.
+HashEntry *hash_lookup(HashMap &hashmap, u32 key, bool check_invalid = true) {
+	u32 lookup_key = key * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
 
-	PROFILER_START(simulation);
-	for (unsigned i = 1; i < num_keys; ++i) {
-		if (num_entries < MAX_AVATARS-8) {
-			test_add(hashmap, keys, num_entries, i);
-		} else if (num_entries == MAX_AVATARS-1) {
-			test_remove(hashmap, keys, num_entries, i, randoms[i]);
-		} else if (num_entries < MAX_AVATARS/2) {
-			if (choices[i]) {
-				test_add(hashmap, keys, num_entries, i);
-			} else {
-				test_remove(hashmap, keys, num_entries, i, randoms[i]);
-			}
-		} else {
-			if (choices[i]) {
-				test_remove(hashmap, keys, num_entries, i, randoms[i]);
-			} else {
-				test_add(hashmap, keys, num_entries, i);
-			}
+	for (u32 offset = 0; offset < hashmap.count; offset++) {
+		u32 index = (lookup_key + offset) & hash_mask;
+
+		HashEntry *entry = hashmap.entries + index;
+		if ((check_invalid && entry->key == hashmap.invalid_key) || (entry->key == key)) {
+			return entry;
 		}
 	}
 
-	for (unsigned i = 0; i < num_entries; ++i) {
-		test_remove(hashmap, keys, num_entries, i, randoms[i]);
+	return 0;
+}
+// Associates the value with the given key in the hashmap.
+HashEntry *hash_add(HashMap &hashmap, u32 key, u32 value) {
+	HashEntry *entry = hash_lookup(hashmap, key);
+	ASSERT(entry, "No space in hashmap! (key=%u, value=%u)", key, value);
+	entry->key = key; entry->value = value;
+	return entry;
+}
+
+HashEntry *hash_add_handle(HashMap &hashmap, u32 hash, u32 handle) {
+	u32 lookup_hash = hash * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
+
+	for (u32 offset = 0; offset < hashmap.count; offset++) {
+		u32 index = (lookup_hash + offset) & hash_mask;
+
+		HashEntry *entry = hashmap.entries + index;
+		if (entry->hash == hashmap.invalid_hash) {
+			entry->hash = hash;
+			entry->handle = handle;
+			return entry;
+		}
 	}
-	PROFILER_STOP(simulation);
 
-	/*printf("Adds %u\n", _add_itr);
-	printf("Add lookups %u\n", _add_lookups_itr);
-	printf("\tAdd ratio %.3f\n", (float)_add_lookups_itr / (float)_add_itr);
-	printf("Removes %u\n", _remove_itr);
-	printf("Remove lookups %u\n", _remove_lookups_itr);
-	printf("\tRemove ratio %.3f\n", (float)_remove_lookups_itr / (float)_remove_itr);
-	printf("Remove moves %u\n", _move_into_place_itr);
-	printf("\tRemove moves ratio %.3f\n", _move_into_place_itr / (float)_remove_itr);
-	printf("\n");*/
-
-	PROFILER_PRINT(add);
-	PROFILER_PRINT(remove);
-	PROFILER_PRINT(simulation);
-
+	ASSERT(false, "No space in hashmap! (hash=%u, handle=%u)", hash, handle);
 	return 0;
 }
 
+inline void _move_into_place(HashMap &hashmap, u32 key, u32 offset) {
+	u32 lookup_key = key * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
 
+	u32 target_hash = (lookup_key + offset) & hash_mask; // Where it was actually stored, i.e. our target to fill
 
+	// Start at i == 1, since the thing we are removing is at i == 0.
+	for (u32 i = 1; i < hashmap.count; ++i) {
+		// Look at our next neighbors
+		u32 hash = (lookup_key + offset + i) & hash_mask;
+		HashEntry *entry = hashmap.entries + hash;
 
+		if (entry->key == hashmap.invalid_key)
+			return; // Found empty slot, we are done.
 
+		u32 optimal_hash = (entry->key * hashmap.bucket_size) & hash_mask; // Where it wants to be stored
 
+		// We need to make sure that this entry is found when doing a lookup.
+		// The slot hash, or (target hash) can't be further 'back' than my optimal hash!
+		// For example: if my optimal hash is 3, than I shouldn't be able to move from 4 to 2.
+		// This must also be true at the boundaries, if my optimal hash is 3, than I shouldn't be able to move from 4 to 127.
+		// After this move, the thing moved should always be closer to its optimal hash than before!
+		// This is solved by comparing the distance the entry would need to jump to get to its optimal position versus the target position.
 
+		i32 max_jump_distance = (i32)(((hash - optimal_hash) + hashmap.count) & hash_mask);
+		i32 jump_distance     = (i32)(((hash - target_hash)  + hashmap.count) & hash_mask);
+
+		if (jump_distance <= max_jump_distance) {
+			// Move to the place where the removed one was
+			hashmap.entries[target_hash] = hashmap.entries[hash];
+			// Clear out the old entry.
+			hashmap.entries[hash].key = hashmap.invalid_key;
+			// Now we might have created a new 'hole', so lets keep on searching with this hash being the new target.
+			target_hash = hash;
+		}
+	}
+}
+
+u32 hash_remove(HashMap &hashmap, u32 key) {
+	u32 lookup_key = key * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
+	u32 value;
+
+	for (u32 offset = 0; offset < hashmap.count; ++offset) {
+		u32 index = (lookup_key + offset) & hash_mask;
+
+		HashEntry *entry = hashmap.entries + index;
+		if (entry->key == key) {
+			value = entry->value;
+			entry->key = hashmap.invalid_key;
+			_move_into_place(hashmap, key, offset);
+			return value;
+		}
+	}
+	ASSERT(false, "Key not found! (key=%u)", key);
+	return 0XFFFFFFFF;
+}
+
+bool hash_try_remove(HashMap &hashmap, u32 key, u32 *value = 0) {
+	u32 lookup_key = key * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
+
+	for (u32 offset = 0; offset < hashmap.count; ++offset) {
+		u32 index = (lookup_key + offset) & hash_mask;
+
+		HashEntry *entry = hashmap.entries + index;
+		if (entry->key == hashmap.invalid_key) {
+			return false; // The given key was not in the hashmap
+		}
+
+		if (entry->key == key) {
+			if (value)
+				*value = entry->value;
+
+			entry->key = hashmap.invalid_key;
+			_move_into_place(hashmap, key, offset);
+			return true;
+		}
+	}
+	return false;
+}
+
+// Removes a non-unique prehashed key by comparing the handle value for uniqueness
+// Used by broadphase atm, where the positional hash value is non-unique
+void hash_remove_handle(HashMap &hashmap, u32 hash, u32 handle) {
+	u32 lookup_hash = hash * hashmap.bucket_size;
+	u32 hash_mask = hashmap.count-1;
+
+	for (u32 offset = 0; offset < hashmap.count; ++offset) {
+		u32 index = (lookup_hash + offset) & hash_mask;
+
+		HashEntry *entry = hashmap.entries + index;
+		if (entry->handle == handle) {
+			entry->hash = hashmap.invalid_hash;
+			_move_into_place(hashmap, hash, offset);
+			return;
+		}
+	}
+	ASSERT(false, "Hash not found! (hash=%u, handle=%u)", hash, handle);
+}

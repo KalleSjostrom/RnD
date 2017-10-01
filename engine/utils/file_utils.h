@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stdio.h>
-#include "common.h"
-
 inline u64 get_filesize(FILE *file) {
 	fseek(file, 0, SEEK_END);
 	long length = ftell(file);
@@ -15,4 +12,10 @@ inline FILE *open_file(const char *filename, size_t *filesize) {
 	ASSERT(file, "Could not find file %s!", filename);
 	*filesize = get_filesize(file);
 	return file;
+}
+
+inline b32 file_exists(const char *filename) {
+	// TODO(kalle): Replace with something sane.
+	FILE *file = fopen(filename, "r");
+	return file != 0;
 }

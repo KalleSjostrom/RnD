@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #define FIBER_STACK_GUARD_PAGES
-#include "task_scheduler.cpp"
+#include "engine/utils/fibers/task_scheduler.cpp"
 
 struct NumberSubset {
 	u64 id;
@@ -70,8 +70,8 @@ void triangle_number_main_task(TaskScheduler *scheduler, void *arg) {
 			subset->end = triangle_num;
 		}
 
-		tasks[i].Function = add_subset;
-		tasks[i].ArgData = subset;
+		tasks[i].function = add_subset;
+		tasks[i].argument = subset;
 
 		next_number = subset->end + 1;
 	}
@@ -91,7 +91,7 @@ void triangle_number_main_task(TaskScheduler *scheduler, void *arg) {
 		result += subsets[i].total;
 	}
 
-	printf("Hello (%llu) (%llu) (%llu)\n", triangle_num, triangle_num * (triangle_num + 1) / 2, result);
+	printf("Result: (%zu) (%zu) (%zu)\n", triangle_num, triangle_num * (triangle_num + 1) / 2, result);
 }
 
 int main(int argc, char **argv) {

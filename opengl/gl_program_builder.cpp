@@ -150,7 +150,7 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		GLenum binary_format;
-		char *binary = (char*)allocate_memory(arena, (u32)binary_length);
+		char *binary = PUSH_STRING(arena, (u32)binary_length);
 		glGetProgramBinary(program, binary_length, 0, &binary_format, binary);
 		GL_CHECK_ERROR(glGetProgramBinary);
 

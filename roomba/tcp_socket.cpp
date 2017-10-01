@@ -48,7 +48,7 @@ b32 setup_client_socket(i32 socket_handle, const char *ip, u32 port) {
 
 	b32 success = connect(socket_handle, (sockaddr*) &address, sizeof(address)) >= 0;
 	if (!success) {
-		fprintf(stderr, "Could not connect to server!\n");
+		fprintf(stderr, "Could not connect to server! %d\n", errno);
 	}
 	return success;
 }

@@ -42,13 +42,13 @@ namespace font {
 
 		fread(&font->info, sizeof(FontInfo), 1, font_file);
 
-		font->characters = (FontCharacter *)allocate_memory(arena, (u32)font->info.num_chars * sizeof(FontCharacter));
+		font->characters = PUSH_STRUCTS(arena, font->info.num_chars, FontCharacter);
 		fread(font->characters, sizeof(FontCharacter), (u32)font->info.num_chars, font_file);
 
 		i32 num_kernings = ('~' - ' ') + 1;
 		num_kernings *= num_kernings; // squared
 
-		font->kerning_table = (i32 *)allocate_memory(arena, sizeof(i32) * (u32)num_kernings);
+		font->kerning_table = PUSH_STRUCTS(arena, num_kernings, i32);
 		fread(font->kerning_table, sizeof(i32), (u32)num_kernings, font_file);
 
 		i32 width;

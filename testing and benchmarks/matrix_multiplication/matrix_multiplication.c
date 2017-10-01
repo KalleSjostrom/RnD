@@ -224,6 +224,8 @@ int main() {
 	PROFILER_STOP_HITS(random_generation, SIZE);
 	PROFILER_PRINT(random_generation);
 
+	test_mm_vector_128(memory);
+	test_mm_vector_256(memory);
 	TIME_IT_HITS(mm_vector_128, test_mm_vector_128(memory), NR_MATRICES-2);
 	TIME_IT_HITS(mm_vector_256, test_mm_vector_256(memory), NR_MATRICES-2);
 	TIME_IT_HITS(mm_scalar_unrolled, test_mm_scalar_unrolled(memory), NR_MATRICES-2);

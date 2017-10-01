@@ -4,6 +4,10 @@
 		{
 			"path": "."
 		},
+		{
+			"path": "../../HandmadeHero",
+			"name": "Handmade Hero"
+		},
 	],
 	"build_systems":
 	[
@@ -25,6 +29,14 @@
 				{
 					"name": "Engine",
 					"working_dir": "${project_path}/engine/",
+				},
+				{
+					"name": "Frida",
+					"working_dir": "${project_path}/frida/",
+				},
+				{
+					"name": "Generator",
+					"working_dir": "${project_path}/generator/",
 				},
 				{
 					"name": "Game",

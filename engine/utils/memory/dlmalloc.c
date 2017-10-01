@@ -3,10 +3,6 @@
 #define DLMALLOC_VERSION 20806
 #endif /* DLMALLOC_VERSION */
 
-#ifndef LACKS_SYS_TYPES_H
-#include <sys/types.h>  /* For size_t */
-#endif  /* LACKS_SYS_TYPES_H */
-
 /* The maximum possible size_t value has all bits set */
 #define MAX_SIZE_T           (~(size_t)0)
 #ifndef MALLOC_ALIGNMENT
@@ -90,14 +86,11 @@ typedef void* mspace;
 #endif
 #define DEBUG 0
 #endif /* DEBUG */
-#if !defined(WIN32) && !defined(LACKS_TIME_H)
-#include <time.h>        /* for magic initialization */
-#endif /* WIN32 */
 #ifndef LACKS_STDLIB_H
-#include <stdlib.h>      /* for abort() */
+// #include <stdlib.h>      /* for abort() */
 #endif /* LACKS_STDLIB_H */
 #ifndef LACKS_UNISTD_H
-#include <unistd.h>     /* for sbrk, sysconf */
+// #include <unistd.h>     /* for sbrk, sysconf */
 #else /* LACKS_UNISTD_H */
 #if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
 extern void*     sbrk(ptrdiff_t);
@@ -105,8 +98,6 @@ extern void*     sbrk(ptrdiff_t);
 #endif /* LACKS_UNISTD_H */
 
 /* Declarations for bit scanning on win32 */
-#if defined(_MSC_VER) && _MSC_VER>=1300
-#ifndef BitScanForward /* Try to avoid pulling in WinNT.h */
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -116,12 +107,12 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 }
 #endif /* __cplusplus */
 
-#define BitScanForward _BitScanForward
-#define BitScanReverse _BitScanReverse
-#pragma intrinsic(_BitScanForward)
-#pragma intrinsic(_BitScanReverse)
-#endif /* BitScanForward */
-#endif /* defined(_MSC_VER) && _MSC_VER>=1300 */
+// #define BitScanForward _BitScanForward
+// #define BitScanReverse _BitScanReverse
+// #pragma intrinsic(_BitScanForward)
+// #pragma intrinsic(_BitScanReverse)
+// #endif /* BitScanForward */
+// #endif /* defined(_MSC_VER) && _MSC_VER>=1300 */
 
 /* ------------------- size_t and alignment properties -------------------- */
 
@@ -194,6 +185,17 @@ typedef unsigned int flag_t;           /* The type of various bit flag sets */
 #define pad_request(req) \
 	 (((req) + CHUNK_OVERHEAD + CHUNK_ALIGN_MASK) & ~CHUNK_ALIGN_MASK)
 
+inline size_t estimate_unpadded_request(size_t padded_request) {
+	// We can't get back the exact unpadded request since it's aligned
+	// However, we can remove the chunk overhead and always be within MALLOC_ALIGNMENT bytes,
+	// i.e. pad_request() of the return value must be equal to the input.
+	size_t chunk_overhead = CHUNK_OVERHEAD;
+	assert(padded_request >= chunk_overhead); // , "The input request is to small to have been padded! (padded_request=%lu)", padded_request);
+	size_t unpadded = padded_request - chunk_overhead;
+	assert(pad_request(unpadded) == padded_request);
+	return unpadded;
+}
+
 /* pad request, checking for minimum (but not maximum) */
 #define request2size(req) \
 	(((req) < MIN_REQUEST)? MIN_CHUNK_SIZE : pad_request(req))
@@ -205,15 +207,12 @@ typedef unsigned int flag_t;           /* The type of various bit flag sets */
 	The head field of a chunk is or'ed with PINUSE_BIT when previous
 	adjacent chunk in use, and or'ed with CINUSE_BIT if this chunk is in
 	use, unless mmapped, in which case both bits are cleared.
-
-	FLAG4_BIT is not used by this malloc, but might be useful in extensions.
 */
 
 #define PINUSE_BIT          (SIZE_T_ONE)
 #define CINUSE_BIT          (SIZE_T_TWO)
-#define FLAG4_BIT           (SIZE_T_FOUR)
 #define INUSE_BITS          (PINUSE_BIT|CINUSE_BIT)
-#define FLAG_BITS           (PINUSE_BIT|CINUSE_BIT|FLAG4_BIT)
+#define FLAG_BITS           (PINUSE_BIT|CINUSE_BIT)
 
 /* Head value for fenceposts */
 #define FENCEPOST_HEAD      (INUSE_BITS|SIZE_T_SIZE)
@@ -221,14 +220,11 @@ typedef unsigned int flag_t;           /* The type of various bit flag sets */
 /* extraction of fields from head words */
 #define cinuse(p)           ((p)->head & CINUSE_BIT)
 #define pinuse(p)           ((p)->head & PINUSE_BIT)
-#define flag4inuse(p)       ((p)->head & FLAG4_BIT)
 #define is_inuse(p)         (((p)->head & INUSE_BITS) != PINUSE_BIT)
 
 #define chunksize(p)        ((p)->head & ~(FLAG_BITS))
 
 #define clear_pinuse(p)     ((p)->head &= ~PINUSE_BIT)
-#define set_flag4(p)        ((p)->head |= FLAG4_BIT)
-#define clear_flag4(p)      ((p)->head &= ~FLAG4_BIT)
 
 /* Treat space at ptr +/- offset as a chunk */
 #define chunk_plus_offset(p, s)  ((mchunkptr)(((char*)(p)) + (s)))
@@ -287,6 +283,73 @@ typedef struct malloc_tree_chunk* tbinptr; /* The type of bins of trees */
 #define MAX_SMALL_SIZE    (MIN_LARGE_SIZE - SIZE_T_ONE)
 #define MAX_SMALL_REQUEST (MAX_SMALL_SIZE - CHUNK_ALIGN_MASK - CHUNK_OVERHEAD)
 
+#if 0
+struct malloc_state {
+	/* Bin maps
+		There is one bit map for small bins ("smallmap") and one for
+		treebins ("treemap).  Each bin sets its bit when non-empty, and
+		clears the bit when empty.  Bit operations are then used to avoid
+		bin-by-bin searching -- nearly all "search" is done without ever
+		looking at bins that won't be selected.  The bit maps
+		conservatively use 32 bits per map word, even if on 64bit system.
+		For a good description of some of the bit-based techniques used
+		here, see Henry S. Warren Jr's book "Hacker's Delight" (and
+		supplement at http://hackersdelight.org/). Many of these are
+		intended to reduce the branchiness of paths through malloc etc, as
+		well as to reduce the number of memory locations read or written.*/
+	binmap_t   smallmap;
+	binmap_t   treemap;
+
+	/* SmallBins
+		An array of bin headers for free chunks.  These bins hold chunks
+		with sizes less than MIN_LARGE_SIZE bytes. Each bin contains
+		chunks of all the same size, spaced 8 bytes apart.  To simplify
+		use in double-linked lists, each bin header acts as a malloc_chunk
+		pointing to the real first node, if it exists (else pointing to
+		itself).  This avoids special-casing for headers.  But to avoid
+		waste, we allocate only the fd/bk pointers of bins, and then use
+		repositioning tricks to treat these as the fields of a chunk.*/
+	mchunkptr  smallbins[(NSMALLBINS+1)*2];
+
+	/* TreeBins
+		Treebins are pointers to the roots of trees holding a range of
+		sizes. There are 2 equally spaced treebins for each power of two
+		from TREE_SHIFT to TREE_SHIFT+16. The last bin holds anything
+		larger. */
+	tbinptr    treebins[NTREEBINS];
+
+	/* Address check support
+		The least_addr field is the least address ever obtained from
+		MORECORE or MMAP. Attempted frees and reallocs of any address less
+		than this are trapped (unless INSECURE is defined). */
+	char*      least_addr; // Don't really need this, only used for ok_address. Could use seg->base instead?
+
+	/* Designated victim (dv)
+		This is the preferred chunk for servicing small requests that
+		don't have exact fits.  It is normally the chunk split off most
+		recently to service another small request.  Its size is cached in
+		dvsize. The link fields of this chunk are not maintained since it
+		is not kept in a bin.*/
+	mchunkptr  dv; // Pretty sure I can zero this out
+	size_t     dvsize;
+
+	/* Top
+		The topmost chunk of the currently active segment. Its size is
+		cached in topsize.  The actual size of topmost space is
+		topsize+TOP_FOOT_SIZE, which includes space reserved for adding
+		fenceposts and segment records if necessary when getting more
+		space from the system.  The size at which to autotrim top is
+		cached from mparams in trim_check, except that it is disabled if
+		an autotrim fails. */
+	mchunkptr  top; // This should be the final chunkptr when we reload, update accordingly.
+	size_t     topsize;
+
+	/* Magic tag
+		A cross-check field that should always hold same value as mparams.magic. */
+	size_t     magic;
+}
+#endif
+
 struct malloc_state {
 	binmap_t   smallmap;
 	binmap_t   treemap;
@@ -321,13 +384,6 @@ static struct malloc_params mparams;
 #define ensure_initialization() (void)(mparams.magic != 0 || init_mparams())
 
 #define is_initialized(M)  ((M)->top != 0)
-
-/*
-	TOP_FOOT_SIZE is padding at the end of a segment, including space
-	that may be needed to place segment records and fenceposts when new
-	noncontiguous segments are added.
-*/
-#define TOP_FOOT_SIZE (align_offset(chunk2mem(0)) + MIN_CHUNK_SIZE)
 
 /* -------------------------------  Hooks -------------------------------- */
 /*
@@ -416,7 +472,7 @@ static void reset_on_error(mstate m);
 		I = NTREEBINS-1;\
 	else {\
 		unsigned int K;\
-		_BitScanReverse((DWORD *) &K, (DWORD) X);\
+		_BitScanReverse((unsigned long *) &K, (unsigned long) X);\
 		I =  (bindex_t)((K << 1) + ((S >> (K + (TREEBIN_SHIFT-1)) & 1)));\
 	}\
 }
@@ -501,7 +557,7 @@ static void reset_on_error(mstate m);
 #define compute_bit2idx(X, I)\
 {\
 	unsigned int J;\
-	_BitScanForward((DWORD *) &J, X);\
+	_BitScanForward((unsigned long *) &J, X);\
 	I = (bindex_t)J;\
 }
 
@@ -656,24 +712,7 @@ static int init_mparams(void) {
 			ABORT;
 
 		{
-#if USE_DEV_RANDOM
-			int fd;
-			unsigned char buf[sizeof(size_t)];
-			/* Try to use /dev/urandom, else fall back on using time */
-			if ((fd = open("/dev/urandom", O_RDONLY)) >= 0 &&
-					read(fd, buf, sizeof(buf)) == sizeof(buf)) {
-				magic = *((size_t *) buf);
-				close(fd);
-			}
-			else
-#endif /* USE_DEV_RANDOM */
-#ifdef WIN32
-			magic = (size_t)(GetTickCount() ^ (size_t)0x55555555U);
-#elif defined(LACKS_TIME_H)
 			magic = (size_t)&magic ^ (size_t)0x55555555U;
-#else
-			magic = (size_t)((size_t)time(0) ^ (size_t)0x55555555U);
-#endif
 			magic |= (size_t)8U;    /* ensure nonzero */
 			magic &= ~(size_t)7U;   /* improve chances of fault for bad values */
 			/* Until memory modes commonly available, use volatile-write */
@@ -939,8 +978,6 @@ static void init_top(mstate m, mchunkptr p, size_t psize) {
 	m->top = p;
 	m->topsize = psize;
 	p->head = psize | PINUSE_BIT;
-	/* set size of fake trailing chunk holding overhead space only once */
-	chunk_plus_offset(p, psize)->head = TOP_FOOT_SIZE;
 }
 
 /* Initialize bins for a new mstate that is otherwise zeroed out */
@@ -1061,7 +1098,8 @@ static void* tmalloc_small(mstate m, size_t nb) {
 	}
 
 	CORRUPTION_ERROR_ACTION(m);
-	return 0;
+	// Unreachable code
+	// return 0;
 }
 
 static mstate init_user_mstate(char* tbase, size_t tsize) {
@@ -1075,27 +1113,28 @@ static mstate init_user_mstate(char* tbase, size_t tsize) {
 	m->magic = mparams.magic;
 	init_bins(m);
 	mn = next_chunk(mem2chunk(m));
-	init_top(m, mn, (size_t)((tbase + tsize) - (char*)mn) - TOP_FOOT_SIZE);
+	init_top(m, mn, (size_t)((tbase + tsize) - (char*)mn));
 	check_top_chunk(m, m->top);
 	return m;
 }
-mspace create_mspace_with_base(void* base, size_t capacity) {
+static mspace create_mspace_with_base(void* base, size_t capacity) {
 	mstate m = 0;
 	size_t msize;
 	ensure_initialization();
 	msize = pad_request(sizeof(struct malloc_state));
-	if (capacity > msize + TOP_FOOT_SIZE) {
+	if (capacity > msize) {
 		m = init_user_mstate((char*)base, capacity);
 		// m->seg.sflags = EXTERN_BIT;
 	}
 	return (mspace)m;
 }
 
-void* mspace_malloc(mspace msp, size_t bytes) {
+static void* mspace_malloc(mspace msp, size_t bytes) {
 	mstate ms = (mstate)msp;
 	if (!ok_magic(ms)) {
 		USAGE_ERROR_ACTION(ms,ms);
-		return 0;
+		// Unreachable code
+		// return 0;
 	}
 	{
 		void* mem;
@@ -1203,10 +1242,11 @@ void* mspace_malloc(mspace msp, size_t bytes) {
 		return mem;
 	}
 
-	return 0;
+	// Unreachable code
+	// return 0;
 }
 
-void mspace_free(mspace msp, void* mem) {
+static void mspace_free(mspace msp, void* mem) {
 	if (mem != 0) {
 		mchunkptr p  = mem2chunk(mem);
 #if FOOTERS
@@ -1296,13 +1336,4 @@ void mspace_free(mspace msp, void* mem) {
 			;
 		}
 	}
-}
-
-size_t mspace_usable_size(const void* mem) {
-	if (mem != 0) {
-		mchunkptr p = mem2chunk(mem);
-		if (is_inuse(p))
-			return chunksize(p) - overhead_for(p);
-	}
-	return 0;
 }

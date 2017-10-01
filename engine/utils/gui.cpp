@@ -158,8 +158,8 @@ namespace gui {
 			u32 buffer_length = 8 * string_length;
 			size_t buffer_size = buffer_length * sizeof(f32);
 
-			f32 *quad_buffer = (f32 *) allocate_memory(*gui.transient_arena, buffer_size);
-			f32 *quad_buffer_uv = (f32 *) allocate_memory(*gui.transient_arena, buffer_size);
+			f32 *quad_buffer = PUSH_STRUCTS(*gui.transient_arena, buffer_length, f32);
+			f32 *quad_buffer_uv = PUSH_STRUCTS(*gui.transient_arena, buffer_length, f32);
 
 			_fill_buffer_data(gui, string, x, y, quad_buffer, quad_buffer_uv);
 

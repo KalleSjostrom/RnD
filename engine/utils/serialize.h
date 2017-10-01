@@ -2,9 +2,13 @@ inline void write_bool(bool value, char **buffer) {
 	*(bool*)(*buffer) = value;
 	*buffer += sizeof(bool);
 }
-inline void write_unsigned(unsigned value, char **buffer) {
-	*(unsigned*)(*buffer) = value;
-	*buffer += sizeof(unsigned);
+inline void write_u32(u32 value, char **buffer) {
+	*(u32*)(*buffer) = value;
+	*buffer += sizeof(u32);
+}
+inline void write_i32(i32 value, char **buffer) {
+	*(i32*)(*buffer) = value;
+	*buffer += sizeof(i32);
 }
 inline void write_u64(u64 value, char **buffer) {
 	*(u64*)(*buffer) = value;
@@ -19,28 +23,39 @@ inline void write_f64(f64 value, char **buffer) {
 	*buffer += sizeof(f64);
 }
 inline void write_string(String &string, char **buffer) {
-	write_unsigned(string.length, buffer);
-	memcpy(*buffer, string.text, string.length);
+	write_i32(string.length, buffer);
+	memcpy(*buffer, string.text, (size_t)string.length);
 	(*buffer)[string.length] = '\0';
-	*buffer += (string.length + 1) * sizeof(char);
+	*buffer += (u32)(string.length + 1) * sizeof(char);
 }
 
 inline void read_bool(bool &value, char **buffer) {
 	value = *(bool*)(*buffer);
 	*buffer += sizeof(bool);
 }
-inline void read_unsigned(u32 &value, char **buffer) {
+inline void read_u32(u32 &value, char **buffer) {
 	value = *(u32*)(*buffer);
 	*buffer += sizeof(u32);
+}
+inline void read_i32(i32 &value, char **buffer) {
+	value = *(i32*)(*buffer);
+	*buffer += sizeof(i32);
 }
 inline void read_u64(u64 &value, char **buffer) {
 	value = *(u64*)(*buffer);
 	*buffer += sizeof(u64);
 }
 inline void read_string(MemoryArena &arena, String &string, char **buffer) {
-	read_unsigned(string.length, buffer);
-	char *memory = allocate_memory(arena, string.length + 1);
-	memcpy(memory, *buffer, string.length + 1);
+	read_i32(string.length, buffer);
+	size_t size = (size_t)(string.length + 1);
+	char *memory = PUSH_STRING(arena, size);
+	memcpy(memory, *buffer, size);
 	string.text = memory;
-	*buffer += (string.length + 1) * sizeof(char);
+	*buffer += size * sizeof(char);
 }
+#define read_serialized_array(array, buffer) do { \
+	int array_count; \
+	read_i32(array_count, buffer); \
+	array_init(array, array_count < 4 ? 4 : array_count); \
+	array_set_count(array, array_count); \
+} while(0)

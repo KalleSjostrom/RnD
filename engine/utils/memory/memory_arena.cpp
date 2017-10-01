@@ -1,62 +1,65 @@
-//@ reloadable_struct
-struct MemoryArena {
+struct MemoryBlock {
 	size_t offset;
+	size_t blocksize;
 	char *memory;
-	size_t _DEBUG_maxsize;
+
+	MemoryBlock *previous_block;
+};
+
+struct MemoryArena {
+	MemoryBlock *block;
+	size_t minimum_blocksize;
 };
 
 struct MemoryBlockHandle {
+	MemoryBlock *block;
 	size_t offset;
 };
 
-MemoryArena init_memory(size_t size, b32 clear_to_zero = false) {
-	MemoryArena arena;
+#include <sys/mman.h>
+#include <unistd.h>
 
-	arena.offset = 0;
-	arena.memory = (char*)malloc(size);
-	arena._DEBUG_maxsize = size;
+inline MemoryBlock *_allocate_block(size_t blocksize) {
+	void *chunk = mmap(0, blocksize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
-	if (clear_to_zero) {
-		memset(arena.memory, 0, size);
+	MemoryBlock *block = (MemoryBlock*)chunk;
+
+	block->memory = (char*)chunk + sizeof(MemoryBlock);
+	block->offset = 0;
+	block->previous_block = 0;
+	return block;
+}
+
+inline void free_all_blocks(MemoryBlock *block) {
+	if (block) {
+		free_all_blocks(block->previous_block);
+		block->previous_block = 0;
+
+		char *start = block->memory - sizeof(MemoryBlock);
+		free(start);
 	}
-
-	return arena;
-}
-MemoryArena init_from_existing(char *memory, size_t size) {
-	MemoryArena arena;
-
-	arena.offset = 0;
-	arena.memory = memory;
-	arena._DEBUG_maxsize = size;
-
-	return arena;
-}
-inline char *allocate_memory(MemoryArena &arena, size_t size) {
-	char *memory = arena.memory + arena.offset;
-	arena.offset += size;
-	ASSERT(arena.offset <= arena._DEBUG_maxsize, "Memory out of bounds");
-	return memory;
-}
-inline void clear_memory(MemoryArena &arena) {
-	arena.offset = 0;
 }
 inline void free_memory(MemoryArena &arena) {
-	free(arena.memory);
-	arena.memory = 0;
-	arena.offset = 0;
-	arena._DEBUG_maxsize = 0;
+	free_all_blocks(arena.block);
+	arena.block = 0;
 }
 
 inline MemoryBlockHandle begin_block(MemoryArena &arena) {
-	MemoryBlockHandle block_handle = { arena.offset };
+	MemoryBlockHandle block_handle = { arena.block, arena.block->offset };
 	return block_handle;
 }
 inline void end_block(MemoryArena &arena, MemoryBlockHandle handle) {
-	arena.offset = handle.offset;
+	while (arena.block != handle.block) {
+		MemoryBlock *block = arena.block;
+		arena.block = block->previous_block;
+
+		free(block->memory - sizeof(MemoryBlock));
+	}
+	arena.block->offset = handle.offset;
 }
 
-inline size_t get_alignment_offset(MemoryArena &arena, unsigned alignment) {
-	size_t result = (size_t) arena.memory + arena.offset;
+inline size_t get_alignment_offset(MemoryBlock *block, unsigned alignment) {
+	size_t result = (size_t) block->memory + block->offset;
 	size_t alignment_mask = alignment - 1;
 	if (result & alignment_mask) {
 		return alignment - (result & alignment_mask);
@@ -65,49 +68,75 @@ inline size_t get_alignment_offset(MemoryArena &arena, unsigned alignment) {
 	return 0;
 }
 
-inline size_t get_effective_size_for(MemoryArena &arena, size_t size, unsigned alignment) {
-	size_t offset = get_alignment_offset(arena, alignment);
+inline size_t get_effective_size_for(MemoryBlock *block, size_t size, unsigned alignment) {
+	size_t offset = get_alignment_offset(block, alignment);
 	size += offset;
 	return size;
 }
 
-#if 0
-inline void memset32(intptr_t buf, uint32_t value, size_t count) {
-	__asm__ __volatile__ (
-			"cld\n\t"
-			"mov rcx, %0\n\t"
-			"mov rax, %1\n\t"
-			"mov rdi, %2\n\t"
-			"rep stosq\n\t"
-			: /* No outputs. */
-			: "r" (n), "r" (c), "r" (buf)
-			: "rcx", "rdi"
-			);
-}
-#endif
+inline void *_push_size(MemoryArena &arena, size_t size, bool clear_to_zero = false, unsigned alignment = 4) {
+	static const size_t pagesize = (size_t) sysconf(_SC_PAGESIZE);
 
-inline void *_push_size(MemoryArena &arena, size_t size, unsigned alignment = 4, bool clear_to_zero = false) {
-	size = get_effective_size_for(arena, size, alignment);
+	size_t alignment_offset = 0;
+	size_t offset = 0;
 
-	ASSERT((arena.offset + size) <= arena._DEBUG_maxsize, "Memory out of bounds");
+	if (arena.block) {
+		alignment_offset = get_alignment_offset(arena.block, alignment);
+		offset = arena.block->offset + alignment_offset;
+	} else {
+		arena.minimum_blocksize = pagesize * 256;
+	}
 
-	size_t alignment_offset = get_alignment_offset(arena, alignment);
-	void *result = arena.memory + arena.offset + alignment_offset;
-	arena.offset += size;
+	size_t max_offset = arena.minimum_blocksize - sizeof(MemoryBlock);
+	if ((offset + size) > max_offset || arena.block == 0) {
+		size_t blocksize = arena.minimum_blocksize;
+		if (size > max_offset) {
+			size_t num_pages = size / pagesize + 1;
+            blocksize = num_pages * pagesize;
+		}
+
+		MemoryBlock *new_block = _allocate_block(blocksize);
+		new_block->previous_block = arena.block;
+		arena.block = new_block;
+
+		offset = get_alignment_offset(arena.block, alignment);
+	}
+
+	arena.block->offset = offset + size;
+	char *result = arena.block->memory + offset;
 
 	if (clear_to_zero) {
 		memset(result, 0, size);
-	} else {
-		memset(result, 0, size);
+	}
+#if DEVELOPMENT
+	else {
 		uint32_t *buf = (uint32_t*)result;
 		for (size_t i = 0; i < size/4; i++) {
 			buf[i] = 0xDEADBEEF;
 		}
 	}
+#endif
 
 	return result;
 }
 
+inline void setup_arena(MemoryArena &arena, size_t size, bool clear_to_zero = false, unsigned alignment = 4) {
+	ASSERT(arena.block == 0, "Arena already setup!");
+	_push_size(arena, size, clear_to_zero, alignment);
+	arena.block->offset = 0;
+}
+
 #define PUSH_STRUCT(arena, type, ...) (type *)_push_size(arena, sizeof(type), ## __VA_ARGS__)
 #define PUSH_STRUCTS(arena, count, type, ...) (type *)_push_size(arena, (size_t)count * sizeof(type),  ## __VA_ARGS__)
+#define PUSH_STRING(arena, count, ...) (char *)_push_size(arena, (size_t)count * sizeof(char),  ## __VA_ARGS__)
 #define PUSH_SIZE(arena, size, ...) _push_size(arena, size, ## __VA_ARGS__)
+
+struct TempAllocator {
+	TempAllocator(MemoryArena *a) : arena(a) {
+		handle = begin_block(*arena);
+	}
+	~TempAllocator() { end_block(*arena, handle); }
+
+	MemoryBlockHandle handle;
+	MemoryArena *arena;
+};

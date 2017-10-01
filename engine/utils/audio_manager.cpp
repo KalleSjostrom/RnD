@@ -109,13 +109,13 @@ struct AudioManager {
 		}
 
 		MemoryBlockHandle memory_block = begin_block(arena);
-		u8 *output = (u8*) allocate_memory(arena, (u32)count);
+		u8 *output = (u8*) PUSH_SIZE(arena, (u32)count);
 		i32 channel = 0;
 
 		i32 active_sound_count = 0;
 
 		// No-one may scratch allocate until this function returns!
-		ActiveSound *active_sounds = (ActiveSound *)(arena.memory + arena.offset);
+		ActiveSound *active_sounds = PUSH_STRUCTS(arena, (u32)ARRAY_COUNT(sounds), ActiveSound);
 		for (i32 i = 0; i < (i32)ARRAY_COUNT(sounds); i++) {
 			Sound &sound = sounds[i];
 			if (sound.playing) {

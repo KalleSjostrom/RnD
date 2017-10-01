@@ -352,7 +352,7 @@ GLWindowHandle* mygl_setup(int width, int height, const char* title) {
 	}
 
 	{ // void _glfwPlatformSwapInterval(int interval)
-		int interval = 1;
+		int interval = 2;
 		[window->context setValues:&interval forParameter:NSOpenGLCPSwapInterval];
 	}
 
