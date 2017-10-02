@@ -22,17 +22,11 @@ u64 murmur_hash_64(const void * key, u32 len, u64 seed) {
 
 	switch (len & 7) {
 		case 7: h ^= u64(data2[6]) << 48;
-		// [[clang::fallthrough]];
 		case 6: h ^= u64(data2[5]) << 40;
-		// [[clang::fallthrough]];
 		case 5: h ^= u64(data2[4]) << 32;
-		// [[clang::fallthrough]];
 		case 4: h ^= u64(data2[3]) << 24;
-		// [[clang::fallthrough]];
 		case 3: h ^= u64(data2[2]) << 16;
-		// [[clang::fallthrough]];
 		case 2: h ^= u64(data2[1]) << 8;
-		// [[clang::fallthrough]];
 		case 1: h ^= u64(data2[0]);
 			h *= m;
 	};

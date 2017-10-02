@@ -1,3 +1,7 @@
+#ifdef OS_WINDOWS
+	#define mkdir(name, mode) _mkdir(name)
+#endif
+
 enum CacheState {
 	CacheState_Unmodified = 1 << 0,
 	CacheState_Added      = 1 << 1,
@@ -87,7 +91,7 @@ void init_filesystem(FileSystem &file_system, char *source_folder, char *output_
 
 	struct stat st;
 	if (stat(output_folder, &st) == -1) {
-		_mkdir(output_folder);
+		mkdir(output_folder, 0700);
 	}
 
 	file_system.file_infos = PUSH_STRUCTS(arena, file_system.cache.max_count, FileInfo);

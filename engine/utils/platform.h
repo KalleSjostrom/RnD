@@ -14,9 +14,3 @@
 #elif defined(__linux__)
 	#define OS_LINUX
 #endif
-
-// #ifdef OS_WINDOWS
-// 	#define thread_local __declspec(thread)
-// #else
-// 	#define thread_local __thread
-// #endif
