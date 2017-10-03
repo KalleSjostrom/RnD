@@ -9,12 +9,21 @@
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
 #define ASSERT_IN_BOUNDS(array, count) ASSERT(ARRAY_COUNT(array) > count, "Array index out of bounds!");
 
-#define FORCE_INLINE __attribute__((always_inline))
-// #if defined _WIN32
-// 	#define thread_local __declspec(thread)
-// #elif defined __GNUC__
-// 	#define thread_local __thread
-// #endif
+#ifdef OS_WINDOWS
+	#define FORCE_INLINE _forceinline
+	#define ALIGN(x) __declspec(align(x))
+	#define ALIGNED_(x) __declspec(align(x))
+	#define fminf(x, y) ((x) < (y) ? (x) : (y))
+	#define fmaxf(x, y) ((x) < (y) ? (y) : (x))
+	#define EXPORT extern "C" __declspec(dllexport)
+#else
+	#define FORCE_INLINE __attribute__((always_inline))
+	#define ALIGN(x) __attribute__((aligned(x)))
+	#define ALIGNED_(x) __attribute__ ((aligned(x)))
+	#define EXPORT extern "C" __attribute__((visibility("default")))
+#endif
+
+#define ALIGNED_TYPE_(t,x) typedef t ALIGNED_(x)
 
 typedef size_t u64;
 typedef int64_t i64;

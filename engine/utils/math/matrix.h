@@ -1,9 +1,10 @@
-struct m4 {
-	float m[16] __attribute__((aligned(16)));
+ALIGNED_TYPE_(struct, 16) {
+	float m[16];
 	FORCE_INLINE float operator[](int index) { return m[index]; }
 // 	FORCE_INLINE float operator[](int index, float rhs) { return m[index] = rhs; }
 	// FORCE_INLINE float &operator&() { return &m; }
-};
+} m4;
+
 #if USE_INTRINSICS
 void mm_matrix_mul(float *am, float *bm, float *cm) {
 	__m128 col_a0 = _mm_load_ps(&am[0]);
@@ -177,44 +178,41 @@ FORCE_INLINE m4 look_at(v3 eye, v3 l, v3 up) {
 	return m;
 }
 
-FORCE_INLINE m4 perspective(float width, float height, float near, float far) {
-	// Use similar triangles.
-	// xp/xw = -n/zw -- solve for xp -> (n*xw)/-zw
-	// Map xw into normalized device coordinates (NDC) - > xn = (1 - (-1))xw / (r-1) + beta. Since this only supports a symmetric viewport, beta is 0. (r+l)/(r-l)
+FORCE_INLINE m4 perspective(float width, float height, float _near, float _far) {
 	return Matrix4x4(
-		(2*near)/width, 0, 0, 0,
-		0, (2*near/height), 0, 0,
-		0, 0, -(far + near) / (far - near), (-2*far*near) / (far-near),
+		(2*_near)/width, 0, 0, 0,
+		0, (2*_near/height), 0, 0,
+		0, 0, -(_far + _near) / (_far - _near), (-2*_far*_near) / (_far-_near),
 		0, 0, -1, 0); // This comes from the fact that we should divide by -z to go from homogenous to clip coordinates.
 }
-FORCE_INLINE m4 perspective(float right, float left, float top, float bottom, float near, float far) {
+FORCE_INLINE m4 perspective(float right, float left, float top, float bottom, float _near, float _far) {
 	return Matrix4x4(
-		(2*near) / (right-left), 0, (right+left)/(right-left), 0,
-		0, (2*near) / (top-bottom), (top+bottom)/(top-bottom), 0,
-		0, 0, -(far+near) / (far-near), (-2*far*near) / (far-near),
+		(2*_near) / (right-left), 0, (right+left)/(right-left), 0,
+		0, (2*_near) / (top-bottom), (top+bottom)/(top-bottom), 0,
+		0, 0, -(_far+_near) / (_far-_near), (-2*_far*_near) / (_far-_near),
 		0, 0, -1, 0);
 }
 
-FORCE_INLINE m4 perspective_fov(float v_fov, float aspect, float near, float far) {
+FORCE_INLINE m4 perspective_fov(float v_fov, float aspect, float _near, float _far) {
 	float angle = (v_fov * DEGREES_TO_RANDIANS) / 2.0f;
-	float half_height = tanf(angle) * near;
+	float half_height = tanf(angle) * _near;
 	float height = half_height * 2;
 	float width = aspect * height;
-	return perspective(width, height, near, far);
+	return perspective(width, height, _near, _far);
 }
 
-FORCE_INLINE m4 orthographic(float width, float height, float near, float far) {
+FORCE_INLINE m4 orthographic(float width, float height, float _near, float _far) {
 	return Matrix4x4(
 		2/width, 0, 0, 0,
 		0, 2/height, 0, 0,
-		0, 0, -2/(far-near), -(far+near)/(far-near),
+		0, 0, -2/(_far-_near), -(_far+_near)/(_far-_near),
 		0, 0, 0, 1); // No homogenous coordinates, w is not needed.
 }
 
-FORCE_INLINE m4 orthographic(float right, float left, float top, float bottom, float near, float far) {
+FORCE_INLINE m4 orthographic(float right, float left, float top, float bottom, float _near, float _far) {
 	return Matrix4x4(
 		2/(right-left), 0, 0, -(right+left)/(right-left),
 		0, 2/(top-bottom), 0, -(top+bottom)/(top-bottom),
-		0, 0, -2/(far-near), -(far+near)/(far-near),
+		0, 0, -2/(_far-_near), -(_far+_near)/(_far-_near),
 		0, 0, 0, 1); // No homogenous coordinates, w is not needed.
 }

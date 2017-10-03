@@ -3,7 +3,11 @@
 #define RES_WIDTH 1024
 #define RES_HEIGHT 768
 
-#define EXPORT extern "C" __attribute__((visibility("default")))
+struct ImageData {
+	int bytes_per_pixel;
+	int width, height;
+	void *pixels;
+};
 
 struct EngineApi {
 	void (*audio_load)(const char *filename, uint8_t **buffer, uint32_t *length);
@@ -11,6 +15,8 @@ struct EngineApi {
 	uint32_t (*audio_queued_size)();
 	void (*audio_free)(int16_t *buffer);
 	void (*audio_set_playing)(bool playing);
+
+	ImageData (*image_load)(const char *filename);
 
 	void (*quit)();
 };

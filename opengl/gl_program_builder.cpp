@@ -155,7 +155,8 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramBinary);
 
 		{
-			FILE *file = fopen(filename, "w");
+			FILE *file;
+			fopen_s(&file, filename, "w");
 			fwrite(&binary_format, sizeof(GLenum), 1, file);
 			fwrite(&binary_length, sizeof(GLint), 1, file);
 			fwrite(&binary, sizeof(char), (u32)binary_length, file);

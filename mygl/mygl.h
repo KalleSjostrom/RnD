@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include <OpenGL/gl3.h>
+// #include <OpenGL/gl3.h>
 
 struct InputApi {
 	void (*key_down)(int key, int modifier_flags);

@@ -31,11 +31,12 @@ namespace audio {
 
 	void load(const char *filename, uint8_t **buffer, uint32_t *length) {
 		SDL_AudioSpec loaded_wav_spec = {};
-		if (SDL_LoadWAV(filename, &loaded_wav_spec, (Uint8**)buffer, length) == 0) {
+		if (SDL_LoadWAV_RW(SDL_RWFromFile(filename, "rb"), 1, &loaded_wav_spec, (Uint8**)buffer, length) == 0) {
 			fprintf(stderr, "Couldn't load audio! (filename=%s, error=%s)\n", filename, SDL_GetError());
 		}
 
 		ASSERT(wav_spec.freq == loaded_wav_spec.freq, "Mismatch audio! freq (%u %u)", wav_spec.freq, loaded_wav_spec.freq);
+#if 0
 		ASSERT(wav_spec.format == loaded_wav_spec.format, "Mismatch audio! format");
 		ASSERT(SDL_AUDIO_BITSIZE(wav_spec.format) == SDL_AUDIO_BITSIZE(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_BITSIZE");
 		ASSERT(SDL_AUDIO_ISFLOAT(wav_spec.format) == SDL_AUDIO_ISFLOAT(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_ISFLOAT");
@@ -44,6 +45,7 @@ namespace audio {
 		ASSERT(SDL_AUDIO_ISINT(wav_spec.format) == SDL_AUDIO_ISINT(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_ISINT");
 		ASSERT(SDL_AUDIO_ISLITTLEENDIAN(wav_spec.format) == SDL_AUDIO_ISLITTLEENDIAN(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_ISLITTLEENDIAN");
 		ASSERT(SDL_AUDIO_ISUNSIGNED(wav_spec.format) == SDL_AUDIO_ISUNSIGNED(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_ISUNSIGNED");
+#endif
 		ASSERT(wav_spec.channels == loaded_wav_spec.channels, "Mismatch audio! channels");
 		ASSERT(wav_spec.silence == loaded_wav_spec.silence, "Mismatch audio! silence");
 		ASSERT(wav_spec.samples == loaded_wav_spec.samples, "Mismatch audio! samples");

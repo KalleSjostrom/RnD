@@ -165,7 +165,7 @@ static const char *vertex = GLSL(
 
 	layout(location = 0) in vec3 positions;
 
-	void main(){
+	void main() {
 		uv.xy = (positions.xy + 1.0f) / 2.0f;
 		gl_Position = vec4(positions, 1.0f);
 	}
@@ -176,47 +176,49 @@ static const char *fragment = GLSL(
 
 	out vec4 color;
 
-	uniform sampler2D lightmap_color;
-	uniform sampler2D lightmap_info;
-	uniform sampler2D scene;
-	uniform sampler2D bloom;
-	uniform sampler2D hatch;
+	// uniform sampler2D lightmap_color;
+	// uniform sampler2D lightmap_info;
+	// uniform sampler2D scene;
+	// uniform sampler2D bloom;
+	// uniform sampler2D hatch;
 
-	vec2 rotate_uv(vec2 uv, float angle) {
-		float ca = cos(angle);
-		float sa = sin(angle);
+	// vec2 rotate_uv(vec2 uv, float angle) {
+	// 	float ca = cos(angle);
+	// 	float sa = sin(angle);
 
-		float rx = -ca*uv.x + sa*uv.y;
-		float ry = -sa*uv.x - ca*uv.y;
+	// 	float rx = -ca*uv.x + sa*uv.y;
+	// 	float ry = -sa*uv.x - ca*uv.y;
 
-		return vec2(rx, ry);
-	}
+	// 	return vec2(rx, ry);
+	// }
 
 	void main() {
-		vec4 light_info = texture(lightmap_info, uv);
-		vec4 light_color = texture(lightmap_color, uv);
+		// vec4 light_info = texture(lightmap_info, uv);
+		// vec4 light_color = texture(lightmap_color, uv);
 
-		vec4 scene_color = texture(scene, uv);
-		vec4 bloom_color = texture(bloom, uv);
+		// vec4 scene_color = texture(scene, uv);
+		// vec4 bloom_color = texture(bloom, uv);
 
-		vec4 hatch_vert_color = texture(hatch, rotate_uv(uv, -0.0f).xy*2);
-		vec4 hatch_hori_color = texture(hatch, rotate_uv(uv, -0.0f).yx*2);
+		// vec4 hatch_vert_color = texture(hatch, rotate_uv(uv, -0.0f).xy*2);
+		// vec4 hatch_hori_color = texture(hatch, rotate_uv(uv, -0.0f).yx*2);
 
-		// bloom_color.a = 0;
-		scene_color.rgb *= light_info.r;
+		// // bloom_color.a = 0;
+		// scene_color.rgb *= light_info.r;
 
-		color = scene_color + bloom_color + vec4(vec3(light_color.rgb), light_info.g);
+		// color = scene_color + bloom_color + vec4(vec3(light_color.rgb), light_info.g);
 
-		float a1 = 1 - hatch_vert_color.g;
+		// float a1 = 1 - hatch_vert_color.g;
 
-		float hatch = hatch_vert_color.r + hatch_hori_color.r;
-		float a2 = (1-hatch) * (1-scene_color.a) + scene_color.a;
+		// float hatch = hatch_vert_color.r + hatch_hori_color.r;
+		// float a2 = (1-hatch) * (1-scene_color.a) + scene_color.a;
 
-		if (scene_color.a == 1) {
-			color.a = 1;
-		} else {
-			color.a = a1 * light_info.g + a2 * (1-light_info.g);
-		}
+		// if (scene_color.a == 1) {
+		// 	color.a = 1;
+		// } else {
+		// 	color.a = a1 * light_info.g + a2 * (1-light_info.g);
+		// }
+
+		color = vec4(1, 1, 1, 1);
 	}
 );
 }

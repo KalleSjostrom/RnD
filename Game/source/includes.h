@@ -1,14 +1,24 @@
+#include "engine/utils/platform.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <float.h>
 
+#ifdef OS_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include "windows.h"
+#include <gl/gl.h>
+#include "win32_setup_gl.h"
+#else
 #include <OpenGL/gl3.h>
 #include <OpenGL/opengl.h>
+#endif
 
 #define GLSL(src) "#version 410\n" #src
 typedef uint16_t GLindex;
-#define GL_INDEX GL_UNSIGNED_SHORT
+// #define GL_INDEX GL_UNSIGNED_SHORT
 
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
@@ -30,7 +40,6 @@ namespace globals {
 #include "engine/utils/animation.h"
 
 /////// ASSETS
-#include "../assets/hatch.c"
 #include "../generated/animations.generated.cpp"
 #include "shaders/default.shader.cpp"
 #include "shaders/avatar.shader.cpp"

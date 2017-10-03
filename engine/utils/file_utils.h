@@ -8,7 +8,8 @@ inline u64 get_filesize(FILE *file) {
 	return (u64)length;
 }
 inline FILE *open_file(const char *filename, size_t *filesize) {
-	FILE *file = fopen(filename, "r");
+	FILE *file;
+	fopen_s(&file, filename, "r");
 	ASSERT(file, "Could not find file %s!", filename);
 	*filesize = get_filesize(file);
 	return file;
@@ -16,6 +17,7 @@ inline FILE *open_file(const char *filename, size_t *filesize) {
 
 inline b32 file_exists(const char *filename) {
 	// TODO(kalle): Replace with something sane.
-	FILE *file = fopen(filename, "r");
+	FILE *file;
+	fopen_s(&file, filename, "r");
 	return file != 0;
 }

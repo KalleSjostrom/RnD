@@ -28,6 +28,10 @@ struct Game {
 EXPORT PLUGIN_RELOAD(reload) {
 	Game &game = *(Game*) memory;
 
+	#ifdef OS_WINDOWS
+		setup_gl();
+	#endif
+
 	globals::transient_arena = &game.transient_arena;
 	setup_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
 
@@ -61,7 +65,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 	rp.view_projection_location = glGetUniformLocation(ray_program, "view_projection");
 	rp.model_location = glGetUniformLocation(ray_program, "model");
 
-	setup(game.render_pipe, screen_width, screen_height);
+	setup(game.engine, game.render_pipe, screen_width, screen_height);
 }
 
 static float time = 0;
@@ -70,7 +74,11 @@ EXPORT PLUGIN_UPDATE(update) {
 	Game &game = *(Game*) memory;
 
 	if (!game.initialized) {
-		game.persistent_arena = {}; // init_from_existing((char*)memory + sizeof(Game), PERSISTENT_ARENA_SIZE);
+		#ifdef OS_WINDOWS
+			setup_gl();
+		#endif
+		MemoryArena ma = {};
+		game.persistent_arena = ma; // init_from_existing((char*)memory + sizeof(Game), PERSISTENT_ARENA_SIZE);
 		setup_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
 	}
 
@@ -99,7 +107,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 		// glEnable(GL_DEPTH_TEST);
 
-		setup(game.render_pipe, screen_width, screen_height);
+		setup(game.engine, game.render_pipe, screen_width, screen_height);
 
 		// spawn_entity(game.entities[game.entity_count++], EntityType_Avatar, game.avatar_program_id, V3(-400, -400, 0));
 		spawn_entity(game.components, game.entities[game.entity_count++], EntityType_BlockAvatar, game.default_program_id, V3(-500, 0, 0));
@@ -117,7 +125,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		if (!gl_program_builder::validate_program(default_program))
 			return -1;
 
-		game.audio_manager.play(game.engine, "../assets/test.wav");
+		game.audio_manager.play(game.engine, "../../game/assets/test.wav");
 	}
 
 	{ // Update the game

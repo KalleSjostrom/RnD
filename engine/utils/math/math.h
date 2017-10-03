@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES 1
 #include <math.h>
 #if USE_INTRINSICS
 #include <immintrin.h>

@@ -200,8 +200,8 @@ FORCE_INLINE Ray make_ray(v3 &from, v3 &to) {
 	r.to = to;
 
 	r.delta = to - from;
-	r.inv_delta.x = safe_divide(1.0f, r.delta.x, INFINITY);
-	r.inv_delta.y = safe_divide(1.0f, r.delta.y, INFINITY);
+	r.inv_delta.x = safe_divide(1.0f, r.delta.x, FLT_MAX);
+	r.inv_delta.y = safe_divide(1.0f, r.delta.y, FLT_MAX);
 
 	return r;
 }
@@ -228,7 +228,7 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 		bool is_inside = inside(aabb, ray.from);
 		bool is_hit = false;
 
-		intersection::RayAABB ir;
+		intersection::RayAABB ir = {};
 		if (!is_inside) {
 			ir = intersection::ray_aabb(ray, aabb);
 			is_hit = ir.did_hit();

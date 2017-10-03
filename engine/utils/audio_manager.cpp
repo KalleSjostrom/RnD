@@ -21,8 +21,8 @@ struct ActiveSound {
 	f32 volume_target[2];
 };
 
-#define SHRT_MIN -32767
-#define SHRT_MAX 32767
+// #define SHRT_MIN -32767
+// #define SHRT_MAX 32767
 
 struct AudioManager {
 	i32 sound_count;
