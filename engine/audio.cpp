@@ -29,7 +29,7 @@ namespace audio {
 		printf("audio spec.size: %u\n", wav_spec.size);
 	}
 
-	void load(const char *filename, uint8_t **buffer, uint32_t *length) {
+	void load(const char *filename, u8 **buffer, u32 *length) {
 		SDL_AudioSpec loaded_wav_spec = {};
 		if (SDL_LoadWAV_RW(SDL_RWFromFile(filename, "rb"), 1, &loaded_wav_spec, (Uint8**)buffer, length) == 0) {
 			fprintf(stderr, "Couldn't load audio! (filename=%s, error=%s)\n", filename, SDL_GetError());
@@ -51,21 +51,21 @@ namespace audio {
 		ASSERT(wav_spec.samples == loaded_wav_spec.samples, "Mismatch audio! samples");
 	}
 
-	void queue(uint8_t *buffer, uint32_t length) {
+	void queue(u8 *buffer, u32 length) {
 		if (SDL_QueueAudio(device_id, buffer, length) < 0) {
 			fprintf(stderr, "Couldn't queue audio! (error=%s)\n", SDL_GetError());
 		}
 	}
 
-	uint32_t queued_size() {
+	u32 queued_size() {
 		return SDL_GetQueuedAudioSize(device_id);
 	}
 
-	void free(int16_t *buffer) {
+	void free(i16 *buffer) {
 		SDL_FreeWAV((Uint8*)buffer);
 	}
 
-	void set_playing(bool playing) {
+	void set_playing(b32 playing) {
 		SDL_PauseAudioDevice(device_id, !playing);
 	}
 }

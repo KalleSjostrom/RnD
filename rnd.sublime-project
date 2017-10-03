@@ -8,9 +8,6 @@
 			"path": "../../HandmadeHero",
 			"name": "Handmade Hero"
 		},
-		{
-			"path": "C:/Users/Kalle/Downloads/glfw-3.2.1/glfw-3.2.1/src",
-		},
 	],
 	"build_systems":
 	[

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 #include <float.h>
 
 #ifdef OS_WINDOWS

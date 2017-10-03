@@ -52,7 +52,7 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 
 				glBindVertexArray(re.vertex_array_object);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, re.element_array_buffer);
-				glDrawElements(re.draw_mode, re.index_count, GL_INDEX, (void*)0);
+				glDrawElements(re.draw_mode, re.index_count, GL_UNSIGNED_SHORT, (void*)0);
 			}
 		}
 	}

@@ -284,7 +284,6 @@ static void run(const char *plugin_path) {
 			_input.pressed[i] = false;
 			_input.released[i] = false;
 		}
-		ENGINE_TIME += dt;
 
 		SDL_GL_SwapWindow(window);
 	}

@@ -21,6 +21,7 @@
 	#define ALIGN(x) __attribute__((aligned(x)))
 	#define ALIGNED_(x) __attribute__ ((aligned(x)))
 	#define EXPORT extern "C" __attribute__((visibility("default")))
+	#define fopen_s(file, name, mode) *file = fopen(name, mode)
 #endif
 
 #define ALIGNED_TYPE_(t,x) typedef t ALIGNED_(x)

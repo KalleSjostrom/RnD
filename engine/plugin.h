@@ -4,19 +4,21 @@
 #define RES_HEIGHT 768
 
 struct ImageData {
-	int bytes_per_pixel;
-	int width, height;
 	void *pixels;
+
+	i32 bytes_per_pixel;
+	i32 width, height;
+	i32 _padding;
 };
 
 struct EngineApi {
-	void (*audio_load)(const char *filename, uint8_t **buffer, uint32_t *length);
-	void (*audio_queue)(uint8_t *buffer, uint32_t length);
-	uint32_t (*audio_queued_size)();
-	void (*audio_free)(int16_t *buffer);
-	void (*audio_set_playing)(bool playing);
+	void (*audio_load)(const char *filename, u8 **buffer, u32 *length);
+	void (*audio_queue)(u8 *buffer, u32 length);
+	u32 (*audio_queued_size)();
+	void (*audio_free)(i16 *buffer);
+	void (*audio_set_playing)(b32 playing);
 
-	ImageData (*image_load)(const char *filename);
+	b32 (*image_load)(const char *filename, ImageData &image_data);
 
 	void (*quit)();
 };
@@ -70,15 +72,15 @@ struct InputTime {
 	float released;
 };
 struct Input {
-	bool pressed[InputKey_Count];
-	bool released[InputKey_Count];
+	b32 pressed[InputKey_Count];
+	b32 released[InputKey_Count];
 	InputTime times[InputKey_Count];
 };
 #define IS_HELD(input, key) ((input).times[(key)].pressed > (input).times[(key)].released)
 #define IS_PRESSED(input, key) (input).pressed[(key)]
 
-#define PLUGIN_UPDATE(name) int name(void *memory, EngineApi &engine, int screen_width, int screen_height, Input &input, float dt)
+#define PLUGIN_UPDATE(name) i32 name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, Input &input, float dt)
 typedef PLUGIN_UPDATE(plugin_update_t);
 
-#define PLUGIN_RELOAD(name) void name(void *memory, int screen_width, int screen_height)
+#define PLUGIN_RELOAD(name) void name(void *memory, i32 screen_width, i32 screen_height)
 typedef PLUGIN_RELOAD(plugin_reload_t);

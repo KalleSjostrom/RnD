@@ -94,7 +94,8 @@ void setup_fbo(FBO &fbo, int width, int height, int count = 1) {
 }
 
 void load_image(EngineApi *engine, RenderPipe &r) {
-	ImageData image_data = engine->image_load("../../game/assets/hatch_1.jpg");
+	ImageData image_data;
+	b32 success = engine->image_load("../../game/assets/hatch_0.jpg", image_data);
 
 	glGenTextures(1, &r.hatch_texture);
 
@@ -106,11 +107,11 @@ void load_image(EngineApi *engine, RenderPipe &r) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	int mode = GL_RGB;
+	GLenum mode = GL_RGB;
 	if (image_data.bytes_per_pixel == 4) {
 		mode = GL_RGBA;
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, mode, image_data.width, image_data.height, 0, mode, GL_UNSIGNED_BYTE, image_data.pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)mode, image_data.width, image_data.height, 0, mode, GL_UNSIGNED_BYTE, image_data.pixels);
 }
 
 void setup(EngineApi *engine, RenderPipe &r, int screen_width, int screen_height) {
@@ -199,7 +200,7 @@ void render_bloom(RenderPipe &r) {
 	glUseProgram(r.passthrough_program);
 	glBindTexture(GL_TEXTURE_2D, r.scene.render_texture[0]);
 	glUniform1i(r.passthrough_render_texture_location, 0);
-	glDrawElements(renderable.draw_mode, renderable.index_count, GL_INDEX, (void*)0);
+	glDrawElements(renderable.draw_mode, renderable.index_count, GL_UNSIGNED_SHORT, (void*)0);
 
 	// Start ping-pong rendering of the gaussian blur
 	glUseProgram(r.bloom_program);
@@ -208,13 +209,13 @@ void render_bloom(RenderPipe &r) {
 		glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[1].framebuffer_object);
 		glBindTexture(GL_TEXTURE_2D, r.bloom[0].render_texture[0]);
 		glUniform2f(r.bloom_direction_location, 0, 1);
-		glDrawElements(renderable.draw_mode, renderable.index_count, GL_INDEX, (void*)0);
+		glDrawElements(renderable.draw_mode, renderable.index_count, GL_UNSIGNED_SHORT, (void*)0);
 
 		// Render to the first framebuffer_object
 		glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[0].framebuffer_object);
 		glBindTexture(GL_TEXTURE_2D, r.bloom[1].render_texture[0]);
 		glUniform2f(r.bloom_direction_location, 1, 0);
-		glDrawElements(renderable.draw_mode, renderable.index_count, GL_INDEX, (void*)0);
+		glDrawElements(renderable.draw_mode, renderable.index_count, GL_UNSIGNED_SHORT, (void*)0);
 	}
 
 	// Restore the viewport
@@ -282,7 +283,6 @@ void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) 
 	glViewport(0, 0, r.screen_width, r.screen_height);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 }
 
 void render_combine(RenderPipe &r) {
@@ -293,25 +293,25 @@ void render_combine(RenderPipe &r) {
 
 	glUseProgram(r.blend_program);
 
-	// glActiveTexture(GL_TEXTURE4);
-	// glBindTexture(GL_TEXTURE_2D, r.hatch_texture);
-	// glUniform1i(r.blend_hatch_location, 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, r.hatch_texture);
+	glUniform1i(r.blend_hatch_location, 4);
 
-	// glActiveTexture(GL_TEXTURE3);
-	// glBindTexture(GL_TEXTURE_2D, r.bloom[0].render_texture[0]);
-	// glUniform1i(r.blend_bloom_location, 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, r.bloom[0].render_texture[0]);
+	glUniform1i(r.blend_bloom_location, 3);
 
-	// glActiveTexture(GL_TEXTURE2);
-	// glBindTexture(GL_TEXTURE_2D, r.lightmap[0].render_texture[1]);
-	// glUniform1i(r.blend_lightmap_info_location, 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, r.lightmap[0].render_texture[1]);
+	glUniform1i(r.blend_lightmap_info_location, 2);
 
-	// glActiveTexture(GL_TEXTURE1);
-	// glBindTexture(GL_TEXTURE_2D, r.lightmap[0].render_texture[0]);
-	// glUniform1i(r.blend_lightmap_color_location, 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, r.lightmap[0].render_texture[0]);
+	glUniform1i(r.blend_lightmap_color_location, 1);
 
-	// glActiveTexture(GL_TEXTURE0);
-	// glBindTexture(GL_TEXTURE_2D, r.scene.render_texture[0]);
-	// glUniform1i(r.blend_scene_location, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, r.scene.render_texture[0]);
+	glUniform1i(r.blend_scene_location, 0);
 
 	CALL(r.fullscreen_quad, model, render, -1);
 }

@@ -1,4 +1,7 @@
-#define _USE_MATH_DEFINES 1
+#ifdef OS_WINDOWS
+	#define _USE_MATH_DEFINES 1
+#endif
+
 #include <math.h>
 #if USE_INTRINSICS
 #include <immintrin.h>
