@@ -1,7 +1,3 @@
-#include "engine/utils/threading/threading.cpp"
-#include "engine/utils/threading/atomics.cpp"
-#include "engine/utils/memory/memory_arena.cpp"
-
 inline size_t round_up(size_t number, size_t multiple) {
 	if (multiple == 0) {
 		return number;
@@ -91,53 +87,53 @@ namespace queue {
 	#define ARRAY_MASK (MAX_ARRAY_SIZE-1)
 
 	b32 take(Queue *q, i32 &value) {
-		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED) - 1;
-		// i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
-		__atomic_store_n(&q->bottom, b, __ATOMIC_RELAXED);
+		i32 b = atomic_load_n(&q->bottom, __ATOMIC_RELAXED) - 1;
+		// i32 *a = atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
+		atomic_store_n(&q->bottom, b, __ATOMIC_RELAXED);
 
-		__atomic_thread_fence(__ATOMIC_SEQ_CST);
+		atomic_thread_fence(__ATOMIC_SEQ_CST);
 
-		i32 t = __atomic_load_n(&q->top, __ATOMIC_RELAXED);
+		i32 t = atomic_load_n(&q->top, __ATOMIC_RELAXED);
 		b32 result = 1;
 		if (t <= b) {
 			// Non-empty queue.
-			value = __atomic_load_n(&q->array[b & ARRAY_MASK], __ATOMIC_RELAXED);
+			value = atomic_load_n(&q->array[b & ARRAY_MASK], __ATOMIC_RELAXED);
 			if (t == b) {
 				/* Single last element in queue. */
-				if (!__atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+				if (!atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
 					/* Failed race. */
 					result = false;
 				}
-				__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+				atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
 			}
 		} else { /* Empty queue. */
 			result = false;
-			__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+			atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
 		}
 		return result;
 	}
 
 	void push(Queue *q, i32 x) {
-		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_RELAXED);
-		i32 t = __atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
-		// i32 *a = __atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
+		i32 b = atomic_load_n(&q->bottom, __ATOMIC_RELAXED);
+		i32 t = atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
+		// i32 *a = atomic_load_n(&q->array, __ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
 		if (b - t > MAX_ARRAY_SIZE - 1) { /* Full queue. */
 			ASSERT(false, "Queue full!");
 		}
-		__atomic_store_n(&q->array[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
-		__atomic_thread_fence(__ATOMIC_RELEASE);
-		__atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
+		atomic_store_n(&q->array[b & ARRAY_MASK], x, __ATOMIC_RELAXED);
+		atomic_thread_fence(__ATOMIC_RELEASE);
+		atomic_store_n(&q->bottom, b + 1, __ATOMIC_RELAXED);
 	}
 
 	b32 steal(Queue *q, i32 &value) {
-		i32 t = __atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
-		__atomic_thread_fence(__ATOMIC_SEQ_CST);
-		i32 b = __atomic_load_n(&q->bottom, __ATOMIC_ACQUIRE);
+		i32 t = atomic_load_n(&q->top, __ATOMIC_ACQUIRE);
+		atomic_thread_fence(__ATOMIC_SEQ_CST);
+		i32 b = atomic_load_n(&q->bottom, __ATOMIC_ACQUIRE);
 		if (t < b) {
 			// Non-empty queue.
-			// i32 *a = __atomic_load_n(&q->array, __ATOMIC_CONSUME);
-			value = __atomic_load_n(&q->array[t & ARRAY_MASK], __ATOMIC_RELAXED);
-			if (!__atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+			// i32 *a = atomic_load_n(&q->array, __ATOMIC_CONSUME);
+			value = atomic_load_n(&q->array[t & ARRAY_MASK], __ATOMIC_RELAXED);
+			if (!atomic_compare_exchange_strong_n(&q->top, &t, t + 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
 				return false; // Failed race.
 			}
 	        return true;
@@ -280,7 +276,7 @@ namespace {
 					cursor = 0;
 
 				bool expected = true;
-				if (__atomic_compare_exchange_weak_n(&scheduler.free_fibers[cursor], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
+				if (atomic_compare_exchange_weak_n(&scheduler.free_fibers[cursor], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
 	                // NOTE(kalle): The 'free_fiber_cursor' is a hint and we dont care enought to sync it between threads.
 	                scheduler.free_fiber_cursor = cursor;
 					return cursor;
@@ -299,12 +295,12 @@ namespace {
 		// In this specific implementation, the fiber pool and waiting list are flat arrays signaled by atomics. So in order to "Push" the fiber to the fiber pool or waiting list, we just set their corresponding atomics to true
 		switch (tls.previous_fiber_destination) {
 		case FiberDestination_ToPool:
-			__atomic_store_n(free_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
+			atomic_store_n(free_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
 			tls.previous_fiber_destination = FiberDestination_None;
 			tls.previous_fiber_index = INVALID_INDEX;
 			break;
 		case FiberDestination_ToWaiting:
-			__atomic_store_n(waiting_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
+			atomic_store_n(waiting_fibers + tls.previous_fiber_index, true, __ATOMIC_RELEASE);
 			tls.previous_fiber_destination = FiberDestination_None;
 			tls.previous_fiber_index = INVALID_INDEX;
 			break;
@@ -344,7 +340,7 @@ namespace {
 		args->main_task(scheduler, args->data);
 
 		// Request that all the threads quit
-		__atomic_store_n(&scheduler->quit, 1, __ATOMIC_RELEASE);
+		atomic_store_n(&scheduler->quit, 1, __ATOMIC_RELEASE);
 
 		// Switch to the thread fibers
 		ThreadLocalStorage &tls = scheduler->tls_array[get_thread_index()];
@@ -394,7 +390,7 @@ namespace {
 
 		ThreadLocalStorage &tls = scheduler->tls_array[get_thread_index()];
 
-		while (!__atomic_load_n(&scheduler->quit, __ATOMIC_ACQUIRE)) {
+		while (!atomic_load_n(&scheduler->quit, __ATOMIC_ACQUIRE)) {
 			// Clean up from the last fiber to run on this thread
 			_cleanup_old_fiber(tls, scheduler->free_fibers, scheduler->waiting_fibers);
 
@@ -403,23 +399,23 @@ namespace {
 
 			for (i32 i = 0; i < FIBER_POOL_SIZE; ++i) {
 				// TODO(kalle): Double lock, why??!
-				if (!__atomic_load_n(&scheduler->waiting_fibers[i], __ATOMIC_RELAXED)) {
+				if (!atomic_load_n(&scheduler->waiting_fibers[i], __ATOMIC_RELAXED)) {
 					continue;
 				}
 
-				if (!__atomic_load_n(&scheduler->waiting_fibers[i], __ATOMIC_ACQUIRE)) {
+				if (!atomic_load_n(&scheduler->waiting_fibers[i], __ATOMIC_ACQUIRE)) {
 					continue;
 				}
 
 				// Found a waiting fiber. Test if it's ready
 				WaitingBundle &bundle = scheduler->waiting_bundles[i];
 				ai32 *job = scheduler->jobs + bundle.job_handle;
-				if (__atomic_load_n(job, __ATOMIC_RELAXED) != bundle.target) {
+				if (atomic_load_n(job, __ATOMIC_RELAXED) != bundle.target) {
 					continue;
 				}
 
 				bool expected = true;
-				if (__atomic_compare_exchange_strong_n(&scheduler->waiting_fibers[i], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
+				if (atomic_compare_exchange_strong_n(&scheduler->waiting_fibers[i], &expected, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
 					waiting_fiber_index = i;
 					break;
 				}
@@ -438,7 +434,7 @@ namespace {
 				if (_scheduler_get_next_task(scheduler->tls_array, scheduler->thread_count, &next_task)) {
 					next_task.task.function(scheduler, next_task.task.argument);
 					ai32 *job = scheduler->jobs + next_task.job_handle;
-					__atomic_fetch_sub(job, 1, __ATOMIC_SEQ_CST);
+					atomic_fetch_sub(job, 1, __ATOMIC_SEQ_CST);
 				}
 			}
 		}
@@ -572,7 +568,7 @@ i32 scheduler_add_tasks(TaskScheduler &scheduler, i32 task_count, Task *tasks) {
 // Yields execution to another task until job reaches target
 void scheduler_wait_for_job(TaskScheduler &scheduler, i32 job_handle, i32 target) {
 	ai32 *job = scheduler.jobs + job_handle;
-	if (__atomic_load_n(job, __ATOMIC_RELAXED) == target) {
+	if (atomic_load_n(job, __ATOMIC_RELAXED) == target) {
 		return;
 	}
 

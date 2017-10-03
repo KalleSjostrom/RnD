@@ -1,3 +1,5 @@
+#include "engine/utils/platform.h"
+
 #include <stdio.h>
 #include <stdint.h> // Windows
 #include <stdlib.h>
@@ -5,11 +7,17 @@
 #include <float.h>
 #include <stdarg.h>
 #include <dirent.h> // for windows, dirent.h is in local include
-#include <direct.h>
+#ifdef OS_WINDOWS
+	#include <direct.h>
+#endif
 #include <sys/stat.h>
 #include <time.h>
 
 #include "engine/utils/common.h"
+
+#include "engine/utils/threading/threading.cpp"
+#include "engine/utils/threading/atomics.cpp"
+
 #include "engine/utils/file_utils.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/string.h"

@@ -530,7 +530,7 @@ namespace parser {
 }
 
 static unsigned global_error = 0;
-static __declspec(thread) parser::ParserContext *global_last_parser_context;
+static THREAD_LOCAL parser::ParserContext *global_last_parser_context;
 // GetFullPathName(global_last_parser_context->filepath, 1024, filepath_buffer, 0);
 #define PARSER_ASSERT(arg, format, ...) { \
 	if (!(arg)) { \
@@ -559,7 +559,7 @@ static __declspec(thread) parser::ParserContext *global_last_parser_context;
 inline char *printable_token(parser::Token &token) {
 	if (token.type == TokenType_Number) {
 		static char error_buffer[256];
-		_snprintf(error_buffer, ARRAY_COUNT(error_buffer), "%g", (double)token.number);
+		snprintf(error_buffer, ARRAY_COUNT(error_buffer), "%g", (double)token.number);
 		return error_buffer;
 	} else {
 		null_terminate(token.string);

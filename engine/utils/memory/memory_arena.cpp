@@ -18,15 +18,11 @@ struct MemoryBlockHandle {
 	size_t offset;
 };
 
-#if defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
-	#include <sys/mman.h>
-#elif defined(OS_WINDOWS)
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-#endif
-
 /// Wrap os memory handling
 #if defined(OS_WINDOWS)
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+
 	inline void protect_memory(void *memory, size_t bytes) {
 		DWORD ignored;
 		BOOL result = VirtualProtect(memory, bytes, PAGE_NOACCESS, &ignored);
@@ -53,6 +49,9 @@ struct MemoryBlockHandle {
 		_aligned_free(block);
 	}
 #elif defined(OS_LINUX) || defined(OS_MAC) || defined(iOS)
+	#include <sys/mman.h>
+	#include <unistd.h>
+
 	inline void protect_memory(void *memory, size_t bytes) {
 		i32 result = mprotect(memory, bytes, PROT_NONE);
 		ASSERT(!result, "Error in protect_memory");

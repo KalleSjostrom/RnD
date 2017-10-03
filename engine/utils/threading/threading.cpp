@@ -54,6 +54,7 @@
 	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
 		return thread_a.id == thread_b.id;
 	}
+	#define THREAD_LOCAL __declspec(thread)
 #elif defined(OS_MAC) || defined(OS_iOS) || defined(OS_LINUX)
 	#include <pthread.h>
 	#include <unistd.h>
@@ -101,4 +102,6 @@
 	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
 		return pthread_equal(thread_a, thread_b);
 	}
+
+	#define THREAD_LOCAL thread_local
 #endif
