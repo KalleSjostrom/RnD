@@ -72,13 +72,8 @@ static const char *fragment = GLSL(
 	out vec4 color;
 
 	void main() {
-		// float lsq = pos.x*center.x + pos.y*center.y;
 		float l = distance(pos, center);
-		color = vec4(0.8f, 0.1f, 0.1f, l > 50 ? 0.0f : 1.0f);
-		// if (pos.y > center.y)
-		// 	color = vec4(c, c, c, 0);
-		// else
-		// 	color = vec4(c, c, c, c);
+		color = vec4(0.8f, 0.1f, 0.1f, 1-smoothstep(50, 51, l));
 	}
 );
 }

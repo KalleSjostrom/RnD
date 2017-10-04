@@ -1,5 +1,11 @@
 #include "shaders/fullscreen_effects.shader.cpp"
 
+static const f32 lightmap_resolution = 1.0f; // In percent
+static const f32 shadowmap_resolution = 360*8; // Descreet angles. Lower means more twitchy moving shadows
+static const f32 bloom_resolution = 0.2f; // In percent
+static const u32 bloom_pass_count = 128; // Number of bloom passes
+static const u32 fsaa_num_samples = 16;
+
 enum RenderMask {
 	RenderMask_ShadowCasters = 1 << 0,
 	RenderMask_Lights = 1 << 1,
@@ -10,13 +16,13 @@ enum RenderMask {
 
 struct FBO {
 	GLuint framebuffer_object;
-	int count;
+	i32 count;
 	GLuint render_texture[8];
 };
 
 struct RenderPipe {
-	int screen_width;
-	int screen_height;
+	i32 screen_width;
+	i32 screen_height;
 
 	Entity fullscreen_quad;
 
@@ -27,7 +33,7 @@ struct RenderPipe {
 
 	v3 light_colors[4];
 	v2 light_positions[4];
-	float light_radii[4];
+	f32 light_radii[4];
 
 	GLuint passthrough_program;
 	GLint passthrough_render_texture_location;
@@ -60,6 +66,9 @@ struct RenderPipe {
 
 	GLuint hatch_texture;
 
+	GLuint fsaa_tex;
+	GLuint fsaa_fbo;
+
 	// Move
 	Program programs[4];
 	i32 program_count;
@@ -71,12 +80,12 @@ static GLenum draw_buffers[] = {
 	GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7,
 };
 
-void setup_fbo(FBO &fbo, int width, int height, int count = 1) {
+void setup_fbo(FBO &fbo, i32 width, i32 height, i32 count = 1) {
 	glGenFramebuffers(1, &fbo.framebuffer_object);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo.framebuffer_object);
 
 	fbo.count = count;
-	for (int i = 0; i < count; ++i) {
+	for (i32 i = 0; i < count; ++i) {
 		glGenTextures(1, &fbo.render_texture[i]);
 		glBindTexture(GL_TEXTURE_2D, fbo.render_texture[i]);
 
@@ -96,6 +105,7 @@ void setup_fbo(FBO &fbo, int width, int height, int count = 1) {
 void load_image(EngineApi *engine, RenderPipe &r) {
 	ImageData image_data;
 	b32 success = engine->image_load("../../game/assets/hatch.png", image_data);
+	ASSERT(success, "Could not load image!");
 
 	glGenTextures(1, &r.hatch_texture);
 
@@ -108,13 +118,17 @@ void load_image(EngineApi *engine, RenderPipe &r) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// The png is stored as ARGB, appearently
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
-
-	// #include "../assets/hatch_3.c"
-	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hatch.width, hatch.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, hatch.pixel_data);
+	switch(image_data.format) {
+		case PixelFormat_RGBA: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data.pixels);
+		} break;
+		case PixelFormat_ABGR: {
+    		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
+		} break;
+	}
 }
 
-void setup(EngineApi *engine, RenderPipe &r, int screen_width, int screen_height) {
+void setup(EngineApi *engine, RenderPipe &r, i32 screen_width, i32 screen_height) {
 	if (r.fullscreen_quad.type != EntityType_Fullscreen)
 		spawn_entity(*(ComponentGroup*)globals::components, r.fullscreen_quad, EntityType_Fullscreen);
 
@@ -122,13 +136,13 @@ void setup(EngineApi *engine, RenderPipe &r, int screen_width, int screen_height
 	r.screen_height = screen_height;
 
 	setup_fbo(r.scene, screen_width, screen_height);
-	setup_fbo(r.shadowmap, 360*2, 1);
+	setup_fbo(r.shadowmap, shadowmap_resolution, 1);
 
-	setup_fbo(r.lightmap[0], screen_width/4, screen_height/4, 2);
-	setup_fbo(r.lightmap[1], screen_width/4, screen_height/4, 2);
+	setup_fbo(r.lightmap[0], screen_width * lightmap_resolution, screen_height * lightmap_resolution, 2);
+	setup_fbo(r.lightmap[1], screen_width * lightmap_resolution, screen_height * lightmap_resolution, 2);
 
-	setup_fbo(r.bloom[0], screen_width/4, screen_height/4);
-	setup_fbo(r.bloom[1], screen_width/4, screen_height/4);
+	setup_fbo(r.bloom[0], screen_width * bloom_resolution, screen_height * bloom_resolution);
+	setup_fbo(r.bloom[1], screen_width * bloom_resolution, screen_height * bloom_resolution);
 
 	r.passthrough_program = gl_program_builder::create_from_strings(shader_passthrough::vertex, shader_passthrough::fragment, 0);
 	r.passthrough_render_texture_location = glGetUniformLocation(r.passthrough_program, "render_texture");
@@ -160,6 +174,14 @@ void setup(EngineApi *engine, RenderPipe &r, int screen_width, int screen_height
 	r.blend_scene_location = glGetUniformLocation(r.blend_program, "scene");
 	gl_program_builder::validate_program(r.blend_program);
 
+	glGenTextures(1, &r.fsaa_tex);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex);
+	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, fsaa_num_samples, GL_RGBA8, r.screen_width, r.screen_height, false);
+
+	glGenFramebuffers(1, &r.fsaa_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, r.fsaa_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex, 0);
+
 	load_image(engine, r);
 
 	r.light_radii[0] = 1.0f; r.light_radii[1] = 1.0f; r.light_radii[2] = 1.0f; r.light_radii[3] = 1.0f;
@@ -179,7 +201,7 @@ void set_light_position(RenderPipe &r, Camera &camera, v3 light_position) {
 
 void render_bloom(RenderPipe &r) {
 	// Set a smaller viewport for down-sampling
-	glViewport(0, 0, r.screen_width/4, r.screen_height/4);
+	glViewport(0, 0, r.screen_width * bloom_resolution, r.screen_height * bloom_resolution);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[1].framebuffer_object);
 	glClearColor(0, 0, 0, 1);
@@ -191,7 +213,7 @@ void render_bloom(RenderPipe &r) {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Get the fullscreen quad and set it up for rendering
-	int model_id = r.fullscreen_quad.model_id;
+	i32 model_id = r.fullscreen_quad.model_id;
 	Renderable &renderable = ((ComponentGroup*)globals::components)->model.instances[model_id].renderable;
 	glBindVertexArray(renderable.vertex_array_object);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderable.element_array_buffer);
@@ -204,7 +226,7 @@ void render_bloom(RenderPipe &r) {
 
 	// Start ping-pong rendering of the gaussian blur
 	glUseProgram(r.bloom_program);
-	for (int i = 0; i < 15; ++i) {
+	for (i32 i = 0; i < bloom_pass_count - 1; ++i) {
 		// Render to the second framebuffer_object
 		glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[1].framebuffer_object);
 		glBindTexture(GL_TEXTURE_2D, r.bloom[0].render_texture[0]);
@@ -231,15 +253,15 @@ void render_shadowmap(RenderPipe &r, ComponentGroup &components, Camera &camera)
 	render(components.renderer, camera, RenderMask_ShadowCasters);
 
 	glDisable(GL_BLEND);
-	glViewport(0, 0, 360*2, 1);
+	glViewport(0, 0, shadowmap_resolution, 1);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, r.shadowmap.framebuffer_object);
 
 	glUseProgram(r.shadowmap_program);
 	glBindTexture(GL_TEXTURE_2D, r.scene.render_texture[0]);
 	glUniform1i(r.shadowmap_scene_location, 0);
-	glUniform2fv(r.shadowmap_light_positions_location, 4, (float*)r.light_positions);
-	glUniform1fv(r.shadowmap_light_radii_location, 4, (float*)r.light_radii);
+	glUniform2fv(r.shadowmap_light_positions_location, 4, (f32*)r.light_positions);
+	glUniform1fv(r.shadowmap_light_radii_location, 4, (f32*)r.light_radii);
 
 	CALL(r.fullscreen_quad, model, render, -1);
 
@@ -260,7 +282,7 @@ void render_test(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	// Push viewport and blend state
 	glDisable(GL_BLEND);
-	glViewport(0, 0, r.screen_width/4, r.screen_height/4);
+	glViewport(0, 0, r.screen_width * lightmap_resolution, r.screen_height * lightmap_resolution);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, r.lightmap[0].framebuffer_object);
 
@@ -268,9 +290,9 @@ void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, r.shadowmap.render_texture[0]);
 	glUniform1i(r.lightmap_shadowmap_location, 0);
-	glUniform2fv(r.lightmap_light_positions_location, 4, (float*)r.light_positions);
-	glUniform1fv(r.lightmap_light_radii_location, 4, (float*)r.light_radii);
-	glUniform3fv(r.lightmap_light_colors_location, 4, (float*)r.light_colors);
+	glUniform2fv(r.lightmap_light_positions_location, 4, (f32*)r.light_positions);
+	glUniform1fv(r.lightmap_light_radii_location, 4, (f32*)r.light_radii);
+	glUniform3fv(r.lightmap_light_colors_location, 4, (f32*)r.light_colors);
 
 	CALL(r.fullscreen_quad, model, render, -1);
 
@@ -286,7 +308,7 @@ void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) 
 }
 
 void render_combine(RenderPipe &r) {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, r.fsaa_fbo);
 
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -314,4 +336,9 @@ void render_combine(RenderPipe &r) {
 	glUniform1i(r.blend_scene_location, 0);
 
 	CALL(r.fullscreen_quad, model, render, -1);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, r.fsaa_fbo); // Make sure your multisampled FBO is the read framebuffer
+	glDrawBuffer(GL_BACK);                       // Set the back buffer as the draw buffer
+	glBlitFramebuffer(0, 0, r.screen_width, r.screen_height, 0, 0, r.screen_width, r.screen_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 }

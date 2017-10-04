@@ -52,5 +52,5 @@ typedef int b32;
 }
 
 #ifdef OS_WINDOWS
-#define snprintf _snprintf
+#define snprintf _snprintf_s
 #endif

@@ -257,7 +257,7 @@ static const char *fragment = GLSL(
 				r /= light_radii[i];
 
 				vec4 data = texture(scene, coord);
-				if (data.a > 0.0f) {
+				if (data.a > 0.5f) {
 					distances[i] = min(distances[i], r);
 				}
 			}

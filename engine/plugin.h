@@ -3,12 +3,17 @@
 #define RES_WIDTH 1024
 #define RES_HEIGHT 768
 
+enum PixelFormat {
+	PixelFormat_RGBA,
+	PixelFormat_ABGR,
+};
+
 struct ImageData {
 	void *pixels;
 
 	i32 bytes_per_pixel;
 	i32 width, height;
-	i32 _padding;
+	PixelFormat format;
 };
 
 struct EngineApi {

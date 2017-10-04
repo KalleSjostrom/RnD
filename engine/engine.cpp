@@ -15,6 +15,16 @@
 
 #define MYGL 0
 
+#include <stdio.h>
+#include "utils/memory/memory_arena.cpp"
+#include "utils/string.h"
+struct ReloadInfo {
+	String reload_marker_path;
+	String directory_path;
+	String plugin_path;
+	String plugin_pattern;
+};
+
 #ifdef OS_WINDOWS
 	#define WIN32_LEAN_AND_MEAN
 	#include "windows.h"
@@ -24,23 +34,48 @@
 	#define get_symbol_address(lib_handle, symbol) GetProcAddress(lib_handle, symbol)
 	#define unload_library(lib_handle) FreeLibrary(lib_handle)
 
-	FORCE_INLINE LARGE_INTEGER absolute_time(void) {
-		LARGE_INTEGER time;
-		QueryPerformanceCounter(&time);
-		return time;
+	const void update_plugin_path(ReloadInfo &reload) {
+		WIN32_FIND_DATA best_data = {};
+		WIN32_FIND_DATA find_data;
+		HANDLE handle = FindFirstFile(*reload.plugin_pattern, &find_data);
+		if (handle == INVALID_HANDLE_VALUE)
+			return;
+		do {
+			FILETIME time = find_data.ftCreationTime;
+			FILETIME best_time = best_data.ftCreationTime;
+			if (time.dwHighDateTime > best_time.dwHighDateTime || (time.dwHighDateTime == best_time.dwHighDateTime && time.dwLowDateTime > best_time.dwLowDateTime)) {
+				best_data = find_data;
+			}
+
+		} while (FindNextFile(handle, &find_data));
+
+		FindClose(handle);
+
+		String plugin_name_string = make_string((char*)best_data.cFileName);
+
+		free(reload.plugin_path.text);
+		reload.plugin_path.text = (char*) malloc((size_t)(reload.directory_path.length + 1 + plugin_name_string.length + 1));
+		reload.plugin_path.length = 0;
+		append_path(reload.plugin_path, 2, &reload.directory_path, &plugin_name_string);
 	}
 
-	struct Time {
+	FORCE_INLINE u64 absolute_time(void) {
+		LARGE_INTEGER time;
+		QueryPerformanceCounter(&time);
+		return time.QuadPart;
+	}
+
+	struct TimeInfo {
 		i64 performance_count_frequency;
 	};
 
-	void setup_time(Time &t) {
+	void setup_time(TimeInfo &t) {
 		LARGE_INTEGER PerfCountFrequencyResult;
 		QueryPerformanceFrequency(&PerfCountFrequencyResult);
 		t.performance_count_frequency = PerfCountFrequencyResult.QuadPart;
 	}
-	double time_in_seconds(Time &t, u64 ticks) {
-		return  ((double)(ticks) / (double) t.performance_count_frequency);
+	double time_in_seconds(TimeInfo &t, u64 time) {
+		return  ((double)(time) / (double) t.performance_count_frequency);
 	}
 #else
 	#include <mach/mach_time.h>
@@ -56,17 +91,19 @@
 		return mach_absolute_time();
 	}
 
-	struct Time {
+	struct TimeInfo {
 		double resolution;
 	};
 
-	void setup_time(Time &t) {
+	typedef u64 u64;
+
+	void setup_time(TimeInfo &t) {
 		mach_timebase_info_data_t timebase_info;
 		mach_timebase_info(&timebase_info);
 
 		t.resolution = (double) timebase_info.numer / (timebase_info.denom * 1.0e9);
 	}
-	double time_in_seconds(Time &t, u64 ticks) {
+	double time_in_seconds(TimeInfo &t, u64 ticks) {
 		return ticks * t.resolution;
 	}
 #endif
@@ -145,9 +182,7 @@ static Plugin load_plugin_code(const char *lib_path, time_t timestamp) {
 
 static void unload_plugin_code(Plugin &plugin) {
 	int ret = unload_library(plugin.lib_handle);
-	if (ret != 0)
-		printf("Error closing lib handle (code=%d)\n", ret);
-
+	(void)ret;
 	plugin.lib_handle = 0;
 	plugin.valid = false;
 	printf("code unloaded!\n");
@@ -163,15 +198,24 @@ static b32 image_load(const char *filepath, ImageData &data) {
 
 	printf("%s\n", SDL_GetPixelFormatName(surface->format->format));
 
+	data.pixels = surface->pixels;
 	data.bytes_per_pixel = surface->format->BytesPerPixel;
 	data.width = surface->w;
 	data.height = surface->h;
-	data.pixels = surface->pixels;
+
+	switch(surface->format->format) {
+		case SDL_PIXELFORMAT_RGBA32: { data.format = PixelFormat_RGBA; } break;
+		case SDL_PIXELFORMAT_ABGR32: { data.format = PixelFormat_ABGR; } break;
+		default: {
+			ASSERT(0, "Unsuported pixel format!");
+			return false;
+		}
+	};
 
 	return true;
 }
 
-static void run(const char *plugin_path) {
+static void run(const char *plugin_directory, const char *plugin_name) {
 	running = true;
 
 	void *memory_chunks[2] = {
@@ -181,11 +225,26 @@ static void run(const char *plugin_path) {
 	i32 memory_index = 0;
 	void *memory = memory_chunks[memory_index];
 
-	char const *lockfile_path = "../../game/out/__lockfile";
+	String plugin_directory_string = make_string((char *)plugin_directory);
+	String plugin_name_string = make_string((char *)plugin_name);
 
-	Plugin plugin = load_plugin_code(plugin_path, get_timestamp(lockfile_path));
+	MemoryArena arena = {};
 
-	Time time = {};
+	String reload_marker_string = MAKE_STRING("__reload_marker");
+	String plugin_patter_string = MAKE_STRING("*.dll");
+
+	ReloadInfo reload = {};
+	reload.reload_marker_path = make_path(arena, plugin_directory_string, reload_marker_string);
+	reload.plugin_pattern = make_path(arena, plugin_directory_string, plugin_patter_string);
+	reload.directory_path = plugin_directory_string;
+
+	reload.plugin_path.text = (char*) malloc((size_t)(reload.directory_path.length + 1 + plugin_name_string.length + 1));
+	reload.plugin_path.length = 0;
+	append_path(reload.plugin_path, 2, &reload.directory_path, &plugin_name_string);
+
+	Plugin plugin = load_plugin_code(*reload.plugin_path, get_timestamp(*reload.reload_marker_path));
+
+	TimeInfo time = {};
 	setup_time(time);
 	u64 current_time = 0;
 	u64 previous_time = absolute_time();
@@ -255,11 +314,12 @@ static void run(const char *plugin_path) {
 #endif
 
 		if (plugin.valid) {
-			time_t timestamp = get_timestamp(lockfile_path);
+			time_t timestamp = get_timestamp(*reload.reload_marker_path);
 			if (timestamp > plugin.timestamp) {
 				unload_plugin_code(plugin);
 
-				plugin = load_plugin_code(plugin_path, timestamp);
+				update_plugin_path(reload);
+				plugin = load_plugin_code(*reload.plugin_path, timestamp);
 
 				// void *old_memory = memory_chunks[memory_index];
 				// memory_index = (memory_index + 1) % ARRAY_COUNT(memory_chunks);
@@ -283,8 +343,8 @@ static void run(const char *plugin_path) {
 			if (fps_current_seconds > 0.25) {
 				double fps = fps_frame_count / fps_current_seconds;
 				char tmp[128];
-				sprintf(tmp, "opengl @ fps: %.2f (valid=%d)", fps, plugin.valid);
-				// SDL_SetWindowTitle(window, tmp);
+				snprintf(tmp, ARRAY_COUNT(tmp), "opengl @ fps: %.2f (valid=%d)", fps, plugin.valid);
+				SDL_SetWindowTitle(window, tmp);
 				fps_current_seconds = 0;
 				fps_frame_count = 0;
 			}
@@ -315,8 +375,41 @@ static void run(const char *plugin_path) {
 	}
 }
 
+#ifdef OS_WINDOWS
+#include <shellapi.h>
+int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowCode) {
+	(void) Instance;
+	(void) PrevInstance;
+	(void) ShowCode;
+
+	char *argv[8] = {};
+	int argc = 0;
+	argv[0] = CommandLine;
+
+	int cursor = 0;
+	while(1) {
+		if (CommandLine[cursor] == ' ') {
+			argv[argc][cursor] = '\0';
+			argc++;
+			cursor++;
+			argv[argc] = CommandLine + cursor;
+			continue;
+		} else if (CommandLine[cursor] == '\0') {
+			if (cursor > 0) {
+				argc++;
+			}
+			break;
+		}
+
+		cursor++;
+	}
+	ASSERT(argc == 2, "Usage engine.exe path/to/plugin name_of_plugin")
+	run(argv[0], argv[1]);
+}
+#else
 int main(int argc, char *argv[]) {
 	(void)argc;
 	run(argv[1]);
 	return 0;
 }
+#endif

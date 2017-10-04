@@ -18,7 +18,7 @@ rem Setup the compiler parameters and general variables
 set DEFINES=-D DEVELOPMENT
 set INCLUDES=-I ../
 SET LIBS=bin/SDL2.lib bin/SDL2_Image.lib
-set ENTRY_POINT=engine_win32
+set ENTRY_POINT=engine
 set OUT_PATH=bin
 
 set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd4668 /wd4820 /wd4625 /wd4710 /wd4626 /wd4582 /wd4623

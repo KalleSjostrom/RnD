@@ -39,7 +39,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	GLuint default_program = gl_program_builder::create_from_strings(shader_default::vertex, shader_default::fragment, 0);
 	GLuint avatar_program = gl_program_builder::create_from_strings(shader_avatar::vertex, shader_avatar::fragment, shader_avatar::geometry);
-	GLuint sphere_program = gl_program_builder::create_from_strings(shader_light::vertex, shader_light::fragment, shader_light::geometry);
+	GLuint sphere_program = gl_program_builder::create_from_strings(shader_sphere::vertex, shader_sphere::fragment, shader_sphere::geometry);
 	GLuint ray_program = gl_program_builder::create_from_strings(shader_ray::vertex, shader_ray::fragment, shader_ray::geometry);
 
 	Renderer &renderer = game.components.renderer;
@@ -130,9 +130,9 @@ EXPORT PLUGIN_UPDATE(update) {
 
 	{ // Update the game
 		// Input handling
-		if (IS_HELD(input, InputKey_Space)) {
-			time += dt;
-		}
+		// if (IS_HELD(input, InputKey_Space)) {
+			time += dt * 0.2f;
+		// }
 
 		Entity &ray_entity = game.entities[1];
 

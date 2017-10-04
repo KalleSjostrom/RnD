@@ -26,6 +26,13 @@
 *.exe
 *.out
 *.app
+*.pdb
+*.ilk
+*.exp
+__reload_marker
+*.suo
+*.map
+*.vs/
 
 *.ppm
 *.sublime-workspace
