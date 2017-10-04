@@ -43,11 +43,11 @@ static void generate_layout() {
 	fprintf(output, "	ReloadType_Game,\n");
 	fprintf(output, "	ReloadType_FBO,\n");
 	fprintf(output, "	ReloadType_RenderPipe,\n");
+	fprintf(output, "	ReloadType_Buffer,\n");
+	fprintf(output, "	ReloadType_Reloader,\n");
 	fprintf(output, "	ReloadType_Keyframes,\n");
 	fprintf(output, "	ReloadType_AnimationData,\n");
 	fprintf(output, "	ReloadType_AnimationDataArray,\n");
-	fprintf(output, "	ReloadType_Reloader,\n");
-	fprintf(output, "	ReloadType_Buffer,\n");
 	fprintf(output, "}; \n");
 	fprintf(output, "#define __RELOAD_SIZE__int 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__bool 1\n");
@@ -124,6 +124,10 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_programs %zu\n", offsetof(RenderPipe, programs));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_program_count %zu\n", offsetof(RenderPipe, program_count));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe___padding %zu\n", offsetof(RenderPipe, __padding));
+	fprintf(output, "#define __RELOAD_SIZE__Buffer %zu\n", sizeof(Buffer));
+	fprintf(output, "#define __RELOAD_OFFSET__Buffer_fill_method %zu\n", offsetof(Buffer, fill_method));
+	fprintf(output, "#define __RELOAD_OFFSET__Buffer_buffer_name %zu\n", offsetof(Buffer, buffer_name));
+	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
 	fprintf(output, "#define __RELOAD_SIZE__Keyframes %zu\n", sizeof(Keyframes));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_count %zu\n", offsetof(Keyframes, count));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_transforms %zu\n", offsetof(Keyframes, transforms));
@@ -137,10 +141,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_SIZE__AnimationDataArray %zu\n", sizeof(AnimationDataArray));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_count %zu\n", offsetof(AnimationDataArray, count));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_entries %zu\n", offsetof(AnimationDataArray, entries));
-	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
-	fprintf(output, "#define __RELOAD_SIZE__Buffer %zu\n", sizeof(Buffer));
-	fprintf(output, "#define __RELOAD_OFFSET__Buffer_fill_method %zu\n", offsetof(Buffer, fill_method));
-	fprintf(output, "#define __RELOAD_OFFSET__Buffer_buffer_name %zu\n", offsetof(Buffer, buffer_name));
 
 	fclose(output);
 }

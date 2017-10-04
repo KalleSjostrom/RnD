@@ -187,6 +187,11 @@ inline void setup_arena(MemoryArena &arena, size_t size, bool clear_to_zero = fa
 	arena.block->offset = 0;
 }
 
+inline void reset_arena(MemoryArena &arena, size_t size, bool clear_to_zero = false, unsigned alignment = 4) {
+	arena.block = 0;
+	setup_arena(arena, size, clear_to_zero, alignment);
+}
+
 #define PUSH_STRUCT(arena, type, ...) (type *)_push_size(arena, sizeof(type), ## __VA_ARGS__)
 #define PUSH_STRUCTS(arena, count, type, ...) (type *)_push_size(arena, (size_t)count * sizeof(type),  ## __VA_ARGS__)
 #define PUSH_STRING(arena, count, ...) (char *)_push_size(arena, (size_t)count * sizeof(char),  ## __VA_ARGS__)

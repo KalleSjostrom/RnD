@@ -95,7 +95,7 @@ void setup_fbo(FBO &fbo, int width, int height, int count = 1) {
 
 void load_image(EngineApi *engine, RenderPipe &r) {
 	ImageData image_data;
-	b32 success = engine->image_load("../../game/assets/hatch_0.jpg", image_data);
+	b32 success = engine->image_load("../../game/assets/hatch.png", image_data);
 
 	glGenTextures(1, &r.hatch_texture);
 
@@ -107,11 +107,11 @@ void load_image(EngineApi *engine, RenderPipe &r) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	GLenum mode = GL_RGB;
-	if (image_data.bytes_per_pixel == 4) {
-		mode = GL_RGBA;
-	}
-	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)mode, image_data.width, image_data.height, 0, mode, GL_UNSIGNED_BYTE, image_data.pixels);
+	// The png is stored as ARGB, appearently
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
+
+	// #include "../assets/hatch_3.c"
+	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hatch.width, hatch.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, hatch.pixel_data);
 }
 
 void setup(EngineApi *engine, RenderPipe &r, int screen_width, int screen_height) {

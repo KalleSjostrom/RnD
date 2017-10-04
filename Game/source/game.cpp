@@ -33,7 +33,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 	#endif
 
 	globals::transient_arena = &game.transient_arena;
-	setup_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
+	reset_arena(game.transient_arena, TRANSIENT_ARENA_SIZE); // This internal memory of the dll, it won't get reloaded.
 
 	globals::components = &game.components;
 

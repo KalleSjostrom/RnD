@@ -9,7 +9,11 @@
 #include "include/SDL_image.h"
 #pragma clang diagnostic pop
 
+#include "mygl/mygl.h"
+
 #include "plugin.h"
+
+#define MYGL 0
 
 #ifdef OS_WINDOWS
 	#define WIN32_LEAN_AND_MEAN
@@ -157,6 +161,8 @@ static b32 image_load(const char *filepath, ImageData &data) {
 		return false;
 	}
 
+	printf("%s\n", SDL_GetPixelFormatName(surface->format->format));
+
 	data.bytes_per_pixel = surface->format->BytesPerPixel;
 	data.width = surface->w;
 	data.height = surface->h;
@@ -175,7 +181,7 @@ static void run(const char *plugin_path) {
 	i32 memory_index = 0;
 	void *memory = memory_chunks[memory_index];
 
-	char const *lockfile_path = "./__lockfile";
+	char const *lockfile_path = "../../game/out/__lockfile";
 
 	Plugin plugin = load_plugin_code(plugin_path, get_timestamp(lockfile_path));
 
@@ -187,14 +193,27 @@ static void run(const char *plugin_path) {
 	double fps_current_seconds = 0;
 	i32 fps_frame_count = 0;
 
-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO)) {
+	u32 sdl_subsystems = SDL_INIT_AUDIO;
+
+	int width, height;
+
+#if MYGL
+	GLWindowHandle *window = mygl_setup(RES_WIDTH, RES_HEIGHT, "Engine");
+	mygl_get_framebuffer_size(window, &width, &height);
+	printf("%d %d\n", width, height);
+#else
+	sdl_subsystems = SDL_INIT_AUDIO | SDL_INIT_VIDEO;
+#endif
+
+	if (SDL_Init(sdl_subsystems)) {
 		ASSERT(0, "SDL_Init failed: %s", IMG_GetError());
 	}
-	if (!IMG_Init(IMG_INIT_JPG)) {
+	if (!IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG)) {
 		ASSERT(0, "IMG_Init failed: %s", IMG_GetError());
 	}
 	audio::open();
 
+#if !MYGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -205,9 +224,12 @@ static void run(const char *plugin_path) {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	SDL_Window *window = SDL_CreateWindow("Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, RES_WIDTH, RES_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+	SDL_Window *window = SDL_CreateWindow("Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, RES_WIDTH, RES_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_GLContext glContext = SDL_GL_CreateContext(window);
 	(void)glContext;
+
+	SDL_GL_GetDrawableSize(window, &width, &height);
+#endif
 
 	EngineApi engine;
 
@@ -222,16 +244,15 @@ static void run(const char *plugin_path) {
 	engine.quit = quit;
 	engine.audio_set_playing(true);
 
-	int width = RES_WIDTH;
-	int height = RES_HEIGHT;
-
-	SDL_Event sdl_event;
 	while (running) {
+#if !MYGL
+		SDL_Event sdl_event;
 		while (SDL_PollEvent(&sdl_event) != 0) {
 			if (sdl_event.type == SDL_QUIT) {// Esc button is pressed
 				running = false;
 			}
 		}
+#endif
 
 		if (plugin.valid) {
 			time_t timestamp = get_timestamp(lockfile_path);
@@ -263,7 +284,7 @@ static void run(const char *plugin_path) {
 				double fps = fps_frame_count / fps_current_seconds;
 				char tmp[128];
 				sprintf(tmp, "opengl @ fps: %.2f (valid=%d)", fps, plugin.valid);
-				SDL_SetWindowTitle(window, tmp);
+				// SDL_SetWindowTitle(window, tmp);
 				fps_current_seconds = 0;
 				fps_frame_count = 0;
 			}
@@ -278,7 +299,12 @@ static void run(const char *plugin_path) {
 		}
 		ENGINE_TIME += delta;
 
+#if MYGL
+		mygl_swap_buffers(window);
+		mygl_poll_events();
+#else
 		SDL_GL_SwapWindow(window);
+#endif
 	}
 
 	IMG_Quit();
