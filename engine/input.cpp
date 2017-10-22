@@ -1,5 +1,6 @@
 InputKey get_input_key_for(int key) {
 	switch (key) {
+#if 0
 		case  0: { return InputKey_A; }; break;
 		case 11: { return InputKey_B; }; break;
 		case  8: { return InputKey_C; }; break;
@@ -39,7 +40,47 @@ InputKey get_input_key_for(int key) {
 		case 61: { return InputKey_RightOption; } break;
 		case 62: { return InputKey_RightControl; } break;
 		case 63: { return InputKey_Function; } break;
+#else
+		case SDLK_a: { return InputKey_A; }; break;
+		case SDLK_b: { return InputKey_B; }; break;
+		case SDLK_c: { return InputKey_C; }; break;
+		case SDLK_d: { return InputKey_D; }; break;
+		case SDLK_e: { return InputKey_E; }; break;
+		case SDLK_f: { return InputKey_F; }; break;
+		case SDLK_g: { return InputKey_G; }; break;
+		case SDLK_h: { return InputKey_H; }; break;
+		case SDLK_i: { return InputKey_I; }; break;
+		case SDLK_j: { return InputKey_J; }; break;
+		case SDLK_k: { return InputKey_K; }; break;
+		case SDLK_l: { return InputKey_L; }; break;
+		case SDLK_m: { return InputKey_M; }; break;
+		case SDLK_n: { return InputKey_N; }; break;
+		case SDLK_o: { return InputKey_O; }; break;
+		case SDLK_p: { return InputKey_P; }; break;
+		case SDLK_q: { return InputKey_Q; }; break;
+		case SDLK_r: { return InputKey_R; }; break;
+		case SDLK_s: { return InputKey_S; }; break;
+		case SDLK_t: { return InputKey_T; }; break;
+		case SDLK_u: { return InputKey_U; }; break;
+		case SDLK_v: { return InputKey_V; }; break;
+		case SDLK_w: { return InputKey_W; }; break;
+		case SDLK_x: { return InputKey_X; }; break;
+		case SDLK_y: { return InputKey_Y; }; break;
+		case SDLK_z: { return InputKey_Z; }; break;
 
+		case SDLK_SPACE: { return InputKey_Space; }; break;
+		case SDLK_RETURN: { return InputKey_Enter; }; break;
+		case SDLK_ESCAPE: { return InputKey_Escape; }; break;
+		case SDLK_TAB: { return InputKey_Tab; }; break;
+		// case 55: { return InputKey_Command; } break;
+		// case 56: { return InputKey_Shift; } break;
+		// case 58: { return InputKey_Option; } break;
+		// case 59: { return InputKey_Control; } break;
+		// case 60: { return InputKey_RightShift; } break;
+		// case 61: { return InputKey_RightOption; } break;
+		// case 62: { return InputKey_RightControl; } break;
+		// case 63: { return InputKey_Function; } break;
+#endif
 		default: { return InputKey_Count; }; break;
 	};
 }

@@ -4,19 +4,19 @@ namespace fluid {
 	using namespace fluid_common;
 	using namespace pthread_aux;
 
-	float k = 1000.0f; // spring constant
-	float d = 4.0f; // number of timesteps it takes to stabalize (~3-5) - τ / DT
-	float ξ = 1.0f / (1.0f + 4.0f*d); // regularization to relax the system
-	float e = 4.0f / (DT*DT*k*(1.0f + 4.0f*d));
-	float a = 4.0f / (DT*(1.0f + 4.0f*d));
-	float b = (4.0f * d) / (1.0f + 4.0f * d);
+	static const float k = 1000.0f; // spring constant
+	static const float d = 4.0f; // number of timesteps it takes to stabalize (~3-5) - τ / DT
+	static const float ξ = 1.0f / (1.0f + 4.0f*d); // regularization to relax the system
+	static const float e = 4.0f / (DT*DT*k*(1.0f + 4.0f*d));
+	static const float a = 4.0f / (DT*(1.0f + 4.0f*d));
+	static const float b = (4.0f * d) / (1.0f + 4.0f * d);
 
 	struct JacobianEntry {
 		v2 value;
 		v2 neighbor_values[MAX_NEIGHBORS];
 	};
 
-	char *transient_memory = 0;
+	static char *transient_memory = 0;
 	#define TRANSIENT_MEMORY_SIZE ( \
 		NR_PARTICLES * sizeof(float) + \
 		NR_PARTICLES * 9 * sizeof(Element) + \
@@ -24,10 +24,10 @@ namespace fluid {
 		NR_PARTICLES * sizeof(Element *) \
 	)
 
-	float *Φ = 0;
-	Element *elements = 0;
-	JacobianEntry *jacobian = 0;
-	Element **hash_map = 0;
+	static float *Φ = 0;
+	static Element *elements = 0;
+	static JacobianEntry *jacobian = 0;
+	static Element **hash_map = 0;
 
 	typedef struct {
 		v2 *positions;
@@ -49,7 +49,7 @@ namespace fluid {
 		float         *g                = memory->g;
 		NeighborList  *neighbors_list   = memory->neighbors_list;
 
-		for (int i = job->start; i < job->stop; ++i) {
+		for (u32 i = job->start; i < job->stop; ++i) {
 			u32 hash = calculate_hash(positions[i].x, positions[i].y);
 			Element *element = hash_map[hash];
 			ASSERT(element, "Null element in hash map");
@@ -96,8 +96,8 @@ namespace fluid {
 				}
 			}
 			if (Φ[i] != 0) {
-				v2 d = jacobian[i].value; // We have only looked on neighbors, not ourself.
-				Φ[i] = (Φ[i] + dot(d, d)) / MASS + e;
+				v2 _d = jacobian[i].value; // We have only looked on neighbors, not ourself.
+				Φ[i] = (Φ[i] + dot(_d, _d)) / MASS + e;
 				Φ[i] = 1.0f / Φ[i];
 			} else {
 				Φ[i] = FLT_MAX;
@@ -122,13 +122,13 @@ namespace fluid {
 
 		// TODO(kalle): This isn't thread safe! The velocities can be modified for a particle before it's "supposed to".
 		// However, it's not a huge problem since all this does is try and reduce the error, not remove it.
-		for (int i = job->start; i < job->stop; ++i) {
+		for (u32 i = job->start; i < job->stop; ++i) {
 			if (Φ[i] != FLT_MAX) {
 				float r_i = -c[i] + e*λ[i];
 
 				r_i += dot(jacobian[i].value, velocities[i]);
 				FOR_ALL_NEIGHBORS()
-					r_i += dot(jacobian[i].neighbor_values[k], velocities[j]);
+					r_i += dot(jacobian[i].neighbor_values[_k], velocities[j]);
 				}
 
 				float dλ_i = -r_i * Φ[i];
@@ -139,9 +139,9 @@ namespace fluid {
 				// TODO(kalle): Don't update velocities here, this is a pointer to the opengl mapped buffer and hence super slow.
 				velocities[i] = velocities[i] + (INV_MASS * dλ_i) * jacobian[i].value;
 				list = neighbors_list + i;
-				for (int k = 0; k < list->counter; ++k) {
-					u32 j = list->neighbors[k];
-					velocities[j] = velocities[j] + (INV_MASS * dλ_i) * jacobian[i].neighbor_values[k];
+				for (u32 _k = 0; _k < list->counter; ++_k) {
+					u32 j = list->neighbors[_k];
+					velocities[j] = velocities[j] + (INV_MASS * dλ_i) * jacobian[i].neighbor_values[_k];
 				}
 			}
 		}
@@ -167,13 +167,13 @@ namespace fluid {
 
 		// TODO(kalle): This isn't thread safe! The velocities can be modified for a particle before it's "supposed to".
 		// However, it's not a huge problem since all this does is try and reduce the error, not remove it.
-		for (int i = job->start; i < job->stop; ++i) {
+		for (u32 i = job->start; i < job->stop; ++i) {
 			if (Φ[i] != FLT_MAX) {
 
 				// Accumulator all the contributions for the Gv
 				float Gv = dot(jacobian[i].value, velocities[i]);
 				FOR_ALL_NEIGHBORS()
-					Gv += dot(jacobian[i].neighbor_values[k], velocities[j]);
+					Gv += dot(jacobian[i].neighbor_values[_k], velocities[j]);
 				}
 
 				float r_i = Gv + a*g[i] + b*Gv;
@@ -182,9 +182,9 @@ namespace fluid {
 
 				velocities[i] = velocities[i] + inv_mass_times_dλ_i * jacobian[i].value;
 				list = neighbors_list + i;
-				for (int k = 0; k < list->counter; ++k) {
-					u32 j = list->neighbors[k];
-					velocities[j] = velocities[j] + inv_mass_times_dλ_i * jacobian[i].neighbor_values[k];
+				for (u32 _k = 0; _k < list->counter; ++_k) {
+					u32 j = list->neighbors[_k];
+					velocities[j] = velocities[j] + inv_mass_times_dλ_i * jacobian[i].neighbor_values[_k];
 				}
 			}
 		}
@@ -192,7 +192,7 @@ namespace fluid {
 		return NULL;
 	}
 
-	SpookMemory *spook_memory;
+	static SpookMemory *spook_memory;
 
 	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure) {
 		PROFILER_START(memset)

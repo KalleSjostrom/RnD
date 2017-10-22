@@ -66,6 +66,11 @@ namespace model_component {
 			return translation(instance.renderable.pose);
 		}
 
+		inline m4 &get_pose(i32 id) {
+			Instance &instance = instances[id];
+			return instance.renderable.pose;
+		}
+
 		inline void rotate_around(i32 id, float angle, float x, float y) {
 			Instance &instance = instances[id];
 
@@ -104,20 +109,30 @@ namespace model_component {
 			instance.renderable.pose *= rotation;
 		}
 
-		inline void set_rotatation(i32 id, float angle) {
+		inline void set_rotation(i32 id, float angle) {
 			Instance &instance = instances[id];
 
 			float ca = cosf(angle);
 			float sa = sinf(angle);
 
-			m4 &rotation = instance.renderable.pose;
+			m4 &pose = instance.renderable.pose;
 
-			rotation.m[INDEX(0, 0)] = ca;
-			rotation.m[INDEX(0, 1)] = -sa;
-			rotation.m[INDEX(1, 0)] = sa;
-			rotation.m[INDEX(1, 1)] = ca;
+			pose.m[INDEX(0, 0)] = ca;
+			pose.m[INDEX(0, 1)] = -sa;
+			pose.m[INDEX(1, 0)] = sa;
+			pose.m[INDEX(1, 1)] = ca;
 
 			// instance.renderable.pose = rotation;
+		}
+
+		inline void set_scale(i32 id, v3 scale) {
+			Instance &instance = instances[id];
+
+			m4 &pose = instance.renderable.pose;
+
+			pose.m[INDEX(0, 0)] = scale.x;
+			pose.m[INDEX(1, 1)] = scale.y;
+			pose.m[INDEX(2, 2)] = scale.z;
 		}
 
 		void update_vertices(i32 id, v3 *vertices) {

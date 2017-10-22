@@ -1,3 +1,5 @@
+#pragma once
+
 /// Wrap os threading
 #if defined(OS_WINDOWS)
 	#include <process.h>

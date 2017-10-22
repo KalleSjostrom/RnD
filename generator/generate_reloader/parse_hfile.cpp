@@ -30,6 +30,10 @@ void skip_function(parser::Tokenizer *tok) {
 	}
 
 	token = parser::peek_next_token(tok);
+	if (token.type == '(') {
+		skip_function(tok);
+		return;
+	}
 	if (token.type == ';') {
 		parser::next_token(tok);
 		return; // This is just a function definition, e.g. void dostuff();
@@ -291,6 +295,12 @@ void add_reloadable_struct(MemoryArena &arena, parser::Tokenizer &tok, Reloadabl
 
 				token = parser::next_token(&tok); // Move up to ']'
 				token = parser::next_token(&tok); // move past ']'
+			}
+
+			if (token.type == '(') { // found function
+				skip_function(&tok);
+				token = parser::next_token(&tok);
+				continue;
 			}
 
 			ASSERT_TOKEN_TYPE(token, ';');

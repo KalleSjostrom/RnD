@@ -1,5 +1,7 @@
 #include "engine/utils/math/vectorization.h"
 
+#define FLT_MAX 3.40282347E+38F // "No-entry-marker" for the schur complement matrix to
+
 namespace fluid_common {
 	static float PI = 3.14159265359f;
 
@@ -14,16 +16,16 @@ namespace fluid_common {
 	static float GRAVITY = -10.0f;
 
 	static float SCP = 1.0f;
-	static float H = (sqrt((4*MASS) / (PI*SCP*ρ_0)));
+	static float H = (sqrtf((4*MASS) / (PI*SCP*ρ_0)));
 	static float BOUNDS = 20.0f;
 
 	static const u32 MAX_NEIGHBORS = 7;
 
-	vec VEC_GRAVITY = _mm256_set_ps(GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f);
-	vec VEC_DT = v_set(DT);
-	vec VEC_NEG_BOUNDS = v_set(-BOUNDS);
-	vec VEC_POS_BOUNDS = v_set(BOUNDS);
-	vec VEC_TWO = v_set(2.0f);
+	static vec VEC_GRAVITY = _mm256_set_ps(GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f, GRAVITY * DT, 0.0f);
+	static vec VEC_DT = v_set(DT);
+	static vec VEC_NEG_BOUNDS = v_set(-BOUNDS);
+	static vec VEC_POS_BOUNDS = v_set(BOUNDS);
+	static vec VEC_TWO = v_set(2.0f);
 
 	/// NEIGHBORS ///
 	struct NeighborList {
@@ -32,8 +34,8 @@ namespace fluid_common {
 	};
 	#define FOR_ALL_NEIGHBORS() \
 		list = neighbors_list + i; \
-		for (int k = 0; k < list->counter; ++k) { \
-			u32 j = list->neighbors[k];
+		for (u32 _k = 0; _k < list->counter; ++_k) { \
+			u32 j = list->neighbors[_k];
 	/// ---- ///
 
 	/// HASHMAP ///
@@ -66,7 +68,7 @@ namespace fluid_common {
 	}
 	inline void fill_hashmap(v2 *positions, Element **hash_map, Element *elements, NeighborList *neighbors_list) {
 		PROFILER_START(hashmap_insert)
-		for (int i = 0; i < NR_PARTICLES; ++i) {
+		for (u32 i = 0; i < NR_PARTICLES; ++i) {
 			float x = positions[i].x;
 			float y = positions[i].y;
 

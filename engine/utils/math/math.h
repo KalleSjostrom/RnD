@@ -9,6 +9,12 @@
 
 static const f32 DEGREES_TO_RANDIANS = (f32)M_PI/180.0f;
 
+FORCE_INLINE f32 sigmoidal(f32 activation) {
+	// 1 / (1 + e^(-a/p)) where p = 1, a is the activation.
+	f32 p = 1.0f;
+	return 1.0f / (1.0f + expf(-activation/p));
+}
+
 FORCE_INLINE f32 lerp(f32 a, f32 b, f32 t) {
 	return a + (b-a)*t;
 }
@@ -36,6 +42,9 @@ typedef v2_f32 v2;
 
 struct v3 {
 	f32 x, y, z;
+	f32 operator[](int index) {
+		return *((f32*)this + index);
+	}
 };
 
 FORCE_INLINE v3 V3(f32 x, f32 y, f32 z) {

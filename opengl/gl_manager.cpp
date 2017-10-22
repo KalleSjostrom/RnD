@@ -1,3 +1,0 @@
-namespace gl_manager {
-
-}

@@ -75,5 +75,15 @@ namespace actor_component {
 		inline RaycastResults raycast(Ray &ray) {
 			return ::raycast(aabb_tree, ray);
 		}
+
+		inline OverlapResults overlap(i32 id) {
+			Instance &instance = instances[id];
+			return ::overlap(aabb_tree, instance.tree_id);
+		}
+
+		inline SweepResults sweep(i32 id, v3 &translation) {
+			Instance &instance = instances[id];
+			return ::sweep(aabb_tree, instance.tree_id, translation);
+		}
 	};
 }

@@ -1,6 +1,7 @@
 namespace mover_component {
 	struct Instance {
 		v3 position;
+		v3 wanted_translation;
 		v3 velocity;
 		v3 acceleration;
 	};
@@ -21,23 +22,24 @@ namespace mover_component {
 			return id;
 		}
 
-		inline void add_acceleration(i32 id, v3 acceleration) {
+		inline void add_acceleration(i32 id, v3 &acceleration) {
 			Instance &instance = instances[id];
 			instance.acceleration += acceleration;
 		}
-		inline void set_velocity(i32 id, v3 velocity) {
+		inline void add_impulse(i32 id, v3 &impulse) {
 			Instance &instance = instances[id];
-			instance.velocity = velocity;
-		}
-		inline v3 get_position(i32 id) {
-			return instances[id].position;
+			instance.velocity += impulse;
+			printf("%g\n", (double)instance.velocity.y);
 		}
 
 		void update(float dt) {
 			for (i32 i = 0; i < count; ++i) {
 				Instance &instance = instances[i];
-				instance.velocity += (instance.acceleration - instance.velocity * 10.f) * dt;
-				instance.position += instance.velocity * dt;
+				float g = -9.82f * 40;
+				v3 acceleration = instance.acceleration + V3(0, g, 0);
+				instance.velocity += acceleration * dt;
+				instance.wanted_translation = instance.velocity * dt;
+				// instance.position += instance.velocity * dt;
 
 				// instance.velocity *= 0.8f;
 				instance.acceleration = V3(0, 0, 0);

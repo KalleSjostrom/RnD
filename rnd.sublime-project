@@ -39,6 +39,10 @@
 					"working_dir": "${project_path}/generator/",
 				},
 				{
+					"name": "Genome",
+					"working_dir": "${project_path}/genome/",
+				},
+				{
 					"name": "Game",
 					"working_dir": "${project_path}/Game/",
 				},
@@ -61,10 +65,6 @@
 				{
 					"name": "MyGL",
 					"working_dir": "${project_path}/mygl/",
-				},
-				{
-					"name": "Genome",
-					"working_dir": "${project_path}/genome/",
 				},
 				{
 					"name": "Test - Mandlebrot",

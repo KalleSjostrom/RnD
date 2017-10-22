@@ -2,7 +2,8 @@
 // #include "../../utils/math.h"
 
 parser::Tokenizer make_tokenizer(char *text) {
-	parser::Tokenizer tok = { text };
+	parser::Tokenizer tok = { };
+	tok.at = text;
 	return tok;
 }
 
@@ -15,8 +16,8 @@ typedef union {
   } parts;
 } double_cast;
 
-inline float next_number(parser::Tokenizer *tok) {
-	parser::Token token = parser::next_token(tok);
+inline float next_number(parser::Tokenizer &tok) {
+	parser::Token token = parser::next_token(&tok);
 	ASSERT_TOKEN_TYPE(token, TokenType_Number);
 	return token.number;
 }
@@ -55,7 +56,8 @@ VertexData read_pot()
 	unsigned *vertex_indices = (unsigned*) malloc(16*1024*sizeof(unsigned));
 	unsigned vertex_index_count = 0;
 
-	parser::Tokenizer tok = { source };
+	parser::Tokenizer tok = { };
+	tok.at = source;
 	bool parsing = true;
 	while (parsing) {
 		parser::Token token = parser::next_token(&tok);
@@ -65,40 +67,40 @@ VertexData read_pot()
 				if (parser::is_equal(token, TOKENIZE("v"))) {
 					// ASSERT(vertex_count < 1024);
 					vertices[vertex_count++] = V3(
-						next_number(&tok),
-						next_number(&tok),
-						next_number(&tok));
+						next_number(tok),
+						next_number(tok),
+						next_number(tok));
 				}
 				// vt - texture coordinates
 				else if (parser::is_equal(token, TOKENIZE("vt"))) {
 					ASSERT(tex_coord_count < 1024, "tex_coord_count out of bounds");
 					tex_coords[tex_coord_count++] = V2_f32(
-						next_number(&tok),
-						next_number(&tok));
+						next_number(tok),
+						next_number(tok));
 				}
 				// vn - vertex normals
 				else if (parser::is_equal(token, TOKENIZE("vn"))) {
 					ASSERT(vertex_normal_count < 1024, "vertex_normal_count out of bounds");
 					vertex_normals[vertex_normal_count++] = V3(
-						next_number(&tok),
-						next_number(&tok),
-						next_number(&tok));
+						next_number(tok),
+						next_number(tok),
+						next_number(tok));
 				}
 				// vc - vertex colors
 				else if (parser::is_equal(token, TOKENIZE("vc"))) {
 					ASSERT(vertex_color_count < 1024, "vertex_color_count out of bounds");
 					vertex_colors[vertex_color_count++] = V4(
-						next_number(&tok),
-						next_number(&tok),
-						next_number(&tok),
-						next_number(&tok));
+						next_number(tok),
+						next_number(tok),
+						next_number(tok),
+						next_number(tok));
 				}
 				// f - faces MUST BE TRIANGLES!
 				else if (parser::is_equal(token, TOKENIZE("f"))) {
 					// ASSERT(vertex_index_count < 1024);
-					vertex_indices[vertex_index_count++] = next_number(&tok);
-					vertex_indices[vertex_index_count++] = next_number(&tok);
-					vertex_indices[vertex_index_count++] = next_number(&tok);
+					vertex_indices[vertex_index_count++] = (u32)next_number(tok);
+					vertex_indices[vertex_index_count++] = (u32)next_number(tok);
+					vertex_indices[vertex_index_count++] = (u32)next_number(tok);
 				}
 			} break;
 			case '#': {

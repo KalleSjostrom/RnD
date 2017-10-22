@@ -1,6 +1,9 @@
 struct AABB {
-	f32 x, y;
+	f32 x, y; // Lower left corner
 	f32 w, h;
+	float operator[](int index) {
+		return *((float*)this + index);
+	}
 };
 
 FORCE_INLINE AABB make_aabb(f32 x, f32 y, f32 w, f32 h) {
@@ -21,6 +24,10 @@ FORCE_INLINE f32 area(AABB a) {
 
 FORCE_INLINE bool inside(AABB &a, v3 &p) {
 	return (p.x > a.x) && (p.x < (a.x + a.w)) && (p.y > a.y) && (p.y < (a.y + a.h));
+}
+
+FORCE_INLINE bool are_overlapping(AABB &a, AABB &b) {
+	return (a.x < b.x + b.w) && (a.x + a.w > b.x) && (a.y < b.y + b.h) && (a.h + a.y > b.y);
 }
 
 enum ShapeType {
@@ -206,17 +213,14 @@ FORCE_INLINE Ray make_ray(v3 &from, v3 &to) {
 	return r;
 }
 
+// TODO(kalle): Extend to return a list of results, the closest hit or just an arbitrary hit.
 struct RaycastResults {
 	i32 id;
 	v3 position;
 	v3 normal;
 };
-
-
-// TODO(kalle): Extend to return a list of results, the closest hit or just an arbitrary hit.
 RaycastResults raycast(AABBTree &tree, Ray &ray) {
-	// Node &root = tree.nodes[tree.root];
-	RaycastResults rr = {};
+	RaycastResults results = {};
 
 	i32 count = 0;
 	i32 at = 0;
@@ -261,23 +265,23 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 
 							did_hit = closest_intersection.did_hit();
 							if (did_hit) {
-								rr.position = ray.from + ray.delta * closest_intersection.t;
-								rr.normal = closest_intersection.normal();
+								results.position = ray.from + ray.delta * closest_intersection.t;
+								results.normal = closest_intersection.normal();
 							}
 						} break;
 						case ShapeType_AABox: {
 							did_hit = true;
 
-							rr.position = ray.from + ray.delta * ir.tmin;
+							results.position = ray.from + ray.delta * ir.tmin;
 
 							if (float_equal(ir.tx1, ir.tmin)) {
-								rr.normal = V3(-1, 0, 0);
+								results.normal = V3(-1, 0, 0);
 							} else if (float_equal(ir.tx2, ir.tmin)) {
-								rr.normal = V3(1, 0, 0);
+								results.normal = V3(1, 0, 0);
 							} else if (float_equal(ir.ty1, ir.tmin)) {
-								rr.normal = V3(0, -1, 0);
+								results.normal = V3(0, -1, 0);
 							} else if (float_equal(ir.ty2, ir.tmin)) {
-								rr.normal = V3(0, 1, 0);
+								results.normal = V3(0, 1, 0);
 							}
 						} break;
 						case ShapeType_Sphere: {
@@ -297,8 +301,8 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 								f32 cathetus = sqrtf(hypotenuse * hypotenuse - opposite_cathetus * opposite_cathetus);
 
 								did_hit = true;
-								rr.position = closest_point - delta_n * cathetus;
-								rr.normal = normalize(rr.position - center);
+								results.position = closest_point - delta_n * cathetus;
+								results.normal = normalize(results.position - center);
 							}
 						} break;
 						case ShapeType_Polygon: {
@@ -306,7 +310,7 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 						} break;
 					}
 					if (did_hit) {
-						rr.id = id;
+						results.id = id;
 						break;
 					}
 				}
@@ -317,5 +321,124 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 		}
 	}
 
-	return rr;
+	return results;
+}
+
+struct OverlapResults {
+	i32 id;
+	v3 position;
+	v3 normal;
+};
+OverlapResults overlap(AABBTree &tree, i32 item) {
+	OverlapResults results = {};
+
+	AABB &aabb = tree.aabb_storage[item];
+
+	i32 count = 0;
+	i32 at = 0;
+	i32 queue[32] = {};
+	queue[count++] = tree.root;
+	while (at < count) {
+		i32 id = queue[at++];
+		if (id == item)
+			continue;
+
+		if (are_overlapping(tree.aabb_storage[id], aabb)) {
+			Node &n = tree.nodes[id];
+			if (n.left != NULL_ID) { // It has children, keep digging down
+				queue[count++] = n.left;
+				queue[count++] = n.right;
+			} else {
+				bool did_hit = true;
+				Shape &shape = tree.shape_storage[id];
+				switch (shape.type) {
+					// TODO(kalle): Implement narrowphase
+					case ShapeType_Box: {
+					} break;
+					case ShapeType_AABox: {
+					} break;
+					case ShapeType_Sphere: {
+					} break;
+					case ShapeType_Polygon: {
+					} break;
+				}
+				if (did_hit) {
+					results.id = id;
+					break;
+				}
+			}
+		}
+	}
+
+	return results;
+}
+
+
+struct SweepResults {
+	i32 id;
+	v3 constrained_translation;
+	v3 normal;
+};
+SweepResults sweep(AABBTree &tree, i32 item, v3 &wanted_translation) {
+	SweepResults results = {};
+
+	results.constrained_translation = wanted_translation;
+
+	AABB &from = tree.aabb_storage[item];
+	AABB to = from;
+	to.x += wanted_translation.x;
+	to.y += wanted_translation.y;
+
+	AABB aabb = from + to;
+
+	v3 f = V3(from.x, from.y, 0);
+	Ray ray = make_ray(f, wanted_translation);
+
+	i32 count = 0;
+	i32 at = 0;
+	i32 queue[32] = {};
+	queue[count++] = tree.root;
+	while (at < count) {
+		i32 id = queue[at++];
+		if (id == item)
+			continue;
+
+		AABB &other = tree.aabb_storage[id];
+		if (are_overlapping(other, aabb)) {
+			Node &n = tree.nodes[id];
+			if (n.left != NULL_ID) { // It has children, keep digging down
+				queue[count++] = n.left;
+				queue[count++] = n.right;
+			} else {
+				bool did_hit = false;
+				Shape &shape = tree.shape_storage[id];
+				switch (shape.type) {
+					case ShapeType_Box: {
+						intersection::AabbAabb out;
+						did_hit = intersection::moving_aabb_aabb(from, other, wanted_translation, &out);
+						if (did_hit) {
+							results.constrained_translation.y = (wanted_translation * out.t).y;
+						}
+					} break;
+					case ShapeType_AABox: {
+						intersection::AabbAabb out;
+						did_hit = intersection::moving_aabb_aabb(from, other, wanted_translation, &out);
+						if (did_hit) {
+							results.constrained_translation.y = (wanted_translation * out.t).y;
+						}
+					} break;
+					case ShapeType_Sphere: {
+					} break;
+					case ShapeType_Polygon: {
+					} break;
+				}
+				if (did_hit) {
+					results.id = id;
+					break;
+				}
+			}
+		}
+	}
+
+	return results;
 }

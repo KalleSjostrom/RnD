@@ -11,7 +11,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #include <gl/gl.h>
-#include "win32_setup_gl.h"
+#include "engine/utils/win32_setup_gl.h"
 #else
 #include <OpenGL/gl3.h>
 #include <OpenGL/opengl.h>
@@ -32,7 +32,6 @@ typedef uint16_t GLindex;
 ///// GAME SPECIFICS
 namespace globals {
 	static MemoryArena *transient_arena;
-	static void *components;
 };
 #define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
 
@@ -44,9 +43,10 @@ namespace globals {
 #include "../generated/animations.generated.cpp"
 #include "shaders/default.shader.cpp"
 #include "shaders/avatar.shader.cpp"
+#include "shaders/fullscreen_effects.shader.cpp"
 
-#define CALL(owner, compname, command, ...) (((ComponentGroup*)globals::components)->compname.command(owner.compname ## _id, ## __VA_ARGS__))
-#define GET(owner, compname, member) (((ComponentGroup*)globals::components)->compname.instances[owner.compname ## _id].member)
+// #define CALL(owner, compname, command, ...) (((ComponentGroup*)globals::components)->compname.command(owner.compname ## _id, ## __VA_ARGS__))
+// #define GET(owner, compname, member) (((ComponentGroup*)globals::components)->compname.instances[owner.compname ## _id].member)
 
 #include "component_group.cpp"
 #include "render_pipe.cpp"

@@ -2,10 +2,11 @@
 
 #define RES_WIDTH 1024
 #define RES_HEIGHT 768
+#define ASPECT_RATIO ((float)RES_WIDTH/(float)RES_HEIGHT)
 
 enum PixelFormat {
 	PixelFormat_RGBA,
-	PixelFormat_ABGR,
+	PixelFormat_ARGB
 };
 
 struct ImageData {
@@ -87,5 +88,5 @@ struct Input {
 #define PLUGIN_UPDATE(name) i32 name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, Input &input, float dt)
 typedef PLUGIN_UPDATE(plugin_update_t);
 
-#define PLUGIN_RELOAD(name) void name(void *memory, i32 screen_width, i32 screen_height)
+#define PLUGIN_RELOAD(name) void name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, Input &input)
 typedef PLUGIN_RELOAD(plugin_reload_t);

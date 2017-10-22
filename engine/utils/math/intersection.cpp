@@ -84,4 +84,41 @@ namespace intersection {
 			}
 		}
 	}
+
+
+	struct AabbAabb {
+		f32 t, t_last;
+		AabbAabb() : t(0), t_last(1) {}
+		bool did_hit() {
+			return t >= 0.0f && t <= 1.0f;
+		}
+	};
+	bool moving_aabb_aabb(AABB &a, AABB &b, v3 v, AabbAabb *out) {
+		bool did_hit = true;
+
+		float a_max[] = { a.x + a.w, a.y + a.h };
+		float b_max[] = { b.x + b.w, b.y + b.h };
+		for (int i = 0; i < 2; ++i) {
+			if (v[i] < 0.0f) {
+				if (a_max[i] < b[i]) { did_hit = false; break; }; // Non intersecting and moving apart
+				if (a[i] > b_max[i]) {
+					out->t = fmaxf((b_max[i] - a[i]) / v[i], out->t);
+				}
+				if (a_max[i] > b[i]) {
+					out->t_last = fminf((b[i] - a_max[i]) / v[i], out->t_last);
+				}
+			} else if (v[i] > 0.0f) {
+				if (a[i] > b_max[i]) { did_hit = false; break; }; // Non intersecting and moving apart
+				if (a_max[i] < b[i]) {
+					out->t = fmaxf((b[i] - a_max[i]) / v[i], out->t);
+				}
+				if (a[i] < b_max[i]) {
+					out->t_last = fminf((b_max[i] - a[i]) / v[i], out->t_last);
+				}
+			}
+			if (out->t_last < out->t) { did_hit = false; break; };
+		}
+
+		return did_hit;
+	}
 }

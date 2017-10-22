@@ -5,6 +5,7 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
 #include "include/SDL.h"
 #include "include/SDL_image.h"
 #pragma clang diagnostic pop
@@ -34,7 +35,7 @@ struct ReloadInfo {
 	#define get_symbol_address(lib_handle, symbol) GetProcAddress(lib_handle, symbol)
 	#define unload_library(lib_handle) FreeLibrary(lib_handle)
 
-	const void update_plugin_path(ReloadInfo &reload) {
+	void update_plugin_path(ReloadInfo &reload) {
 		WIN32_FIND_DATA best_data = {};
 		WIN32_FIND_DATA find_data;
 		HANDLE handle = FindFirstFile(*reload.plugin_pattern, &find_data);
@@ -105,6 +106,9 @@ struct ReloadInfo {
 	}
 	double time_in_seconds(TimeInfo &t, u64 ticks) {
 		return ticks * t.resolution;
+	}
+	void update_plugin_path(ReloadInfo &reload) {
+		(void) reload;
 	}
 #endif
 
@@ -205,7 +209,7 @@ static b32 image_load(const char *filepath, ImageData &data) {
 
 	switch(surface->format->format) {
 		case SDL_PIXELFORMAT_RGBA32: { data.format = PixelFormat_RGBA; } break;
-		case SDL_PIXELFORMAT_ABGR32: { data.format = PixelFormat_ABGR; } break;
+		case SDL_PIXELFORMAT_BGRA32: { data.format = PixelFormat_ARGB; } break;
 		default: {
 			ASSERT(0, "Unsuported pixel format!");
 			return false;
@@ -307,8 +311,18 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 #if !MYGL
 		SDL_Event sdl_event;
 		while (SDL_PollEvent(&sdl_event) != 0) {
-			if (sdl_event.type == SDL_QUIT) {// Esc button is pressed
-				running = false;
+			switch (sdl_event.type) {
+				case SDL_QUIT: {
+					running = false;
+				} break;
+				case SDL_KEYDOWN: {
+					if (sdl_event.key.repeat == 0)
+						key_down(sdl_event.key.keysym.sym, 0);
+				} break;
+				case SDL_KEYUP: {
+					if (sdl_event.key.repeat == 0)
+						key_up(sdl_event.key.keysym.sym, 0);
+				} break;
 			}
 		}
 #endif
@@ -327,7 +341,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 				// plugin.reload(old_memory, new_memory);
 				// memory = memory_chunks[memory_index];
 
-				plugin.reload(memory, width, height);
+				plugin.reload(memory, engine, width, height, _input);
 				printf("Plugin reloaded\n");
 			}
 		}
@@ -409,7 +423,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine
 #else
 int main(int argc, char *argv[]) {
 	(void)argc;
-	run(argv[1]);
+	run(argv[1], argv[2]);
 	return 0;
 }
 #endif

@@ -12,9 +12,9 @@ namespace pthread_aux {
 		u32 stop;
 	} Job;
 
-	pthread_t *threads = 0;
-	pthread_attr_t attr;
-	Job *jobs;
+	static pthread_t *threads = 0;
+	static pthread_attr_t attr;
+	static Job *jobs;
 
 	void pthread_init(void *userdata) {
 		threads = (pthread_t*) calloc(NUMBER_OF_THREADS, sizeof(pthread_t));
@@ -24,7 +24,7 @@ namespace pthread_aux {
 		jobs = (Job *)malloc(NUMBER_OF_THREADS * sizeof(Job));
 		u32 chunks = NR_PARTICLES / NUMBER_OF_THREADS;
 
-		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+		for (u32 i = 0; i < NUMBER_OF_THREADS; i++) {
 			jobs[i].userdata = userdata;
 			jobs[i].start = i * chunks;
 			jobs[i].stop = (i+1) * chunks;

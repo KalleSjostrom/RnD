@@ -35,7 +35,7 @@ double my_wtime() {
 #define PROFILER_STOP_HITS(id, hits) profilers[ProfilerScopes__##id].cycle_count += (rdtsc() - __start_cycle_count##id); profilers[ProfilerScopes__##id].hit_count+=hits; profilers[ProfilerScopes__##id].elapsed_time += my_wtime() - __start_time##id;
 //#define PROFILER_PRINT(id) printf("[%-30s]\tcycles: %12llu,\t\thits: %10u,\t\tcycles/hit: %12llu,\t\ttime: %10f\n", #id, profilers[ProfilerScopes__##id].cycle_count, profilers[ProfilerScopes__##id].hit_count, profilers[ProfilerScopes__##id].hit_count > 0 ? profilers[ProfilerScopes__##id].cycle_count / profilers[ProfilerScopes__##id].hit_count : 0, profilers[ProfilerScopes__##id].elapsed_time);
 #define PROFILER_PRINT(id) printf("[%-20s]\ttime: %8f\n", #id, profilers[ProfilerScopes__##id].elapsed_time);
-#define PROFILER_RESET(id) { PerfCounter &counter = profilers[ProfilerScopes__##id]; counter.cycle_count = 0; counter.hit_count = 0; counter.elapsed_time = 0.0f; }
+#define PROFILER_RESET(id) { PerfCounter &id##counter = profilers[ProfilerScopes__##id]; id##counter.cycle_count = 0; id##counter.hit_count = 0; id##counter.elapsed_time = 0.0; }
 
 #define TIME_IT(id, a) PROFILER_START(id); a; PROFILER_STOP(id); PROFILER_PRINT(id);
 #define TIME_IT_HITS(id, a, hits) PROFILER_START(id); a; PROFILER_STOP_HITS(id, hits); PROFILER_PRINT(id);

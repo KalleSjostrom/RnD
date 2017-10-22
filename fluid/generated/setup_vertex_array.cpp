@@ -12,11 +12,11 @@ namespace gl_manager {
 		glGenVertexArrays(1, vao);
 		glBindVertexArray(*vao);
 
-		__GL_BIND_BUFFER(buffers, positions);
+		GL_BIND_BUFFER(buffers, positions);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
-		__GL_BIND_BUFFER(buffers, density_pressure);
+		GL_BIND_BUFFER(buffers, density_pressure);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
 

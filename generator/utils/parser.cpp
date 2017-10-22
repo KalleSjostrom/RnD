@@ -1,3 +1,8 @@
+#pragma once
+
+#include "engine/utils/string.h"
+#include "engine/utils/threading/threading.cpp"
+
 #define TokenType_Unknown 1
 #define TokenType_String 2
 #define TokenType_Number 3

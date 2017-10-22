@@ -21,27 +21,27 @@ struct ClInfo {
 	cl_program program;
 	SimKernels kernels;
 	Buffer buffers[32];
-	size_t nr_particles;
+	u64 nr_particles;
 };
 
-void reload_buffer(MemoryArena &arena, ClInfo &info, BufferIndex index, v2 (*f)(int i)) {
+void reload_buffer(MemoryArena &arena, ClInfo &info, BufferIndex index, v2 (*f)(u64 i)) {
 	cl_context context = info.context;
 	cl_int errcode_ret;
 
 	Buffer &buffer = info.buffers[index];
 
-	size_t old_size = sizeof(v2)*info.nr_particles;
-	size_t new_size = sizeof(v2) * NR_PARTICLES;
+	u64 old_size = sizeof(v2)*info.nr_particles;
+	u64 new_size = sizeof(v2) * NR_PARTICLES;
 
-	v2 *buffer_content = (v2 *) allocate_memory(arena, new_size);
+	v2 *buffer_content = PUSH_STRUCTS(arena, NR_PARTICLES, v2);
 	errcode_ret = clEnqueueReadBuffer(info.command_queue, buffer.mem, CL_TRUE, 0, (new_size < old_size ? new_size : old_size), buffer_content, 0, 0, 0);
 
-	for (size_t i = info.nr_particles; i < NR_PARTICLES; ++i) {
+	for (u64 i = info.nr_particles; i < NR_PARTICLES; ++i) {
 		buffer_content[i] = f(i);
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffer.vbo);
-	glBufferData(GL_ARRAY_BUFFER, new_size, buffer_content, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) new_size, buffer_content, GL_DYNAMIC_DRAW);
 
 	errcode_ret = clReleaseMemObject(buffer.mem);
 	CL_CHECK_ERRORCODE(clReleaseMemObject, errcode_ret);
@@ -59,7 +59,9 @@ void reload_buffers(MemoryArena &arena, ClInfo &info) {
 
 	info.nr_particles = NR_PARTICLES;
 
-	clear_memory(arena);
+	ASSERT(false, "Need to clear memory?");
+
+	// clear_memory(arena);
 }
 
 void setup_buffers(ClInfo &info) {
@@ -110,7 +112,7 @@ void setup_kernels(ClInfo &info) {
 }
 
 void run_kernels(ClInfo &info) {
-	size_t workGroupSize[] = { NR_PARTICLES };
+	u64 workGroupSize[] = { NR_PARTICLES };
 	cl_int errcode_ret;
 	cl_event event;
 
@@ -125,8 +127,8 @@ void run_kernels(ClInfo &info) {
 }
 void create_program_and_kernels(MemoryArena &arena, ClInfo &info) {
 	cl_int errcode_ret;
-	cl_program program = cl_program_builder::create_from_binary_file(arena, info.context, COMPUTE_SHADER_BINARY, &info.device);
-	SimKernels kernels = { 0 };
+	cl_program program = cl_program_builder::create_from_source_file(info.context, COMPUTE_SHADER_SOURCE, 1, &info.device);
+	SimKernels kernels = { };
 
 	cl_kernel calc_density_pressure = clCreateKernel(program, "calc_density_pressure", &errcode_ret);
 	CL_CHECK_ERRORCODE(clCreateKernel, errcode_ret);

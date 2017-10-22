@@ -149,7 +149,7 @@ namespace gui {
 		}
 	}
 
-	void update_string(GUI &gui, i16 handle, String &string, f32 x = 0.0f, f32 y = 0.0f) {
+	void update_string(GUI &gui, i32 handle, String &string, f32 x = 0.0f, f32 y = 0.0f) {
 		// Allocate the position and uv buffers, fill them and then send them to the gpu.
 		MemoryBlockHandle memory_block_handle = begin_block(*gui.transient_arena);
 			Job &job = gui.jobs[handle];

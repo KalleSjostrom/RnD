@@ -1,10 +1,10 @@
 #include "cl_settings.h"
 
 namespace cl_manager {
-	static void print_cl_device_info(size_t num_devices, cl_device_id *devices) {
-		size_t buffer_size = 128;
+	static void print_cl_device_info(u32 num_devices, cl_device_id *devices) {
+		u32 buffer_size = 128;
 		char buffer[buffer_size];
-		for (int i = 0; i < num_devices; i++) {
+		for (u32 i = 0; i < num_devices; i++) {
 			clGetDeviceInfo(devices[i], CL_DEVICE_NAME, buffer_size, buffer, 0);
 			fprintf(stdout, "Device %s supports ", buffer);
 
@@ -51,7 +51,7 @@ namespace cl_manager {
 		cl_command_queue command_queue = clCreateCommandQueue(context, devices[device_index], queue_properties, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateCommandQueue, errcode_ret);
 
-		ClInfo info = { 0 };
+		ClInfo info = { };
 		info.context = context;
 		info.command_queue = command_queue;
 		info.device = devices[device_index];

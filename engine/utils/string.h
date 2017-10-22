@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/utils/memory/memory_arena.cpp"
+
 struct String {
 	char *text;
 	i32 length;
