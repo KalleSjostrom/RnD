@@ -28,7 +28,7 @@ namespace fluid {
 	JacobianEntry *jacobian = 0;
 	Element **hash_map = 0;
 
-	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure) {
+	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure, v2 gravity) {
 		if (transient_memory == 0) {
 			transient_memory = (char *) malloc(TRANSIENT_MEMORY_SIZE);
 			char *memory = transient_memory;
@@ -178,6 +178,9 @@ namespace fluid {
 			NOTE(kalle): This version is cheating!
 			We are updating the v[j] in the same "go" as we update α.
 			*/
+			for (int i = 0; i < PARTICLE_COUNT; ++i) {
+				velocities[i] += gravity * DT;
+			}
 			for (int i = 0; i < PARTICLE_COUNT; ++i) {
 				if (Φ[i] != FLT_MAX) {
 

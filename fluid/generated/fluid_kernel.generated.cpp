@@ -1,14 +1,5 @@
 // Exported lines
-#define NR_PARTICLES 1024 * 10
-
-#include "cl_preamble.cpp"
-
-enum BufferIndex {
-	BufferIndex__density_pressure,
-	BufferIndex__accelerations,
-	BufferIndex__velocities,
-	BufferIndex__positions,
-};
+#include "../source/buffer.cpp"
 
 namespace cl_manager {
 struct SimKernels {
@@ -61,22 +52,6 @@ void reload_buffers(MemoryArena &arena, ClInfo &info) {
 	ASSERT(false, "Need to clear memory?");
 
 	// clear_memory(arena);
-}
-
-void setup_buffers(ClInfo &info) {
-	cl_context context = info.context;
-
-	Buffer density_pressure = gen_buffer(context, zero);
-	info.buffers[BufferIndex__density_pressure] = density_pressure;
-
-	Buffer accelerations = gen_buffer(context, zero);
-	info.buffers[BufferIndex__accelerations] = accelerations;
-
-	Buffer velocities = gen_buffer(context, zero);
-	info.buffers[BufferIndex__velocities] = velocities;
-
-	Buffer positions = gen_buffer(context, gen_random_pos);
-	info.buffers[BufferIndex__positions] = positions;
 }
 
 void setup_kernels(ClInfo &info) {

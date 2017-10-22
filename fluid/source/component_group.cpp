@@ -27,6 +27,7 @@ void update_components(ComponentGroup &component_group, float dt) {
     component_group.input.update(dt);
 	component_group.animation.update(dt);
 	component_group.mover.update(dt);
+	component_group.fluid.update(dt);
 }
 
 struct Entity {

@@ -10,22 +10,19 @@ namespace fluid {
 
 	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure) {
 		{
-			PROFILER_START(memset)
-			memset(density_pressure, 0, NR_PARTICLES * sizeof(v2));
-			PROFILER_STOP(memset)
+			memset(density_pressure, 0, PARTICLE_COUNT * sizeof(v2));
 		}
 
 		// Elements for keeping the linked list in the hash.
-		Element *hash_map[NR_PARTICLES] = {};
-		NeighborList neighbors_list[NR_PARTICLES];
-		Element elements[NR_PARTICLES * 9];
+		Element *hash_map[PARTICLE_COUNT] = {};
+		NeighborList neighbors_list[PARTICLE_COUNT];
+		Element elements[PARTICLE_COUNT * 9];
 		fill_hashmap(positions, hash_map, elements, neighbors_list);
 		{
-			PROFILER_START(narrowphase)
-			for (int i = 0; i < NR_PARTICLES; ++i) {
+			for (u32 i = 0; i < PARTICLE_COUNT; ++i) {
 				u32 hash = calculate_hash(positions[i].x, positions[i].y);
 				Element *element = hash_map[hash];
-				ASSERT(element);
+				ASSERT(element, "No such element in hashmap");
 				Element *cursor;
 
 				NeighborList &list_i = neighbors_list[i];
@@ -61,17 +58,15 @@ namespace fluid {
 				}
 				density_pressure[i].y = K_GAS * (density_pressure[i].x - ρ_0);
 			}
-			PROFILER_STOP(narrowphase)
 		}
 
-		v2 accelerations[NR_PARTICLES];
+		v2 accelerations[PARTICLE_COUNT];
 		NeighborList *list; // Used by FOR_ALL_NEIGHBORS()
 		{
-			PROFILER_START(acceleration)
-			for (int i = 0; i < NR_PARTICLES; ++i) {
-				v2 a_pressure = V2(0, 0);
-				v2 a_viscosity = V2(0, 0);
-				v2 a_external = V2(0, GRAVITY);
+			for (int i = 0; i < PARTICLE_COUNT; ++i) {
+				v2 a_pressure = V2_f32(0, 0);
+				v2 a_viscosity = V2_f32(0, 0);
+				v2 a_external = V2_f32(0, GRAVITY);
 
 				FOR_ALL_NEIGHBORS()
 					v2 r_ji = positions[j] - positions[i];
@@ -94,7 +89,6 @@ namespace fluid {
 				}
 				accelerations[i] = a_pressure + a_viscosity + a_external;
 			}
-			PROFILER_STOP(acceleration)
 		}
 
 		integrate_wide_boundary_projection_v2(positions, velocities, accelerations);

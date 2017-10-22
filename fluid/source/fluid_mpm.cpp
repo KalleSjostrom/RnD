@@ -13,13 +13,22 @@ namespace fluid {
 	char *transient_memory = 0;
 	#define TRANSIENT_MEMORY_SIZE ( \
 		GRID_WIDTH * GRID_HEIGHT * sizeof(float) + \
-		NR_PARTICLES * sizeof(float) \
+		PARTICLE_COUNT * sizeof(float) \
 	)
 
 	#define MASS 1
 
 	float *grid_masses = 0;
 	// float *point_masses = 0;
+
+	float N(float x) {
+		float ax = abs(x);
+		if (ax < 1.0f)
+			return ((1.0f/2.0f) * ax*ax*ax) - (ax*ax) + (2.0f/3.0f);
+		if (ax < 2.0f)
+			return ((-1.0f/6.0f) * ax*ax*ax) + (ax*ax) - (2*ax) + (4.0f/3.0f);
+		return 0.0f;
+	}
 
 	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure) {
 		if (transient_memory == 0) {
@@ -30,12 +39,12 @@ namespace fluid {
 			memory += GRID_WIDTH * GRID_HEIGHT * sizeof(float);
 
 			// point_masses = (float *) memory;
-			// memory += NR_PARTICLES * sizeof(float);
+			// memory += PARTICLE_COUNT * sizeof(float);
 		}
 		memset(transient_memory, 0, TRANSIENT_MEMORY_SIZE);
 
 		// Rasterize particle data to the grid
-		for (int i = 0; i < NR_PARTICLES; i++) {
+		for (int i = 0; i < PARTICLE_COUNT; i++) {
 			v2 &p = positions[i];
 
 			float x = p.x + BOUNDS;
@@ -47,15 +56,6 @@ namespace fluid {
 
 			float frac_x = x - cx;
 			float frac_y = y - cy;
-
-			float N(float x) {
-				float ax = abs(x);
-				if (ax < 1.0f)
-					return ((1.0f/2.0f) * ax*ax*ax) - (ax*ax) + (2.0f/3.0f);
-				if (ax < 2.0f)
-					return ((-1.0f/6.0f) * ax*ax*ax) + (ax*ax) - (2*ax) + (4.0f/3.0f);
-				return 0.0f;
-			}
 
 			#define MASS 1
 			grid_masses[grid_index] += MASS * (N(frac_x) * N(frac_y)); // NOTE(kalle): dyadic is assumed to be regular multiply.

@@ -3,10 +3,6 @@
 #include "includes.h"
 #include "levels.cpp"
 
-#include "../generated/fluid_kernel.generated.cpp"
-#include "opencl/cl_manager.cpp"
-#include "fluid_.cpp"
-
 struct Application {
 	MemoryArena persistent_arena;
 	MemoryArena transient_arena;
@@ -22,8 +18,6 @@ struct Application {
 
 	i32 entity_count;
 	Entity entities[512];
-
-	cl_manager::ClInfo info;
 };
 
 EXPORT PLUGIN_RELOAD(reload) {
@@ -81,19 +75,12 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
-		// glEnable(GL_DEPTH_TEST);
+		glEnable(GL_PROGRAM_POINT_SIZE);
+		glPointSize(12);
 
 		setup_programs(application.components);
 		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
 		application.components.input.set_input(&input);
-
-		application.info = cl_manager::init(application.transient_arena);
-		cl_manager::ClInfo &info = application.info;
-		cl_manager::create_program_and_kernels(application.transient_arena, info);
-		cl_manager::setup_buffers(info);
-		cl_manager::setup_kernels(info);
-
-		application.components.fluid.set_vbos(info.buffers[BufferIndex__positions].vbo, info.buffers[BufferIndex__density_pressure].vbo);
 
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
@@ -106,14 +93,17 @@ EXPORT PLUGIN_UPDATE(update) {
 			model__set_scale(application.components, entity, V3(data.w, data.h, 0));
 		}
 
-		// 	// Audio
-		// 	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
+		// Audio
+		// application.audio_manager.play(application.engine, "../../application/assets/test.wav");
 		setup_camera(application.camera, V3(0, 0, 500), ASPECT_RATIO);
 	}
 
-	run_fluid(application.info);
-
 	{ // Update the application
+		if (IS_HELD(input, InputKey_Space)) {
+			Entity &entity = application.entities[application.entity_count-1];
+			application.components.fluid.rotate(entity.fluid_id, dt);
+		}
+
 		// Update all the components
 		update_components(application.components, dt);
 		// Handle component/component communication.
@@ -127,12 +117,5 @@ EXPORT PLUGIN_UPDATE(update) {
 		render(application.render_pipe, application.components, application.camera);
 	}
 
-	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// glUseProgram(am.shader_program);
-	// glBindVertexArray(am.vao);
-	// glDrawArrays(GL_POINTS, 0, NR_PARTICLES);
-
-
-	// globals::transient_arena.offset = 0;
 	return 0;
 }

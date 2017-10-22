@@ -1,6 +1,12 @@
+enum RenderableDataType {
+	RenderableDataType_Elements,
+	RenderableDataType_Arrays,
+};
+
 struct Renderable {
 	m4 pose;
 	i32 index_count;
+	RenderableDataType datatype;
 	GLenum draw_mode; // e.g. GL_TRIANGLE_STRIP;
 	GLuint element_array_buffer;
 	GLuint vertex_array_object;

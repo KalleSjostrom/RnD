@@ -1,6 +1,13 @@
 #include "cl_settings.h"
 
 namespace cl_manager {
+	struct ClInfo {
+		cl_context context;
+		cl_command_queue command_queue;
+		cl_device_id device;
+		cl_program program;
+	};
+
 	static void print_cl_device_info(u32 num_devices, cl_device_id *devices) {
 		static const u32 buffer_size = 128;
 		char buffer[buffer_size];

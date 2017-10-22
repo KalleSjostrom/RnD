@@ -1,9 +1,5 @@
 #include "engine/utils/math/vectorization.h"
 
-// #define FLT_MAX 3.40282347E+38F // "No-entry-marker" for the schur complement matrix to
-
-#define PARTICLE_COUNT 1024 * 10 // Must be a power of two
-
 namespace fluid_common {
 	static float PI = 3.14159265359f;
 
@@ -19,7 +15,7 @@ namespace fluid_common {
 
 	static float SCP = 1.0f;
 	static float H = (sqrtf((4*MASS) / (PI*SCP*ρ_0)));
-	static float BOUNDS = 20.0f;
+	static float BOUNDS = 5.0f;
 
 	static const u32 MAX_NEIGHBORS = 7;
 
@@ -96,7 +92,7 @@ namespace fluid_common {
 		// Eight wide boundary projection (4 vectors at a time).
 		for (int i = 0; i < PARTICLE_COUNT; i+=4) {
 			vec vel8 = v_load((float*)(velocities + i));
-			vel8 = v_add(vel8, VEC_GRAVITY);
+			// vel8 = v_add(vel8, VEC_GRAVITY);
 
 			vec pos8 = v_load((float*)(positions + i));
 			pos8 = v_add(pos8, v_mul(vel8, VEC_DT));
