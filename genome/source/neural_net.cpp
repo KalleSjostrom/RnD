@@ -70,22 +70,11 @@ NeuralNet make_neural_net(MemoryArena &arena, i32 *layer_sizes, i32 layer_size_c
 	return net;
 }
 
-float evaluate_neuron(float *neuron_weights, FloatArray &input) {
-	float activation = 0;
-	// Variable length dot-product, make it wide?
-	for (i32 i = 0; i < input.count; i++) {
-		activation += input[i] * neuron_weights[i];
-	}
-
-	return sigmoidal(activation);
-}
-
 FloatArray evaluate_neural_net(NeuralNet &net, FloatArray inputs) {
 	for (i32 i = 0; i < net.layer_count; i++) {
 		NeuronLayer &layer = net.layers[i];
 		FloatArray &layer_input = i == 0 ? inputs : net.layers[i-1].output;
 		for (i32 j = 0; j < layer.neuron_count; j++) {
-
 			float *neuron_weights = layer.neurons[j];
 			float activation = 0;
 			// Variable length dot-product, make it wide?
