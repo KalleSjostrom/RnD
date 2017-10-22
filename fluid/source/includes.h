@@ -12,6 +12,7 @@
 #include "windows.h"
 #include <gl/gl.h>
 #include "engine/utils/win32_setup_gl.h"
+#include "engine/utils/win32_setup_cl.h"
 #else
 #include <OpenGL/gl3.h>
 #include <OpenGL/opengl.h>
@@ -21,10 +22,13 @@
 typedef uint16_t GLindex;
 // #define GL_INDEX GL_UNSIGNED_SHORT
 
+#include "settings.h"
+
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
 #include "opengl/gl_program_builder.cpp"
+#include "opencl/cl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
 #include "engine/utils/math/math.h"
@@ -34,15 +38,17 @@ namespace globals {
 	static MemoryArena *transient_arena;
 };
 #define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
+#define SCRATCH_ALLOCATE_STRING(count) PUSH_STRING(*globals::transient_arena, count)
+#define SCRATCH_ALLOCATE_SIZE(type, count) PUSH_SIZE(*globals::transient_arena, count, type)
 
 #include "engine/utils/audio_manager.cpp"
 #include "engine/utils/camera.cpp"
 #include "engine/utils/animation.h"
 
 /////// ASSETS
-#include "../generated/animations.generated.cpp"
 #include "shaders/default.shader.cpp"
 #include "shaders/avatar.shader.cpp"
+#include "shaders/fluid.shader.cpp"
 #include "shaders/fullscreen_effects.shader.cpp"
 
 #include "component_group.cpp"

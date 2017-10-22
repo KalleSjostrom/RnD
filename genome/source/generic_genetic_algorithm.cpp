@@ -6,15 +6,13 @@ enum ProfilerScopes {
 	ProfilerScopes__run,
 };
 
-FORCE_INLINE u64 random_population_index(RandomPCG32 &r) {
-	u64 a = (u64)random_pcg32(r);
-	u64 b = (u64)random_pcg32(r);
-	return (a << 32) ^ (b);
+FORCE_INLINE u64 random_population_index(Random &r) {
+	return random_u64(r);
 }
 
 void run(MemoryArena &arena, const GASettings &settings) {
-	RandomPCG32 random = {};
-	random_pcg32_init(random, rdtsc(), 54u);
+	Random random = {};
+	random_init(random, rdtsc(), 54u);
 
 	Fitness max_fitness = settings.max_fitness;
 	Fitness min_fitness = settings.min_fitness;
@@ -30,7 +28,7 @@ void run(MemoryArena &arena, const GASettings &settings) {
 	PopulationIndex *selected = PUSH_STRUCTS(arena, population_size, PopulationIndex);
 
 	for (u64 i = 0; i < population_size; i++) {
-		population[i] = make_random();
+		population[i] = make_random(random);
 	}
 
 	PROFILER_START(run);
@@ -47,12 +45,11 @@ void run(MemoryArena &arena, const GASettings &settings) {
 
 		// End criteria
 		if (is_done(max, min)) {
-			printf("YAY! Found a winner at iteration '%lu'\n", j);
+			LOG_INFO("GA", "YAY! Found a winner at iteration '%lu'\n", j);
 
-			PopulationIndex index = 0;
-			for (u64 i = 0; i < population_size; i++) {
+			for (PopulationIndex i = 0; i < population_size; i++) {
 				if (fitness[i] == max) {
-					printf("winner: %lu %lu\n", i, population[i]);
+					LOG_INFO("GA", "winner: %lu %lu\n", i, population[i]);
 				}
 			}
 			break;
@@ -69,7 +66,7 @@ void run(MemoryArena &arena, const GASettings &settings) {
                 for (u64 i = 0; i < nr_considerations; i++) {
 					PopulationIndex random_index = random_population_index(random) & (population_size-1);
 					float probability = (float)fitness[random_index] / (float)max;
-					if (random_pcg32f(random) <= probability) {
+					if (random_f32(random) <= probability) {
 						selected[selected_size++] = random_index;
 					}
 				}
@@ -94,13 +91,13 @@ void run(MemoryArena &arena, const GASettings &settings) {
 		switch (settings.mating_type) {
 			case MatingType_OnePointCrossover: {
 				for (u64 i = 0; i < population_size; i+=2) {
-					PopulationIndex mom_index = selected[random_pcg32(random) % selected_size];
-					PopulationIndex dad_index = selected[random_pcg32(random) % selected_size];
+					PopulationIndex mom_index = selected[random_u32(random) % selected_size];
+					PopulationIndex dad_index = selected[random_u32(random) % selected_size];
 
 					Genome mom = population[mom_index];
 					Genome dad = population[dad_index];
 
-					i32 point = random_pcg32(random) & (64 - 1);
+					i32 point = random_u32(random) & (64 - 1);
 					Genome mask = 0xFFFFFFFFFFFFFFFF << point;
 
 					population_buffer[i] = (mask & mom) | (~mask & dad);
@@ -120,8 +117,8 @@ void run(MemoryArena &arena, const GASettings &settings) {
 
 					Genome individual = population_buffer[random_index];
 
-					i32 point = random_pcg32(random) & (64 - 1);
-					individual ^= (1 << point);
+					i32 point = random_u32(random) & (64 - 1);
+					individual ^= (Genome)(1 << point);
 
 					population_buffer[random_index] = individual;
 				}

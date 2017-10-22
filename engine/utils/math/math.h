@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef OS_WINDOWS
 	#define _USE_MATH_DEFINES 1
 #endif

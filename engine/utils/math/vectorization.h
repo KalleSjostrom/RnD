@@ -1,3 +1,115 @@
+#ifdef OS_WINDOWS
+	#include <intrin.h>
+	#define cpuid(info, x) __cpuidex(info, x, 0)
+#else
+	#include <cpuid.h>
+	void cpuid(int info[4], int InfoType) {
+		__cpuid_count(InfoType, 0, info[0], info[1], info[2], info[3]);
+	}
+#endif
+
+enum CpuFeatureFlag : unsigned {
+	//  Misc.
+	CpuFeatureFlag_MMX = 1<<0,
+	CpuFeatureFlag_x64 = 1<<1,
+	CpuFeatureFlag_ABM = 1<<2,
+	CpuFeatureFlag_RDRAND = 1<<3,
+	CpuFeatureFlag_BMI1 = 1<<4,
+	CpuFeatureFlag_BMI2 = 1<<5,
+	CpuFeatureFlag_ADX = 1<<6,
+	CpuFeatureFlag_PREFETCHWT1 = 1<<7,
+
+	//  SIMD: 128-bit
+	CpuFeatureFlag_SSE = 1<<8,
+	CpuFeatureFlag_SSE2 = 1<<9,
+	CpuFeatureFlag_SSE3 = 1<<10,
+	CpuFeatureFlag_SSSE3 = 1<<11,
+	CpuFeatureFlag_SSE41 = 1<<12,
+	CpuFeatureFlag_SSE42 = 1<<13,
+	CpuFeatureFlag_SSE4a = 1<<14,
+	CpuFeatureFlag_AES = 1<<15,
+	CpuFeatureFlag_SHA = 1<<16,
+
+	//  SIMD: 256-bit
+	CpuFeatureFlag_AVX = 1<<17,
+	CpuFeatureFlag_XOP = 1<<18,
+	CpuFeatureFlag_FMA3 = 1<<19,
+	CpuFeatureFlag_FMA4 = 1<<20,
+	CpuFeatureFlag_AVX2 = 1<<21,
+
+	//  SIMD: 512-bit
+	CpuFeatureFlag_AVX512F = 1<<22, // AVX512 Foundation
+	CpuFeatureFlag_AVX512CD = 1<<23, // AVX512 Conflict Detection
+	CpuFeatureFlag_AVX512PF = 1<<24, // AVX512 Prefetch
+	CpuFeatureFlag_AVX512ER = 1<<25, // AVX512 Exponential + Reciprocal
+	CpuFeatureFlag_AVX512VL = 1<<26, // AVX512 Vector Length Extensions
+	CpuFeatureFlag_AVX512BW = 1<<27, // AVX512 Byte + Word
+	CpuFeatureFlag_AVX512DQ = 1<<28, // AVX512 Doubleword + Quadword
+	CpuFeatureFlag_AVX512IFMA = 1<<29, // AVX512 Integer 52-bit Fused Multiply-Add
+	CpuFeatureFlag_AVX512VBMI = 1<<30, // AVX512 Vector Byte Manipulation Instructions
+};
+
+unsigned detect_cpu_features() {
+	int info[4];
+	cpuid(info, 0);
+	int nIds = info[0];
+
+	cpuid(info, 0x80000000);
+	unsigned nExIds = info[0];
+
+	unsigned flags = 0;
+
+	// Detect Features
+	if (nIds >= 0x00000001) {
+		cpuid(info, 0x00000001);
+		flags |= ((info[3] & ((int)1 << 23)) != 0) ? CpuFeatureFlag_MMX : 0;
+		flags |= ((info[3] & ((int)1 << 25)) != 0) ? CpuFeatureFlag_SSE : 0;
+		flags |= ((info[3] & ((int)1 << 26)) != 0) ? CpuFeatureFlag_SSE2 : 0;
+		flags |= ((info[2] & ((int)1 <<  0)) != 0) ? CpuFeatureFlag_SSE3 : 0;
+
+		flags |= ((info[2] & ((int)1 <<  9)) != 0) ? CpuFeatureFlag_SSSE3 : 0;
+		flags |= ((info[2] & ((int)1 << 19)) != 0) ? CpuFeatureFlag_SSE41 : 0;
+		flags |= ((info[2] & ((int)1 << 20)) != 0) ? CpuFeatureFlag_SSE42 : 0;
+		flags |= ((info[2] & ((int)1 << 25)) != 0) ? CpuFeatureFlag_AES : 0;
+
+		flags |= ((info[2] & ((int)1 << 28)) != 0) ? CpuFeatureFlag_AVX : 0;
+		flags |= ((info[2] & ((int)1 << 12)) != 0) ? CpuFeatureFlag_FMA3 : 0;
+
+		flags |= ((info[2] & ((int)1 << 30)) != 0) ? CpuFeatureFlag_RDRAND : 0;
+	}
+	if (nIds >= 0x00000007) {
+		cpuid(info, 0x00000007);
+		flags |= ((info[1] & ((int)1 <<  5)) != 0) ? CpuFeatureFlag_AVX2 : 0;
+
+		flags |= ((info[1] & ((int)1 <<  3)) != 0) ? CpuFeatureFlag_BMI1 : 0;
+		flags |= ((info[1] & ((int)1 <<  8)) != 0) ? CpuFeatureFlag_BMI2 : 0;
+		flags |= ((info[1] & ((int)1 << 19)) != 0) ? CpuFeatureFlag_ADX : 0;
+		flags |= ((info[1] & ((int)1 << 29)) != 0) ? CpuFeatureFlag_SHA : 0;
+		flags |= ((info[2] & ((int)1 <<  0)) != 0) ? CpuFeatureFlag_PREFETCHWT1 : 0;
+
+		flags |= ((info[1] & ((int)1 << 16)) != 0) ? CpuFeatureFlag_AVX512F : 0;
+		flags |= ((info[1] & ((int)1 << 28)) != 0) ? CpuFeatureFlag_AVX512CD : 0;
+		flags |= ((info[1] & ((int)1 << 26)) != 0) ? CpuFeatureFlag_AVX512PF : 0;
+		flags |= ((info[1] & ((int)1 << 27)) != 0) ? CpuFeatureFlag_AVX512ER : 0;
+		flags |= ((info[1] & ((int)1 << 31)) != 0) ? CpuFeatureFlag_AVX512VL : 0;
+		flags |= ((info[1] & ((int)1 << 30)) != 0) ? CpuFeatureFlag_AVX512BW : 0;
+		flags |= ((info[1] & ((int)1 << 17)) != 0) ? CpuFeatureFlag_AVX512DQ : 0;
+		flags |= ((info[1] & ((int)1 << 21)) != 0) ? CpuFeatureFlag_AVX512IFMA : 0;
+		flags |= ((info[2] & ((int)1 <<  1)) != 0) ? CpuFeatureFlag_AVX512VBMI : 0;
+	}
+	if (nExIds >= 0x80000001) {
+		cpuid(info, 0x80000001);
+		flags |= ((info[3] & ((int)1 << 29)) != 0) ? CpuFeatureFlag_x64 : 0;
+		flags |= ((info[2] & ((int)1 <<  5)) != 0) ? CpuFeatureFlag_ABM : 0;
+		flags |= ((info[2] & ((int)1 <<  6)) != 0) ? CpuFeatureFlag_SSE4a : 0;
+		flags |= ((info[2] & ((int)1 << 16)) != 0) ? CpuFeatureFlag_FMA4 : 0;
+		flags |= ((info[2] & ((int)1 << 11)) != 0) ? CpuFeatureFlag_XOP : 0;
+	}
+
+	return flags;
+}
+
+
 //<mmintrin.h>  MMX
 //<xmmintrin.h> SSE
 //<emmintrin.h> SSE2
@@ -8,9 +120,7 @@
 //<ammintrin.h> SSE4A
 //<wmmintrin.h> AES
 //<immintrin.h> AVX
-
 #if defined(__AVX__)
-
 	#include <immintrin.h>
 
 	#define vec __m256
@@ -34,7 +144,6 @@
 	#define VECTOR_INDICES { 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f }
 
 #elif defined(__SSE__)
-
 	#include <x86intrin.h>
 
 	#define vec __m128

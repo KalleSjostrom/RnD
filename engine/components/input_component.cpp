@@ -18,12 +18,11 @@ namespace input_component {
 		i32 add() {
 			ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
 			i32 id = count++;
-			Instance &instance = instances[id];
-
 			return id;
 		}
 
 		void update(float dt) {
+			(void) dt;
 			for (i32 i = 0; i < count; ++i) {
 				Instance &instance = instances[i];
 

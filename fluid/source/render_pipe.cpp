@@ -381,4 +381,6 @@ void render(RenderPipe &render_pipe, ComponentGroup &components, Camera &camera)
 
 	render_bloom(render_pipe, components, camera);
 	render_combine(render_pipe, components, camera);
+
+	render(components.renderer, camera, RenderMask_Fluid); // Rendering all (non shadow-casting) lights to the lightmap
 }

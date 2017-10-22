@@ -2,7 +2,7 @@
 #include "cl_errors.cpp"
 
 namespace cl_program_builder {
-	static void build(cl_program program, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
+	static void build(MemoryArena &arena, cl_program program, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
 		cl_int errcode_ret = clBuildProgram(program, num_devices, devices, build_options, 0, 0);
 		CL_CHECK_ERRORCODE(clBuildProgram, errcode_ret);
 
@@ -20,7 +20,9 @@ namespace cl_program_builder {
 			u64 ret_val_size;
 			errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_LOG, 0, 0, &ret_val_size);
 			CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
-			char build_log[ret_val_size+1];
+
+			TempAllocator ta(&arena);
+			char *build_log = PUSH_STRING(arena, ret_val_size+1);
 			errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, 0);
 			CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
 			build_log[ret_val_size] = '\0';
@@ -28,26 +30,28 @@ namespace cl_program_builder {
 		}
 	}
 
-	cl_program create_from_source_file(cl_context context, const char *filename, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
+	cl_program create_from_source_file(MemoryArena &arena, cl_context context, const char *filename, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
 		u64 size;
 		FILE *file = open_file(filename, &size);
-		char source_buffer[size];
-		fread(source_buffer, 1, size, file);
+		TempAllocator ta(&arena);
+		char *source_buffer = PUSH_STRING(arena, size);
+		size_t read_bytes = fread(source_buffer, 1, size, file);
 		fclose(file);
-		source_buffer[size] = '\0';
+		source_buffer[read_bytes] = '\0';
 
 		cl_int errcode_ret;
 		const char *code[] = { source_buffer };
 		cl_program program = clCreateProgramWithSource(context, 1, code, &size, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateProgramWithSource, errcode_ret);
 
-		build(program, num_devices, devices, build_options);
+		build(arena, program, num_devices, devices, build_options);
 
 		return program;
 	}
 
 	cl_program create_from_binary_file(MemoryArena &arena, cl_context context, const char *filename, cl_device_id *devices) {
-		FILE *file = fopen(filename, "r");
+		FILE *file;
+		fopen_s(&file, filename, "r");
 
 		cl_uint count;
 		fread(&count, sizeof(cl_uint), 1, file);
@@ -69,7 +73,7 @@ namespace cl_program_builder {
 		cl_program program = clCreateProgramWithBinary(context, count, devices, binary_sizes, (const u8 **) binaries, (cl_int*)binary_status, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateProgramWithBinary, errcode_ret);
 
-		build(program, count, devices);
+		build(arena, program, count, devices);
 		return program;
 	}
 
@@ -93,7 +97,8 @@ namespace cl_program_builder {
 		CL_CHECK_ERRORCODE(clGetProgramInfo, errcode_ret);
 
 		{ // Write file
-			FILE *file = fopen(filename, "w");
+			FILE *file;
+			fopen_s(&file, filename, "w");
 			fwrite(&num_devices, sizeof(cl_uint), 1, file);
 			fwrite(binary_sizes, sizeof(u64), num_devices, file);
 

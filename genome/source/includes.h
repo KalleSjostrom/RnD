@@ -44,8 +44,5 @@ namespace globals {
 #include "shaders/avatar.shader.cpp"
 #include "shaders/fullscreen_effects.shader.cpp"
 
-// #define CALL(owner, compname, command, ...) (((ComponentGroup*)globals::components)->compname.command(owner.compname ## _id, ## __VA_ARGS__))
-// #define GET(owner, compname, member) (((ComponentGroup*)globals::components)->compname.instances[owner.compname ## _id].member)
-
 #include "component_group.cpp"
 #include "render_pipe.cpp"

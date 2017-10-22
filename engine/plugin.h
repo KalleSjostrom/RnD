@@ -1,3 +1,5 @@
+#pragma once
+
 #include "utils/common.h"
 
 #define RES_WIDTH 1024

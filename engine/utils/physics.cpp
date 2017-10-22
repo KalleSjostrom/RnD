@@ -391,9 +391,6 @@ SweepResults sweep(AABBTree &tree, i32 item, v3 &wanted_translation) {
 
 	AABB aabb = from + to;
 
-	v3 f = V3(from.x, from.y, 0);
-	Ray ray = make_ray(f, wanted_translation);
-
 	i32 count = 0;
 	i32 at = 0;
 	i32 queue[32] = {};

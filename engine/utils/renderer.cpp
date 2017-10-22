@@ -11,7 +11,7 @@ struct Program {
 };
 
 struct Renderer {
-	Program programs[4];
+	Program programs[32];
 	i32 program_count;
 	i32 __padding;
 };
@@ -50,9 +50,22 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 
 				glUniformMatrix4fv(p.model_location, 1, GL_FALSE, (GLfloat*)(re.pose.m));
 
-				glBindVertexArray(re.vertex_array_object);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, re.element_array_buffer);
-				glDrawElements(re.draw_mode, re.index_count, GL_UNSIGNED_SHORT, (void*)0);
+				if (render_mask == 1 << 3) {
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+					glEnable(GL_BLEND);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					glEnable(GL_PROGRAM_POINT_SIZE);
+					glPointSize(12);
+
+					glBindVertexArray(re.vertex_array_object);
+					#define PARTICLE_COUNT 1024 * 10 // Must be a power of two
+					glDrawArrays(GL_POINTS, 0, PARTICLE_COUNT);
+				} else {
+					glBindVertexArray(re.vertex_array_object);
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, re.element_array_buffer);
+					glDrawElements(re.draw_mode, re.index_count, GL_UNSIGNED_SHORT, (void*)0);
+				}
 			}
 		}
 	}

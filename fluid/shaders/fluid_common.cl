@@ -22,7 +22,8 @@ static float poly6(float2 r_ji) {
 
 static float2 spiky(float2 r_ji) {
 	float r = length(r_ji);
-	return r <= H ? SPIKY_C * r_ji * pow((H - r), 2.0f) : float2(0, 0);
+	float2 zero = {};
+	return r <= H ? SPIKY_C * r_ji * pow((H - r), 2.0f) : zero;
 }
 
 static float viscosity(float2 r_ji) {

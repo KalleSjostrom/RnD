@@ -37,31 +37,32 @@ namespace font {
 	};
 
 	void load(MemoryArena &arena, const char *filename, Font *font) {
-		FILE *font_file = fopen(filename, "rb");
-		ASSERT(font_file, "No font file found at location '%s'\n", filename);
+		FILE *file;
+		fopen_s(&file, filename, "rb");
+		ASSERT(file, "No font file found at location '%s'\n", filename);
 
-		fread(&font->info, sizeof(FontInfo), 1, font_file);
+		fread(&font->info, sizeof(FontInfo), 1, file);
 
 		font->characters = PUSH_STRUCTS(arena, font->info.num_chars, FontCharacter);
-		fread(font->characters, sizeof(FontCharacter), (u32)font->info.num_chars, font_file);
+		fread(font->characters, sizeof(FontCharacter), (u32)font->info.num_chars, file);
 
 		i32 num_kernings = ('~' - ' ') + 1;
 		num_kernings *= num_kernings; // squared
 
 		font->kerning_table = PUSH_STRUCTS(arena, num_kernings, i32);
-		fread(font->kerning_table, sizeof(i32), (u32)num_kernings, font_file);
+		fread(font->kerning_table, sizeof(i32), (u32)num_kernings, file);
 
 		i32 width;
-		fread(&width, sizeof(i32), 1, font_file);
+		fread(&width, sizeof(i32), 1, file);
 		i32 height;
-		fread(&height, sizeof(i32), 1, font_file);
+		fread(&height, sizeof(i32), 1, file);
 		font->width = width;
 		font->height = height;
 
 		u32 size = (u32)(width * height);
 
 		font->pixels = (unsigned char *)malloc(size*sizeof(unsigned char));
-		fread(font->pixels, sizeof(unsigned char), size, font_file);
+		fread(font->pixels, sizeof(unsigned char), size, file);
 	}
 
 	inline i32 get_kerning(i32 *kerning_table, char a, char b) {

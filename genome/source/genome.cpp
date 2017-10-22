@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "levels.cpp"
+#include "engine/utils/math/random.h"
 
 /// SETTINGS
 typedef u64 Genome;
@@ -40,14 +41,12 @@ struct GASettings {
 
 static const GASettings ga_settings = {
 	128, 0, 4096, 1024*64, 0.1f,
-	(SelectionType)1, (MatingType)0, (MutationType)0,
+	(SelectionType)0, (MatingType)0, (MutationType)0,
 	0, 0, 0,
 };
 
-Genome make_random() {
-	u64 a = (u64)random();
-	u64 b = (u64)random();
-	return (a << 32) ^ (b);
+Genome make_random(Random &random) {
+	return random_u64(random);
 }
 
 bool is_done(Fitness max, Fitness min) {

@@ -2,6 +2,7 @@
 #define NR_PARTICLES 1024 * 10
 
 #include "cl_preamble.cpp"
+
 enum BufferIndex {
 	BufferIndex__density_pressure,
 	BufferIndex__accelerations,
@@ -50,8 +51,6 @@ void reload_buffer(MemoryArena &arena, ClInfo &info, BufferIndex index, v2 (*f)(
 	CL_CHECK_ERRORCODE(clCreateFromGLBuffer, errcode_ret);
 }
 void reload_buffers(MemoryArena &arena, ClInfo &info) {
-	cl_context context = info.context;
-
 	reload_buffer(arena, info, BufferIndex__density_pressure, zero);
 	reload_buffer(arena, info, BufferIndex__accelerations, zero);
 	reload_buffer(arena, info, BufferIndex__velocities, zero);
@@ -82,7 +81,6 @@ void setup_buffers(ClInfo &info) {
 
 void setup_kernels(ClInfo &info) {
 	cl_manager::SimKernels kernels = info.kernels;
-	cl_context context = info.context;
 	cl_int errcode_ret;
 
 	Buffer density_pressure = info.buffers[BufferIndex__density_pressure];
@@ -127,7 +125,7 @@ void run_kernels(ClInfo &info) {
 }
 void create_program_and_kernels(MemoryArena &arena, ClInfo &info) {
 	cl_int errcode_ret;
-	cl_program program = cl_program_builder::create_from_source_file(info.context, COMPUTE_SHADER_SOURCE, 1, &info.device);
+	cl_program program = cl_program_builder::create_from_source_file(arena, info.context, COMPUTE_SHADER_SOURCE, 1, &info.device, "-I "COMPUTE_SHADER_INCLUDE);
 	SimKernels kernels = { };
 
 	cl_kernel calc_density_pressure = clCreateKernel(program, "calc_density_pressure", &errcode_ret);

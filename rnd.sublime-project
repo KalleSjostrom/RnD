@@ -1,96 +1,101 @@
 {
+	"build_systems":
+	[
+		{
+			"name": "RnD",
+			"osx":
+			{
+				"file_regex": "(.*?):([0-9]+):([0-9]+):(.*)",
+				"shell_cmd": "./build.sh"
+			},
+			"selector": "source.dosbatch",
+			"syntax": "Packages/sublime_tools/cl.build-language",
+			"variants":
+			[
+				{
+					"name": "Engine",
+					"working_dir": "${project_path}/engine/"
+				},
+				{
+					"name": "Frida",
+					"working_dir": "${project_path}/frida/"
+				},
+				{
+					"name": "Generator",
+					"working_dir": "${project_path}/generator/"
+				},
+				{
+					"name": "Genome",
+					"working_dir": "${project_path}/genome/"
+				},
+				{
+					"name": "Game",
+					"working_dir": "${project_path}/Game/"
+				},
+				{
+					"name": "Roomba Mock Server",
+					"working_dir": "${project_path}/roomba/server/"
+				},
+				{
+					"name": "Roomba Client",
+					"working_dir": "${project_path}/roomba/client/"
+				},
+				{
+					"name": "Fluid",
+					"working_dir": "${project_path}/fluid/"
+				},
+				{
+					"name": "Fibers",
+					"working_dir": "${project_path}/fibers/"
+				},
+				{
+					"name": "MyGL",
+					"working_dir": "${project_path}/mygl/"
+				},
+				{
+					"name": "Test - Mandlebrot",
+					"working_dir": "${project_path}/testing and benchmarks/mandelbrot/"
+				},
+				{
+					"name": "Test - Math",
+					"working_dir": "${project_path}/testing and benchmarks/math_benchmarks/"
+				},
+				{
+					"name": "Test - Matrix Multiplication",
+					"working_dir": "${project_path}/testing and benchmarks/matrix_multiplication/"
+				},
+				{
+					"name": "Test - Memory",
+					"working_dir": "${project_path}/testing and benchmarks/memory/"
+				},
+				{
+					"name": "Test - Perlin",
+					"working_dir": "${project_path}/testing and benchmarks/perlin/"
+				},
+				{
+					"name": "Test - Sorting",
+					"working_dir": "${project_path}/testing and benchmarks/sorting/"
+				}
+			],
+			"windows":
+			{
+				"cmd":
+				[
+					"build.bat"
+				],
+				"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+			},
+			"working_dir": "${project_path}/"
+		}
+	],
 	"folders":
 	[
 		{
 			"path": "."
 		},
 		{
-			"path": "../../HandmadeHero",
-			"name": "Handmade Hero"
-		},
-	],
-	"build_systems":
-	[
-		{
-			"name": "RnD",
-			"windows": {
-				"cmd": ["build.bat"],
-				"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)",
-			},
-			"osx": {
-				"shell_cmd": "./build.sh",
-				"file_regex": "(.*?):([0-9]+):([0-9]+):(.*)",
-			},
-			"working_dir": "${project_path}/",
-			"syntax": "Packages/sublime_tools/cl.build-language",
-			"selector": "source.dosbatch",
-			"variants":
-			[
-				{
-					"name": "Engine",
-					"working_dir": "${project_path}/engine/",
-				},
-				{
-					"name": "Frida",
-					"working_dir": "${project_path}/frida/",
-				},
-				{
-					"name": "Generator",
-					"working_dir": "${project_path}/generator/",
-				},
-				{
-					"name": "Genome",
-					"working_dir": "${project_path}/genome/",
-				},
-				{
-					"name": "Game",
-					"working_dir": "${project_path}/Game/",
-				},
-				{
-					"name": "Roomba Mock Server",
-					"working_dir": "${project_path}/roomba/server/",
-				},
-				{
-					"name": "Roomba Client",
-					"working_dir": "${project_path}/roomba/client/",
-				},
-				{
-					"name": "Fluid",
-					"working_dir": "${project_path}/fluid/",
-				},
-				{
-					"name": "Fibers",
-					"working_dir": "${project_path}/fibers/",
-				},
-				{
-					"name": "MyGL",
-					"working_dir": "${project_path}/mygl/",
-				},
-				{
-					"name": "Test - Mandlebrot",
-					"working_dir": "${project_path}/testing and benchmarks/mandelbrot/",
-				},
-				{
-					"name": "Test - Math",
-					"working_dir": "${project_path}/testing and benchmarks/math_benchmarks/",
-				},
-				{
-					"name": "Test - Matrix Multiplication",
-					"working_dir": "${project_path}/testing and benchmarks/matrix_multiplication/",
-				},
-				{
-					"name": "Test - Memory",
-					"working_dir": "${project_path}/testing and benchmarks/memory/",
-				},
-				{
-					"name": "Test - Perlin",
-					"working_dir": "${project_path}/testing and benchmarks/perlin/",
-				},
-				{
-					"name": "Test - Sorting",
-					"working_dir": "${project_path}/testing and benchmarks/sorting/",
-				},
-			]
+			"name": "Handmade Hero",
+			"path": "C:\\Users\\Kalle\\Programming\\Handmade Hero"
 		}
 	]
 }

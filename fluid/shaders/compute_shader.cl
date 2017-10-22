@@ -6,7 +6,8 @@
 //@ positions gen_random_pos
 __kernel void calc_density_pressure(__global float2 *density_pressure, __global float2 *positions) {
 	unsigned int i = get_global_id(0);
-	density_pressure[i] = float2(0.0f, 0.0f);
+	density_pressure[i].x = 0.0;
+	density_pressure[i].y = 0.0;
 	for (int j = 0; j < NR_PARTICLES; ++j) {
 		density_pressure[i].x += MASS * poly6(positions[j] - positions[i]);
 	}
