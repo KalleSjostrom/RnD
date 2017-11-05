@@ -79,7 +79,7 @@ struct InputTime {
 	float pressed;
 	float released;
 };
-struct Input {
+struct InputData {
 	b32 pressed[InputKey_Count];
 	b32 released[InputKey_Count];
 	InputTime times[InputKey_Count];
@@ -87,8 +87,8 @@ struct Input {
 #define IS_HELD(input, key) ((input).times[(key)].pressed > (input).times[(key)].released)
 #define IS_PRESSED(input, key) (input).pressed[(key)]
 
-#define PLUGIN_UPDATE(name) i32 name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, Input &input, float dt)
+#define PLUGIN_UPDATE(name) i32 name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, InputData &input, float dt)
 typedef PLUGIN_UPDATE(plugin_update_t);
 
-#define PLUGIN_RELOAD(name) void name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, Input &input)
+#define PLUGIN_RELOAD(name) void name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, InputData &input)
 typedef PLUGIN_RELOAD(plugin_reload_t);

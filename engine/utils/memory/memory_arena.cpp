@@ -68,6 +68,9 @@ struct MemoryBlockHandle {
 		void *chunk = mmap(0, blocksize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 		return chunk;
 	}
+	inline void virtual_free(void *block) {
+		munmap(block, 5000);
+	}
 	inline void *aligned_allocation(size_t size, size_t alignment) {
 		void *returnPtr;
 		posix_memalign(&returnPtr, alignment, size);
@@ -97,12 +100,25 @@ inline void free_all_blocks(MemoryBlock *block) {
 		block->previous_block = 0;
 
 		char *start = block->memory - sizeof(MemoryBlock);
-		free(start);
+		virtual_free(start);
 	}
 }
 inline void free_memory(MemoryArena &arena) {
 	free_all_blocks(arena.block);
 	arena.block = 0;
+}
+
+inline void reset_transient_memory(MemoryArena &arena) {
+	while (arena.block && arena.block->previous_block) {
+        MemoryBlock *previous_block = arena.block->previous_block;
+
+		virtual_free(arena.block);
+
+		arena.block = previous_block;
+	}
+	if (arena.block) {
+		arena.block->offset = 0;
+	}
 }
 
 inline MemoryBlockHandle begin_block(MemoryArena &arena) {
@@ -114,7 +130,7 @@ inline void end_block(MemoryArena &arena, MemoryBlockHandle handle) {
 		MemoryBlock *block = arena.block;
 		arena.block = block->previous_block;
 
-		free(block->memory - sizeof(MemoryBlock));
+		virtual_free(block->memory - sizeof(MemoryBlock));
 	}
 	arena.block->offset = handle.offset;
 }
@@ -169,14 +185,14 @@ inline void *_push_size(MemoryArena &arena, size_t size, bool clear_to_zero = fa
 	if (clear_to_zero) {
 		memset(result, 0, size);
 	}
-#if DEVELOPMENT
-	else {
-		uint32_t *buf = (uint32_t*)result;
-		for (size_t i = 0; i < size/4; i++) {
-			buf[i] = 0xDEADBEEF;
-		}
-	}
-#endif
+// #if DEVELOPMENT
+// 	else {
+// 		uint32_t *buf = (uint32_t*)result;
+// 		for (size_t i = 0; i < size/4; i++) {
+// 			buf[i] = 0xDEADBEEF;
+// 		}
+// 	}
+// #endif
 
 	return result;
 }

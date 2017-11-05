@@ -14,10 +14,10 @@ uint32_t random_u32(Random &r) {
 	// Calculate output function (XSH RR), uses old state for max ILP
 	uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
 	uint32_t rot = oldstate >> 59u;
-#pragma warning(push)
-#pragma warning(disable:4146)
+// #pragma warning(push)
+// #pragma warning(disable:4146)
 	return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-#pragma warning(pop)
+// #pragma warning(pop)
 }
 
 uint64_t random_u64(Random &r) {
@@ -27,7 +27,12 @@ uint64_t random_u64(Random &r) {
 }
 
 float random_f32(Random &r) {
-    return (float)random_u32(r) / (float)UINT_MAX;
+	return (float)random_u32(r) / (float)UINT_MAX;
+}
+
+float random_bilateral_f32(Random &r) {
+	float a = (float)random_u32(r) / (float)UINT_MAX;
+	return a * 2.0f - 1.f;
 }
 
 void random_init(Random &r, uint64_t initstate, uint64_t initseq) {
@@ -37,3 +42,7 @@ void random_init(Random &r, uint64_t initstate, uint64_t initseq) {
 	r.state += initstate;
 	random_u32(r);
 }
+
+// void random_init(Random &r) {
+// 	random_init(r, _rdtsc(), 54u);
+// }

@@ -9,6 +9,7 @@ struct Camera {
 
 inline void set_position(Camera &camera, v3 position) {
 	camera.view = look_at(position, V3(0.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
+	camera.position = position;
 }
 
 void set_projection(Camera &camera, float aspect_ratio) {

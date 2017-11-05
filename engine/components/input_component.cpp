@@ -1,41 +1,37 @@
-namespace input_component {
-	struct Instance {
-		v3 move;
-		b32 jump;
-	};
+struct Input {
+	v3 move;
+	b32 jump;
+};
 
-	struct InputComponent {
-		Input *input;
+struct InputComponent {
+	InputData *input_data;
+	Input inputs[1];
+	cid count;
 
-		Instance instances[1];
-		i32 count;
-		i32 __padding;
+	void set_input_data(InputData *i) {
+		input_data = i;
+	}
 
-		void set_input(Input *i) {
-			input = i;
-		}
+	cid add() {
+		ASSERT((u32)count < ARRAY_COUNT(inputs), "Component full!");
+		cid id = count++;
+		return id;
+	}
 
-		i32 add() {
-			ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
-			i32 id = count++;
-			return id;
-		}
+	void update(float dt) {
+		(void) dt;
+		for (i32 i = 0; i < count; ++i) {
+			Input &input = inputs[i];
 
-		void update(float dt) {
-			(void) dt;
-			for (i32 i = 0; i < count; ++i) {
-				Instance &instance = instances[i];
+			input.move.x = 0;
 
-				instance.move.x = 0;
-
-				if (IS_HELD(*input, InputKey_D)) {
-					instance.move.x += 10;
-				}
-				if (IS_HELD(*input, InputKey_A)) {
-					instance.move.x += -10;
-				}
-				instance.jump = IS_PRESSED(*input, InputKey_Space);
+			if (IS_HELD(*input_data, InputKey_D)) {
+				input.move.x += 10;
 			}
+			if (IS_HELD(*input_data, InputKey_A)) {
+				input.move.x += -10;
+			}
+			input.jump = IS_PRESSED(*input_data, InputKey_Space);
 		}
-	};
-}
+	}
+};

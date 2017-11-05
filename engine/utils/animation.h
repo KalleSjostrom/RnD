@@ -9,12 +9,6 @@ inline AnimationData make_animation_data(v3 *keyframes, i32 keyframe_count, i32 
 	return d;
 }
 
-struct Animation {
-	AnimationData *data;
-	f32 time;
-	i32 __padding;
-};
-
 struct Skeleton {
 	i32 count;
 	v3 position[4];

@@ -17,8 +17,8 @@
 					"working_dir": "${project_path}/engine/"
 				},
 				{
-					"name": "Frida",
-					"working_dir": "${project_path}/frida/"
+					"name": "Raytracer",
+					"working_dir": "${project_path}/raytracer/"
 				},
 				{
 					"name": "Generator",

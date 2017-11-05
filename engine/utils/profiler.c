@@ -7,6 +7,8 @@ typedef struct {
 	f64 elapsed_time;
 } PerfCounter;
 
+
+// TODO(kalle): break out the timing calls
 #ifdef OS_WINDOWS
 	struct Stopwatch {
 		LARGE_INTEGER frequency;

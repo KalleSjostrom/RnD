@@ -67,7 +67,7 @@ namespace fluid_component {
 		Instance instances[8];
 		i32 count;
 
-		i32 add() {
+		cid add() {
 			ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
 			i32 id = count++;
 			Instance &instance = instances[id];

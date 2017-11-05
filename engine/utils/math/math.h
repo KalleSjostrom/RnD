@@ -35,6 +35,10 @@ FORCE_INLINE f32 clamp(f32 value, f32 low, f32 high) {
 	return value;
 }
 
+FORCE_INLINE f32 saturate(f32 value) {
+	return clamp(value, 0, 1);
+}
+
 #define ELEMENT_TYPE f32
 #include "math_v2.h"
 typedef v2_f32 v2;
@@ -43,7 +47,14 @@ typedef v2_f32 v2;
 #include "math_v2.h"
 
 struct v3 {
-	f32 x, y, z;
+	union {
+		struct {
+			f32 x, y, z;
+		};
+		struct {
+			f32 r, g, b;
+		};
+	};
 	f32 operator[](int index) {
 		return *((f32*)this + index);
 	}
@@ -83,7 +94,7 @@ FORCE_INLINE v3 & operator+=(v3 &a, v3 b) {
 }
 
 FORCE_INLINE v3 operator-(v3 a) {
-	return V3(-a.x, -a.x, -a.z);
+	return V3(-a.x, -a.y, -a.z);
 }
 FORCE_INLINE v3 operator-(v3 a, v3 b) {
 	return V3(a.x - b.x, a.y - b.y, a.z - b.z);
