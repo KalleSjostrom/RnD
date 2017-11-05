@@ -192,7 +192,7 @@ EXPORT PLUGIN_UPDATE(update) {
 				sphere->position = { 200, 200, -100 };
 				sphere->data = { 30, 50, 50 };
 				sphere->reflection_color = { 0.5f, 0.7f, 0.3f };
-				sphere->roughness = 0.2f;
+				sphere->roughness = 0.1f;
 			}
 			{
 				CLEntity *sphere = entities + input_entity_count++;
@@ -205,10 +205,26 @@ EXPORT PLUGIN_UPDATE(update) {
 			{
 				CLEntity *sphere = entities + input_entity_count++;
 				sphere->type = 1;
-				sphere->position = { -300, -60, 0 };
+				sphere->position = { -300, -40, 0 };
 				sphere->data = { 30, 50, 50 };
 				// sphere->reflection_color = { 1, 1, 1 };
 				sphere->emittance_color = { 0.0f, 0.0f, 40.0f };
+				sphere->roughness = 1.0f;
+			}
+			{
+				CLEntity *sphere = entities + input_entity_count++;
+				sphere->type = 2;
+				sphere->position = { -260, 200, 0 };
+				sphere->data = { 50, 50, 50 };
+				sphere->reflection_color = { 1, 1, 1 };
+				sphere->roughness = 1.0f;
+			}
+			{
+				CLEntity *sphere = entities + input_entity_count++;
+				sphere->type = 2;
+				sphere->position = { -260, -60, 100 };
+				sphere->data = { 30, 50, 50 };
+				sphere->reflection_color = { 1, 1, 1 };
 				sphere->roughness = 1.0f;
 			}
 			{
@@ -238,7 +254,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			settings.one_over_h = 1.0f / settings.height;
 			settings.half_pix_w = 0.5f * settings.one_over_w;
 			settings.half_pix_h = 0.5f * settings.one_over_h;
-			settings.rays_per_pixel = 10;
+			settings.rays_per_pixel = 32;
 
 			input_settings_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLRaytracerSettings), &settings, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
