@@ -32,6 +32,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	#ifdef OS_WINDOWS
 		setup_gl();
+		setup_cl();
 	#endif
 
 	MemoryArena empty = {};
@@ -61,17 +62,16 @@ EXPORT PLUGIN_RELOAD(reload) {
 	game.entity_count = level.count;
 }
 
-typedef struct {
-	cl_int type;
+ALIGNED_TYPE_(struct, 16) {
 	cl_float3 position;
 	cl_float3 data;
-
 	cl_float3 emittance_color;
 	cl_float3 reflection_color;
 	cl_float roughness;
+	cl_int type;
 } CLEntity;
 
-typedef struct {
+ALIGNED_TYPE_(struct, 16) {
 	cl_uint width;
 	cl_uint height;
 	cl_float half_width;
@@ -91,6 +91,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		#ifdef OS_WINDOWS
 			setup_gl();
+			setup_cl();
 		#endif
 		MemoryArena empty = {};
 		game.persistent_arena = empty;
@@ -177,8 +178,6 @@ EXPORT PLUGIN_UPDATE(update) {
 				plane->roughness = 1;
 			}
 
-
-
 			{
 				CLEntity *sphere = entities + input_entity_count++;
 				sphere->type = 1;
@@ -222,34 +221,6 @@ EXPORT PLUGIN_UPDATE(update) {
 			}
 
 
-
-			// {
-			// 	CLEntity *sphere = entities + 3;
-			// 	sphere->type = 1;
-			// 	sphere->position = { 0, 300, 0 };
-			// 	sphere->data = { 100, 50, 50 };
-			// 	sphere->emittance_color = { 10.0f, 10.0f, (51.0f / 255.0f) * 10.0f };
-			// 	sphere->roughness = 1.0f;
-			// }
-
-			// {
-			// 	CLEntity *sphere = entities + 2;
-			// 	sphere->type = 1;
-			// 	sphere->position = { 200, -50, 0 };
-			// 	sphere->data = { 50, 50, 50 };
-			// 	sphere->reflection_color = { 1, 1, 1 };
-			// 	sphere->roughness = 0.01f;
-			// }
-
-			// {
-			// 	CLEntity *sphere = entities + 3;
-			// 	sphere->type = 1;
-			// 	sphere->position = { 0, 300, 0 };
-			// 	sphere->data = { 100, 50, 50 };
-			// 	sphere->emittance_color = { 10.0f, 10.0f, (51.0f / 255.0f) * 10.0f };
-			// 	sphere->roughness = 1.0f;
-			// }
-
 			input_entities_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntity) * ARRAY_COUNT(entities), entities, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 		}
@@ -267,7 +238,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			settings.one_over_h = 1.0f / settings.height;
 			settings.half_pix_w = 0.5f * settings.one_over_w;
 			settings.half_pix_h = 0.5f * settings.one_over_h;
-			settings.rays_per_pixel = 8;
+			settings.rays_per_pixel = 10;
 
 			input_settings_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLRaytracerSettings), &settings, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
@@ -353,7 +324,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		errcode_ret = clSetKernelArg(game.kernel, 4, sizeof(u64), (void *) &framecounter);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(game.kernel, 5, sizeof(v3), (void *) &game.camera.position);
+		errcode_ret = clSetKernelArg(game.kernel, 5, sizeof(cl_float3), (void *) &game.camera.position);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		glFinish();

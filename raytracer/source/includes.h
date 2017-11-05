@@ -31,8 +31,15 @@ typedef uint16_t GLindex;
 
 #define CL_ERROR_CHECKING 1
 #define CL(src) "" #src
+
+// FULKOD(kalle): How should I determine what device to run on? Can two devices cooperate? How does that work with one command queue?
+// Maybe one device can fill in the accumulation buffer, and the other does the actual write to image?
+#ifdef OS_WINDOWS
+#define DEVICE_INDEX 0
+#else
 #define DEVICE_INDEX 1
-// #define DEVICE_INDEX 1 // NOTE(kalle): 1 is Device GeForce GT 650M on my mac book.
+#endif
+
 #include "engine/opencl/cl_manager.cpp"
 #include "engine/opencl/cl_program_builder.cpp"
 

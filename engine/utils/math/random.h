@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef OS_WINDOWS
+#pragma warning(push)
+#pragma warning(disable:4146)
+#endif
+
 // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 struct Random {
@@ -14,10 +19,7 @@ uint32_t random_u32(Random &r) {
 	// Calculate output function (XSH RR), uses old state for max ILP
 	uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
 	uint32_t rot = oldstate >> 59u;
-// #pragma warning(push)
-// #pragma warning(disable:4146)
 	return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-// #pragma warning(pop)
 }
 
 uint64_t random_u64(Random &r) {
@@ -46,3 +48,7 @@ void random_init(Random &r, uint64_t initstate, uint64_t initseq) {
 // void random_init(Random &r) {
 // 	random_init(r, _rdtsc(), 54u);
 // }
+
+#ifdef OS_WINDOWS
+#pragma warning(pop)
+#endif

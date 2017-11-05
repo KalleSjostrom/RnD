@@ -8,13 +8,13 @@ static const char *source = CL(
 
 static const char *trace_ray = CL(
 	typedef struct {
-		int type;
 		float3 position;
 		float3 data;
 
 		float3 emittance_color;
 		float3 reflection_color;
 		float roughness;
+		int type;
 	} Entity;
 
 	typedef struct {
@@ -45,7 +45,7 @@ static const char *trace_ray = CL(
 
 	uint random_u32(Random *r) {
 		ulong oldstate = r->state;
-		r->state = oldstate * 6364136223846793005ULL + (r->inc|1); // Advance internal state
+		r->state = oldstate * (ulong)6364136223846793005 + (r->inc|1); // Advance internal state
 		uint xorshifted = (uint)(((oldstate >> 18u) ^ oldstate) >> 27u); // Calculate output function (XSH RR), uses old state for max ILP
 		uint rot = oldstate >> 59u;
 		return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));

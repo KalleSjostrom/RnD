@@ -625,20 +625,24 @@ typedef struct _cl_buffer_region {
 typedef cl_int CLRELEASEMEMOBJECT(cl_mem);
 typedef cl_int CLBUILDPROGRAM(cl_program program, cl_uint num_devices, const cl_device_id *device_list, const char *options, void (CL_CALLBACK *pfn_notify)(cl_program program, void *user_data), void *user_data);
 typedef cl_int CLGETPROGRAMBUILDINFO(cl_program program, cl_device_id device, cl_program_build_info param_name, size_t param_value_size, void * param_value, size_t * param_value_size_ret);
-typedef cl_program CLCREATEPROGRAMWITHSOURCE(cl_context context, cl_uint count, const char ** strings, const size_t * lengths, cl_int * errcode_ret);
-typedef cl_program CLCREATEPROGRAMWITHBINARY(cl_context context, cl_uint num_devices, const cl_device_id * device_list, const size_t * lengths, const unsigned char ** binaries, cl_int * binary_status, cl_int * errcode_ret);
+typedef cl_program CLCREATEPROGRAMWITHSOURCE(cl_context context, cl_uint count, const char ** strings, const size_t * lengths, cl_int *errcode_ret);
+typedef cl_program CLCREATEPROGRAMWITHBINARY(cl_context context, cl_uint num_devices, const cl_device_id * device_list, const size_t * lengths, const unsigned char ** binaries, cl_int * binary_status, cl_int *errcode_ret);
 typedef cl_int CLGETPROGRAMINFO(cl_program program, cl_program_info param_name, size_t param_value_size, void * param_value, size_t * param_value_size_ret);
-typedef cl_mem CLCREATEFROMGLBUFFER(cl_context context, cl_mem_flags flags, cl_GLuint bufobj, int * errcode_ret);
+typedef cl_mem CLCREATEBUFFER(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret);
+typedef cl_mem CLCREATEFROMGLBUFFER(cl_context context, cl_mem_flags flags, cl_GLuint bufobj, cl_int *errcode_ret);
+typedef cl_mem CLCREATEFROMGLTEXTURE(cl_context context, cl_mem_flags flags, cl_GLenum target, cl_GLint miplevel, cl_GLuint texture, cl_int *errcode_ret);
 typedef cl_int CLENQUEUEREADBUFFER(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read, size_t offset, size_t size, void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
 typedef cl_int CLSETKERNELARG(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void * arg_value);
 typedef cl_int CLENQUEUENDRANGEKERNEL(cl_command_queue command_queue, cl_kernel kernel, cl_uint work_dim, const size_t * global_work_offset, const size_t * global_work_size, const size_t * local_work_size, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
 typedef cl_int CLFINISH(cl_command_queue command_queue);
-typedef cl_kernel CLCREATEKERNEL(cl_program program, const char * kernel_name, cl_int * errcode_ret);
+typedef cl_kernel CLCREATEKERNEL(cl_program program, const char * kernel_name, cl_int *errcode_ret);
 typedef cl_int CLGETDEVICEINFO(cl_device_id device, cl_device_info param_name, size_t param_value_size, void * param_value, size_t * param_value_size_ret);
 typedef cl_int CLGETDEVICEIDS(cl_platform_id platform, cl_device_type device_type, cl_uint num_entries, cl_device_id * devices, cl_uint * num_devices);
-typedef cl_context CLCREATECONTEXT(const cl_context_properties * properties, cl_uint num_devices, const cl_device_id * devices, void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *), void * user_data, cl_int * errcode_ret);
-typedef cl_command_queue CLCREATECOMMANDQUEUEWITHPROPERTIES(cl_context context, cl_device_id device, const cl_queue_properties * properties, cl_int * errcode_ret);
+typedef cl_context CLCREATECONTEXT(const cl_context_properties * properties, cl_uint num_devices, const cl_device_id * devices, void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *), void * user_data, cl_int *errcode_ret);
+typedef cl_command_queue CLCREATECOMMANDQUEUEWITHPROPERTIES(cl_context context, cl_device_id device, const cl_queue_properties * properties, cl_int *errcode_ret);
 typedef cl_int CLGETPLATFORMIDS(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms);
+typedef cl_int CLENQUEUEACQUIREGLOBJECTS(cl_command_queue command_queue, cl_uint num_objects, const cl_mem * mem_objects, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+typedef cl_int CLENQUEUERELEASEGLOBJECTS(cl_command_queue command_queue, cl_uint num_objects, const cl_mem * mem_objects, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
 
 DECLARE_CL_FUNCTION(CLRELEASEMEMOBJECT, clReleaseMemObject);
 DECLARE_CL_FUNCTION(CLBUILDPROGRAM, clBuildProgram);
@@ -646,7 +650,9 @@ DECLARE_CL_FUNCTION(CLGETPROGRAMBUILDINFO, clGetProgramBuildInfo);
 DECLARE_CL_FUNCTION(CLCREATEPROGRAMWITHSOURCE, clCreateProgramWithSource);
 DECLARE_CL_FUNCTION(CLCREATEPROGRAMWITHBINARY, clCreateProgramWithBinary);
 DECLARE_CL_FUNCTION(CLGETPROGRAMINFO, clGetProgramInfo);
+DECLARE_CL_FUNCTION(CLCREATEBUFFER, clCreateBuffer);
 DECLARE_CL_FUNCTION(CLCREATEFROMGLBUFFER, clCreateFromGLBuffer);
+DECLARE_CL_FUNCTION(CLCREATEFROMGLTEXTURE, clCreateFromGLTexture);
 DECLARE_CL_FUNCTION(CLENQUEUEREADBUFFER, clEnqueueReadBuffer);
 DECLARE_CL_FUNCTION(CLSETKERNELARG, clSetKernelArg);
 DECLARE_CL_FUNCTION(CLENQUEUENDRANGEKERNEL, clEnqueueNDRangeKernel);
@@ -659,6 +665,9 @@ DECLARE_CL_FUNCTION(CLCREATECONTEXT, clCreateContext);
 DECLARE_CL_FUNCTION(CLCREATECOMMANDQUEUEWITHPROPERTIES, clCreateCommandQueueWithProperties);
 DECLARE_CL_FUNCTION(CLGETPLATFORMIDS, clGetPlatformIDs);
 
+DECLARE_CL_FUNCTION(CLENQUEUEACQUIREGLOBJECTS, clEnqueueAcquireGLObjects);
+DECLARE_CL_FUNCTION(CLENQUEUERELEASEGLOBJECTS, clEnqueueReleaseGLObjects);
+
 void setup_cl() {
 	HMODULE lib = LoadLibrary("OpenCL64.dll");
 
@@ -668,7 +677,9 @@ void setup_cl() {
 	GET_CL_FUNCTION(lib, CLCREATEPROGRAMWITHSOURCE, clCreateProgramWithSource);
 	GET_CL_FUNCTION(lib, CLCREATEPROGRAMWITHBINARY, clCreateProgramWithBinary);
 	GET_CL_FUNCTION(lib, CLGETPROGRAMINFO, clGetProgramInfo);
+	GET_CL_FUNCTION(lib, CLCREATEBUFFER, clCreateBuffer);
 	GET_CL_FUNCTION(lib, CLCREATEFROMGLBUFFER, clCreateFromGLBuffer);
+	GET_CL_FUNCTION(lib, CLCREATEFROMGLTEXTURE, clCreateFromGLTexture);
 	GET_CL_FUNCTION(lib, CLENQUEUEREADBUFFER, clEnqueueReadBuffer);
 	GET_CL_FUNCTION(lib, CLSETKERNELARG, clSetKernelArg);
 	GET_CL_FUNCTION(lib, CLENQUEUENDRANGEKERNEL, clEnqueueNDRangeKernel);
@@ -680,4 +691,7 @@ void setup_cl() {
 	GET_CL_FUNCTION(lib, CLCREATECONTEXT, clCreateContext);
 	GET_CL_FUNCTION(lib, CLCREATECOMMANDQUEUEWITHPROPERTIES, clCreateCommandQueueWithProperties);
 	GET_CL_FUNCTION(lib, CLGETPLATFORMIDS, clGetPlatformIDs);
+
+	GET_CL_FUNCTION(lib, CLENQUEUEACQUIREGLOBJECTS, clEnqueueAcquireGLObjects);
+	GET_CL_FUNCTION(lib, CLENQUEUERELEASEGLOBJECTS, clEnqueueReleaseGLObjects);
 }

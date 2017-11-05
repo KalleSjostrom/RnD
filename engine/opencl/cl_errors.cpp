@@ -217,11 +217,14 @@ static void print_error_clCreateFromGLBuffer(cl_int errcode) {
 
 static void print_error_clCreateFromGLTexture(cl_int errcode) {
 	switch (errcode) {
-		// case CL_INVALID_CONTEXT: LOG_INFO("OpenCL", "if context is not a valid context or was not created from a GL context.\n"); break;
-		// case CL_INVALID_VALUE: LOG_INFO("OpenCL", "if values specified in flags are not valid.\n"); break;
-		// case CL_INVALID_GL_OBJECT: LOG_INFO("OpenCL", "if bufobj is not a GL buffer object or is a GL buffer object but does not have an existing data store e or the size of the buffer is 0.\n"); break;
-		// case CL_OUT_OF_RESOURCES: LOG_INFO("OpenCL", "if there is a failure to allocate resources required by the OpenCL implementation on the device.\n"); break;
-		// case CL_OUT_OF_HOST_MEMORY: LOG_INFO("OpenCL", "if there is a failure to allocate resources required by the OpenCL implementation on the host.\n"); break;
+		case CL_INVALID_CONTEXT: LOG_INFO("OpenCL", "if context is not a valid context or was not created from a GL context.\n"); break;
+		case CL_INVALID_VALUE: LOG_INFO("OpenCL", "if values specified in flags are not valid or if value specified in texture_target is not one of the values specified in the description of texture_target.\n"); break;
+		case CL_INVALID_MIP_LEVEL: LOG_INFO("OpenCL", "if miplevel is greater than zero and the OpenGL implementation does not support creating from non-zero mipmap levels. OR if miplevel is less than the value of levelbase (for OpenGL implementations) or zero (for OpenGL ES implementations); or greater than the value of q (for both OpenGL and OpenGL ES). levelbase and q are defined for the texture in section 3.8.10 (Texture Completeness) of the OpenGL 2.1 specification and section 3.7.10 of the OpenGL ES 2.0.\n"); break;
+		case CL_INVALID_GL_OBJECT: LOG_INFO("OpenCL", "if texture is not a GL texture object whose type matches texture_target, if the specified miplevel of texture is not defined, or if the width or height of the specified miplevel is zero or if the GL texture object is incomplete.	\n"); break;
+		case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR: LOG_INFO("OpenCL", "if the OpenGL texture internal format does not map to a supported OpenCL image format.\n"); break;
+		case CL_INVALID_OPERATION: LOG_INFO("OpenCL", "if texture is a GL texture object created with a border width value greater than zero.\n"); break;
+		case CL_OUT_OF_RESOURCES: LOG_INFO("OpenCL", "if there is a failure to allocate resources required by the OpenCL implementation on the device.\n"); break;
+		case CL_OUT_OF_HOST_MEMORY: LOG_INFO("OpenCL", "if there is a failure to allocate resources required by the OpenCL implementation on the host.\n"); break;
 		default: LOG_INFO("OpenCL", "UNKNONW ERROR!"); break;
 	}
 }

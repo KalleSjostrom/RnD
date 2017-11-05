@@ -11,10 +11,10 @@ namespace cl_program_builder {
 			errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &build_status, 0);
 			CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
 			switch (build_status) {
-				case CL_BUILD_NONE: printf("No build.\n"); break;
-				case CL_BUILD_ERROR: printf("Build error.\n"); break;
-				case CL_BUILD_SUCCESS: printf("Build successful.\n"); break;
-				case CL_BUILD_IN_PROGRESS: printf("Build in progress.\n"); break;
+				case CL_BUILD_NONE: LOG_INFO("OpenCL", "No build.\n"); break;
+				case CL_BUILD_ERROR: LOG_INFO("OpenCL", "Build error.\n"); break;
+				case CL_BUILD_SUCCESS: LOG_INFO("OpenCL", "Build successful.\n"); break;
+				case CL_BUILD_IN_PROGRESS: LOG_INFO("OpenCL", "Build in progress.\n"); break;
 			}
 
 			u64 ret_val_size;
@@ -27,7 +27,7 @@ namespace cl_program_builder {
                 errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, 0);
                 CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
                 build_log[ret_val_size] = '\0';
-                printf("CL build log:\n%s\n", build_log);
+                LOG_INFO("OpenCL", "CL build log:\n%s\n", build_log);
             }
 		}
 	}

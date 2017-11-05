@@ -42,6 +42,9 @@ struct MemoryBlockHandle {
 		void *chunk = VirtualAlloc(0, blocksize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		return chunk;
 	}
+	inline void virtual_free(void *block) {
+		VirtualFree(block, 0, MEM_RELEASE);
+	}
 	inline void *aligned_allocation(size_t size, size_t alignment) {
 		return _aligned_malloc(size, alignment);
 	}
