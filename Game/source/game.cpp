@@ -32,7 +32,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	reload_programs(application.components);
 	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
-	application.components.input.set_input(&input);
+	application.components.input.set_input_data(&input);
 
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
@@ -74,7 +74,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		setup_programs(application.components);
 		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
-		application.components.input.set_input(&input);
+		application.components.input.set_input_data(&input);
 
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];

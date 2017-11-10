@@ -3,21 +3,21 @@
 #include "engine/components/model_component.cpp"
 #include "engine/components/mover_component.cpp"
 #include "engine/components/actor_component.cpp"
+#include "engine/components/material_component.cpp"
 
 #include "engine/utils/renderer.cpp"
 
 struct ComponentGroup {
-	input_component::InputComponent input;
+	InputComponent input;
 
-	animation_component::AnimationComponent animation;
-	mover_component::MoverComponent mover;
+	AnimationComponent animation;
+	MoverComponent mover;
 
-	model_component::ModelComponent model;
-	actor_component::ActorComponent actor;
+	ModelComponent model;
+	ActorComponent actor;
+	MaterialComponent material;
 
 	Renderer renderer;
-	i32 __padding;
-	i32 ___padding;
 };
 
 void update_components(ComponentGroup &component_group, float dt) {
@@ -110,16 +110,16 @@ void model__set_scale(ComponentGroup &components, Entity &entity, v3 scale) {
 	components.model.set_scale(entity.model_id, scale);
 }
 v3 &mover__get_position(ComponentGroup &components, Entity &entity) {
-	return components.mover.instances[entity.mover_id].position;
+	return components.mover.movers[entity.mover_id].position;
 }
 v3 &mover__get_wanted_translation(ComponentGroup &components, Entity &entity) {
-	return components.mover.instances[entity.mover_id].wanted_translation;
+	return components.mover.movers[entity.mover_id].wanted_translation;
 }
 v3 &mover__get_velocity(ComponentGroup &components, Entity &entity) {
-	return components.mover.instances[entity.mover_id].velocity;
+	return components.mover.movers[entity.mover_id].velocity;
 }
 void mover__set_velocity(ComponentGroup &components, Entity &entity, v3 &velocity) {
-	components.mover.instances[entity.mover_id].velocity = velocity;
+	components.mover.movers[entity.mover_id].velocity = velocity;
 }
 void mover__add_acceleration(ComponentGroup &components, Entity &entity, v3 &acceleration) {
 	components.mover.add_acceleration(entity.mover_id, acceleration);
@@ -128,10 +128,10 @@ void mover__add_impulse(ComponentGroup &components, Entity &entity, v3 &impulse)
 	components.mover.add_impulse(entity.mover_id, impulse);
 }
 v3 input__get_move(ComponentGroup &components, Entity &entity) {
-	return components.input.instances[entity.input_id].move;
+	return components.input.inputs[entity.input_id].move;
 }
 b32 input__get_jump(ComponentGroup &components, Entity &entity) {
-	return components.input.instances[entity.input_id].jump;
+	return components.input.inputs[entity.input_id].jump;
 }
 
 void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, v3 position = V3(0,0,0)) {

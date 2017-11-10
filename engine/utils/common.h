@@ -42,6 +42,8 @@ typedef char i8;
 
 typedef int b32;
 
+typedef u16 cid;
+
 #define STATIC_ASSERT(condition, msg) typedef i32 my_static_assert[(condition) ? 1 : -1]
 #define ASSERT(condition, format, ...) { \
 	if (!(condition)) { \

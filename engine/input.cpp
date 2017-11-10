@@ -85,7 +85,7 @@ InputKey get_input_key_for(int key) {
 	};
 }
 
-static Input _input = {};
+static InputData _input = {};
 
 void key_down(int key, int modifier_flags) {
 	(void) modifier_flags;

@@ -1,5 +1,3 @@
-typedef u16 cid;
-
 #include "engine/components/input_component.cpp"
 #include "engine/components/animation_component.cpp"
 #include "engine/components/model_component.cpp"

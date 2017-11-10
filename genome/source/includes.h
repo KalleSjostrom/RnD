@@ -24,7 +24,7 @@ typedef uint16_t GLindex;
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
-#include "opengl/gl_program_builder.cpp"
+#include "engine/opengl/gl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
 #include "engine/utils/math/math.h"

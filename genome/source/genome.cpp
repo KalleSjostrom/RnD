@@ -91,7 +91,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	reload_programs(game.components);
 	setup_render_pipe(game.engine, game.render_pipe, game.components, screen_width, screen_height);
-	game.components.input.set_input(&input);
+	// game.components.input.set_input(&input);
 
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
@@ -133,7 +133,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		setup_programs(game.components);
 		setup_render_pipe(game.engine, game.render_pipe, game.components, screen_width, screen_height);
-		game.components.input.set_input(&input);
+		// game.components.input.set_input(&input);
 
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
