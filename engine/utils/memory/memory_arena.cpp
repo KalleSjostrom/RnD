@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string.h>
+
 struct MemoryBlock {
 	size_t offset;
 	size_t blocksize;

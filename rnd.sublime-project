@@ -17,6 +17,14 @@
 					"working_dir": "${project_path}/engine/"
 				},
 				{
+					"name": "Conetracer",
+					"working_dir": "${project_path}/conetracer/"
+				},
+				{
+					"name": "ObjCompiler",
+					"working_dir": "${project_path}/external tools/obj_compiler/"
+				},
+				{
 					"name": "Raytracer",
 					"working_dir": "${project_path}/raytracer/"
 				},
@@ -96,6 +104,10 @@
 		{
 			"name": "Handmade Hero",
 			"path": "C:\\Users\\Kalle\\Programming\\Handmade Hero"
+		},
+		{
+			"name": "DrSym",
+			"path": "../dynamorio-master"
 		}
 	]
 }

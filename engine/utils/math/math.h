@@ -5,6 +5,10 @@
 #endif
 
 #include <math.h>
+#ifndef USE_INTRINSICS
+#define USE_INTRINSICS 0
+#endif
+
 #if USE_INTRINSICS
 #include <immintrin.h>
 #endif
@@ -39,6 +43,15 @@ FORCE_INLINE f32 saturate(f32 value) {
 	return clamp(value, 0, 1);
 }
 
+FORCE_INLINE void sincosf(float x, float *sinx, float *cosx) {
+	__sincosf(x, sinx, cosx);
+}
+
+// FORCE_INLINE void sincosf(float x, float *sinx, float *cosx) {
+// 	*sinx = sinf(x);
+// 	*cosx = sqrtf(1 - *sinx);
+// }
+
 #define ELEMENT_TYPE f32
 #include "math_v2.h"
 typedef v2_f32 v2;
@@ -55,7 +68,7 @@ struct v3 {
 			f32 r, g, b;
 		};
 	};
-	f32 operator[](int index) {
+	f32 &operator[](int index) {
 		return *((f32*)this + index);
 	}
 };
@@ -127,9 +140,10 @@ FORCE_INLINE v3 normalize_or_zero(v3 a) {
 FORCE_INLINE v3 cross(v3 a, v3 b) {
 	f32 x = a.y*b.z - a.z*b.y;
 	f32 y = a.z*b.x - a.x*b.z;
-	f32 z = a.y*b.x - a.x*b.y;
+	f32 z = a.x*b.y - a.y*b.x;
 	return V3(x, y, z);
 }
+
 FORCE_INLINE v3 lerp(v3 a, v3 b, f32 t) {
 	return V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }
@@ -210,3 +224,4 @@ FORCE_INLINE v4 normalize(v4 a) {
 }
 
 #include "matrix.h"
+#include "quaternion.h"

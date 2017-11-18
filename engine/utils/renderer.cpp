@@ -1,7 +1,8 @@
 struct Program {
 	GLuint program;
+	GLint projection_location;
+	GLint view_location;
 	GLint model_location;
-	GLint view_projection_location;
 
 	i32 count;
 	Renderable *renderables[8];
@@ -22,8 +23,9 @@ i32 add_program(Renderer &r, GLuint shader_program, u32 render_mask) {
 	Program &p = r.programs[id];
 	p.program = shader_program;
 	glUseProgram(shader_program);
+	p.projection_location = glGetUniformLocation(shader_program, "projection");
+	p.view_location = glGetUniformLocation(shader_program, "view");
 	p.model_location = glGetUniformLocation(shader_program, "model");
-	p.view_projection_location = glGetUniformLocation(shader_program, "view_projection");
 	p.render_mask = render_mask;
 	return id;
 }
@@ -38,7 +40,7 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 		Program &p = r.programs[i];
 		if (p.render_mask & render_mask) {
 			glUseProgram(p.program);
-			begin_frame(camera, p.view_projection_location);
+			begin_frame(camera, p.projection_location, p.view_location);
 
 			for (i32 j = 0; j < p.count; ++j) {
 				Renderable &re = *p.renderables[j];
@@ -51,7 +53,7 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 					} break;
 					case RenderableDataType_Elements: {
 						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, re.element_array_buffer);
-						glDrawElements(re.draw_mode, re.index_count, GL_UNSIGNED_SHORT, (void*)0);
+						glDrawElements(re.draw_mode, re.index_count, GL_UNSIGNED_INT, (void*)0);
 					} break;
 				}
 			}

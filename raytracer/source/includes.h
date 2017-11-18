@@ -57,8 +57,14 @@ namespace globals {
 #include "engine/utils/animation.h"
 
 /////// ASSETS
-#include "shaders/default.shader.cpp"
-#include "shaders/fullscreen_effects.shader.cpp"
+#include "engine/generated/shaders/default.shader.cpp"
+#include "engine/generated/shaders/model.shader.cpp"
+#include "engine/generated/shaders/fullscreen_effects.shader.cpp"
+#include "engine/generated/shaders/default.cl_shader.cpp"
 
-#include "component_group.cpp"
+#include "engine/generated/component_group.cpp"
 #include "render_pipe.cpp"
+
+#include "levels.cpp"
+#include "engine/utils/math/random.h"
+#include "engine/utils/profiler.c"

@@ -34,6 +34,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
 	application.components.input.set_input_data(&input);
 
+	Level level = make_level();
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
 
@@ -44,9 +45,9 @@ EXPORT PLUGIN_RELOAD(reload) {
 			entity = application.entities + application.entity_count++;
 		}
 
-		model__set_position(application.components, *entity, V3(data.x, data.y, 0));
+		model__set_position(application.components, *entity, data.offset);
 		model__set_rotation(application.components, *entity, data.rotation);
-		model__set_scale(application.components, *entity, V3(data.w, data.h, 0));
+		model__set_scale(application.components, *entity, data.size);
 	}
 	application.entity_count = level.count;
 }
@@ -69,22 +70,23 @@ EXPORT PLUGIN_UPDATE(update) {
 		application.engine = &engine;
 
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
+		// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 		// glEnable(GL_DEPTH_TEST);
 
 		setup_programs(application.components);
 		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
 		application.components.input.set_input_data(&input);
 
+		Level level = make_level();
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
 			Entity &entity = application.entities[application.entity_count++];
 
-			spawn_entity(application.components, entity, data.type, V3(data.x, data.y, 0));
+			spawn_entity(application.components, entity, data.type, data.context, data.offset);
 
-			model__set_position(application.components, entity, V3(data.x, data.y, 0));
+			model__set_position(application.components, entity, data.offset);
 			model__set_rotation(application.components, entity, data.rotation);
-			model__set_scale(application.components, entity, V3(data.w, data.h, 0));
+			model__set_scale(application.components, entity, data.size);
 		}
 
 		// 	// Audio
@@ -102,10 +104,9 @@ EXPORT PLUGIN_UPDATE(update) {
 	}
 
 	{ // Render
-		//// Render pipe ////
 		render(application.render_pipe, application.components, application.camera);
 	}
 
-	// globals::transient_arena.offset = 0;
+	reset_transient_memory(*globals::transient_arena);
 	return 0;
 }

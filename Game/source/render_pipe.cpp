@@ -127,8 +127,10 @@ void load_image(EngineApi *engine, RenderPipe &r) {
 }
 
 void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
-	if (r.fullscreen_quad.type != EntityType_Fullscreen)
-		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen);
+	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
+		Context c = {};
+		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen, c);
+	}
 
 	r.screen_width = screen_width;
 	r.screen_height = screen_height;
@@ -218,8 +220,8 @@ void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &compone
 }
 
 void set_light_position(RenderPipe &r, Camera &camera, v3 light_position) {
-	camera.view_projection = camera.projection * camera.view;
-	v3 lp = multiply_perspective(camera.view_projection, light_position);
+	m4 view_projection = camera.projection * camera.view;
+	v3 lp = multiply_perspective(view_projection, light_position);
 	r.light_positions[0] = V2_f32(lp.x, lp.y);
 }
 

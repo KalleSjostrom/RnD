@@ -41,9 +41,10 @@ namespace globals {
 
 /////// ASSETS
 #include "../generated/animations.generated.cpp"
-#include "shaders/default.shader.cpp"
-#include "shaders/avatar.shader.cpp"
-#include "shaders/fullscreen_effects.shader.cpp"
+#include "engine/generated/shaders/default.shader.cpp"
+#include "engine/generated/shaders/model.shader.cpp"
+#include "engine/generated/shaders/avatar.shader.cpp"
+#include "engine/generated/shaders/fullscreen_effects.shader.cpp"
 
-#include "component_group.cpp"
+#include "engine/generated/component_group.cpp"
 #include "render_pipe.cpp"

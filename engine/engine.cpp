@@ -309,19 +309,30 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 
 	while (running) {
 #if !MYGL
-		SDL_Event sdl_event;
+		SDL_Event sdl_event = {};
+		_input.mouse_xrel = 0;
+		_input.mouse_yrel = 0;
 		while (SDL_PollEvent(&sdl_event) != 0) {
 			switch (sdl_event.type) {
 				case SDL_QUIT: {
 					running = false;
 				} break;
+				case SDL_MOUSEMOTION: {
+					mouse_motion(sdl_event.motion.x, sdl_event.motion.y, sdl_event.motion.xrel, sdl_event.motion.yrel);
+				} break;
+				case SDL_MOUSEBUTTONDOWN: {
+					mouse_down(sdl_event.button.button);
+				} break;
+				case SDL_MOUSEBUTTONUP: {
+					mouse_up(sdl_event.button.button);
+				} break;
 				case SDL_KEYDOWN: {
 					if (sdl_event.key.repeat == 0)
-						key_down(sdl_event.key.keysym.sym, 0);
+						key_down(sdl_event.key.keysym.sym, sdl_event.key.keysym.mod);
 				} break;
 				case SDL_KEYUP: {
 					if (sdl_event.key.repeat == 0)
-						key_up(sdl_event.key.keysym.sym, 0);
+						key_up(sdl_event.key.keysym.sym, sdl_event.key.keysym.mod);
 				} break;
 			}
 		}

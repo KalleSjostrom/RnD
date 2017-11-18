@@ -1,4 +1,8 @@
 #!/bin/bash
-# -Ofast -ggdb
-# -mavx -msse4.2
-clang -ggdb obj_compiler.cpp -o obj_compiler
+source ../../common.sh
+
+# local_flags="-mavx -fvisibility=hidden -nostartfiles -Wno-trigraphs -Wno-format-nonliteral -Wno-double-promotion"
+# frameworks="-framework OpenGL -framework OpenCL"
+
+echo Building obj_compiler
+clang $release $common -I../../ obj_compiler.cpp -o obj_compiler $flags

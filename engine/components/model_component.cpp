@@ -3,30 +3,61 @@ enum RenderableDataType {
 	RenderableDataType_Arrays,
 };
 
+struct Channel {
+	// GLuint vertex_array_object;
+	GLuint vertex_buffer_object;
+};
+
 struct Renderable {
 	m4 pose;
-	i32 index_count;
 	RenderableDataType datatype;
 	GLenum draw_mode; // e.g. GL_TRIANGLE_STRIP;
+
+	i32 index_count;
 	GLuint element_array_buffer;
+
 	GLuint vertex_array_object;
+
+	// Channel
+	Channel vertex;
+	Channel normal;
+	Channel tex_coord;
 };
 
 struct Model {
 	Renderable renderable;
+	GLuint vertex_buffer_object;
 
 	GLenum buffer_type; // e.g. GL_STATIC_DRAW;
-	GLuint vertex_buffer_object;
 
 	i32 vertex_count;
 	i32 __padding;
 };
 
+struct ChannelData {
+	v3 *data;
+	i32 count;
+};
+
+struct ModelCC {
+	ChannelData vertex;
+	ChannelData normal;
+	ChannelData texture_coordinates; // should be v2
+
+	GLindex *indices;
+	i32 index_count;
+
+	GLenum buffer_type; //  = GL_STATIC_DRAW
+	GLenum draw_mode; // = GL_TRIANGLE_STRIP
+
+	i32 program_type;
+};
+
 struct ModelComponent {
-	Model instances[8];
+	Model instances[32];
 	cid count;
 
-	cid add(v3 position, GLindex *indices, i32 index_count, v3 *vertices, i32 vertex_count, GLenum buffer_type = GL_STATIC_DRAW, GLenum draw_mode = GL_TRIANGLE_STRIP) {
+	cid add(v3 position, ModelCC *cc) {
 		ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
 		cid id = count++;
 		Model &instance = instances[id];
@@ -35,33 +66,76 @@ struct ModelComponent {
 		renderable.pose = identity();
 		set_position(id, position);
 
-		renderable.index_count = index_count;
-		instance.vertex_count = vertex_count;
+		renderable.index_count = cc->index_count;
+		instance.buffer_type = cc->buffer_type;
 
-		instance.buffer_type = buffer_type;
-		renderable.draw_mode = draw_mode;
+		renderable.draw_mode = cc->draw_mode;
+		renderable.datatype = RenderableDataType_Elements;
 
 		glGenBuffers(1, &renderable.element_array_buffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderable.element_array_buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, (u32)index_count * sizeof(GLindex), indices, GL_STATIC_DRAW); // Indices are not assumed to change, only the vertices
-
-		glGenBuffers(1, &instance.vertex_buffer_object);
-		glBindBuffer(GL_ARRAY_BUFFER, instance.vertex_buffer_object);
-		glBufferData(GL_ARRAY_BUFFER, (u32)vertex_count * sizeof(v3), vertices, buffer_type);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, (u32)renderable.index_count * sizeof(GLindex), cc->indices, GL_STATIC_DRAW); // Indices are not assumed to change, only the vertices
 
 		glGenVertexArrays(1, &renderable.vertex_array_object);
-		glBindVertexArray(renderable.vertex_array_object);
 
-		glBindBuffer(GL_ARRAY_BUFFER, instance.vertex_buffer_object);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
+		{ // Vertex channel
+			Channel &c = renderable.vertex;
+			ChannelData &cd = cc->vertex;
+			if (cd.data) {
+				glGenBuffers(1, &c.vertex_buffer_object);
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glBufferData(GL_ARRAY_BUFFER, (u32)cd.count * sizeof(v3), cd.data, cc->buffer_type);
+
+				glBindVertexArray(renderable.vertex_array_object);
+
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(0);
+			}
+		}
+
+		{ // Normal channel
+			Channel &c = renderable.normal;
+			ChannelData &cd = cc->normal;
+			if (cd.data) {
+				glGenBuffers(1, &c.vertex_buffer_object);
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glBufferData(GL_ARRAY_BUFFER, (u32)cd.count * sizeof(v3), cd.data, cc->buffer_type);
+
+				glBindVertexArray(renderable.vertex_array_object);
+
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(1);
+			}
+		}
+
+		{ // Tex coord channel
+			// Channel &c = renderable.normal;
+			// ChannelData &cd = cc.normal;
+
+			// glGenBuffers(1, &c.element_array_buffer);
+			// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, c.element_array_buffer);
+			// glBufferData(GL_ELEMENT_ARRAY_BUFFER, (u32)index_count * sizeof(GLindex), indices, GL_STATIC_DRAW); // Indices are not assumed to change, only the vertices
+
+			// glGenBuffers(1, &c.vertex_buffer_object);
+			// glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+			// glBufferData(GL_ARRAY_BUFFER, (u32)cd.count * sizeof(v3), cd.data, buffer_type);
+
+			// glGenVertexArrays(1, &c.vertex_array_object);
+			// glBindVertexArray(c.vertex_array_object);
+
+			// glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+			// glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			// glEnableVertexAttribArray(0);
+		}
 
 		return id;
 	}
 
 	inline void set_position(i32 id, v3 position) {
 		Model &instance = instances[id];
-		set_translation(instance.renderable.pose, position);
+		translation(instance.renderable.pose) = position;
 	}
 
 	inline v3 get_position(i32 id) {
@@ -72,6 +146,20 @@ struct ModelComponent {
 	inline m4 &get_pose(i32 id) {
 		Model &instance = instances[id];
 		return instance.renderable.pose;
+	}
+
+	inline void rotate_around(i32 id, q4 q) {
+		Model &instance = instances[id];
+
+		m4 &pose = instance.renderable.pose;
+
+		v3 &x = *(v3*)(pose.m + 0);
+		v3 &y = *(v3*)(pose.m + 4);
+		v3 &z = *(v3*)(pose.m + 8);
+
+		x = ::rotate_around(q, x);
+		y = ::rotate_around(q, y);
+		z = ::rotate_around(q, z);
 	}
 
 	inline void rotate_around(i32 id, float angle, float x, float y) {

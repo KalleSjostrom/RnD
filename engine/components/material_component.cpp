@@ -4,6 +4,8 @@ struct Material {
 	float roughness;
 };
 
+typedef Material MaterialCC;
+
 struct MaterialComponent {
 	Material instances[8];
 	cid count;

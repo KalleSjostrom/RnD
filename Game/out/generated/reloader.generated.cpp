@@ -40,15 +40,11 @@ static void generate_layout() {
 	fprintf(output, "	ReloadType_BaseType,\n");
 	fprintf(output, "	ReloadType_FBO,\n");
 	fprintf(output, "	ReloadType_RenderPipe,\n");
-	fprintf(output, "	ReloadType_EntityData,\n");
-	fprintf(output, "	ReloadType_Level,\n");
 	fprintf(output, "	ReloadType_Keyframes,\n");
 	fprintf(output, "	ReloadType_AnimationData,\n");
 	fprintf(output, "	ReloadType_AnimationDataArray,\n");
 	fprintf(output, "	ReloadType_Application,\n");
 	fprintf(output, "	ReloadType_Reloader,\n");
-	fprintf(output, "	ReloadType_ComponentGroup,\n");
-	fprintf(output, "	ReloadType_Entity,\n");
 	fprintf(output, "}; \n");
 	fprintf(output, "#define __RELOAD_SIZE__int 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__bool 1\n");
@@ -98,16 +94,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_programs %zu\n", offsetof(RenderPipe, programs));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_program_count %zu\n", offsetof(RenderPipe, program_count));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe___padding %zu\n", offsetof(RenderPipe, __padding));
-	fprintf(output, "#define __RELOAD_SIZE__EntityData %zu\n", sizeof(EntityData));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_type %zu\n", offsetof(EntityData, type));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_x %zu\n", offsetof(EntityData, x));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_y %zu\n", offsetof(EntityData, y));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_w %zu\n", offsetof(EntityData, w));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_h %zu\n", offsetof(EntityData, h));
-	fprintf(output, "#define __RELOAD_OFFSET__EntityData_rotation %zu\n", offsetof(EntityData, rotation));
-	fprintf(output, "#define __RELOAD_SIZE__Level %zu\n", sizeof(Level));
-	fprintf(output, "#define __RELOAD_OFFSET__Level_count %zu\n", offsetof(Level, count));
-	fprintf(output, "#define __RELOAD_OFFSET__Level_entity_data %zu\n", offsetof(Level, entity_data));
 	fprintf(output, "#define __RELOAD_SIZE__Keyframes %zu\n", sizeof(Keyframes));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_count %zu\n", offsetof(Keyframes, count));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_transforms %zu\n", offsetof(Keyframes, transforms));
@@ -133,21 +119,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__Application_entity_count %zu\n", offsetof(Application, entity_count));
 	fprintf(output, "#define __RELOAD_OFFSET__Application_entities %zu\n", offsetof(Application, entities));
 	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
-	fprintf(output, "#define __RELOAD_SIZE__ComponentGroup %zu\n", sizeof(ComponentGroup));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_input %zu\n", offsetof(ComponentGroup, input));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_animation %zu\n", offsetof(ComponentGroup, animation));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_mover %zu\n", offsetof(ComponentGroup, mover));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_model %zu\n", offsetof(ComponentGroup, model));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_actor %zu\n", offsetof(ComponentGroup, actor));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_material %zu\n", offsetof(ComponentGroup, material));
-	fprintf(output, "#define __RELOAD_OFFSET__ComponentGroup_renderer %zu\n", offsetof(ComponentGroup, renderer));
-	fprintf(output, "#define __RELOAD_SIZE__Entity %zu\n", sizeof(Entity));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_type %zu\n", offsetof(Entity, type));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_input_id %zu\n", offsetof(Entity, input_id));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_animation_id %zu\n", offsetof(Entity, animation_id));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_mover_id %zu\n", offsetof(Entity, mover_id));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_model_id %zu\n", offsetof(Entity, model_id));
-	fprintf(output, "#define __RELOAD_OFFSET__Entity_actor_id %zu\n", offsetof(Entity, actor_id));
 
 	fclose(output);
 }

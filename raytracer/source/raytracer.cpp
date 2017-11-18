@@ -1,8 +1,4 @@
 #include "includes.h"
-#include "levels.cpp"
-#include "engine/utils/math/random.h"
-#include "engine/utils/profiler.c"
-#include "shaders/default.cl_shader.cpp"
 
 struct Game {
 	MemoryArena persistent_arena;
@@ -17,7 +13,8 @@ struct Game {
 	EngineApi *engine;
 
 	ClInfo cl_info;
-	cl_mem input_entities_mem;
+	cl_mem input_entity_geometry_mem;
+	cl_mem input_entity_material_mem;
 	cl_mem output_mem;
 	cl_kernel kernel;
 
@@ -72,6 +69,18 @@ ALIGNED_TYPE_(struct, 16) {
 } CLEntity;
 
 ALIGNED_TYPE_(struct, 16) {
+	cl_float3 position;
+	cl_float3 data;
+	cl_int type;
+} CLEntityGeometry;
+
+ALIGNED_TYPE_(struct, 16) {
+	cl_float3 emittance_color;
+	cl_float3 reflection_color;
+	cl_float roughness;
+} CLEntityMaterial;
+
+ALIGNED_TYPE_(struct, 16) {
 	cl_uint width;
 	cl_uint height;
 	cl_float half_width;
@@ -120,7 +129,9 @@ EXPORT PLUGIN_UPDATE(update) {
 		// glEnable(GL_DEPTH_TEST);
 
 		ClInfo cl_info = init_opencl(game.transient_arena);
-		cl_program program = cl_program_builder::create_from_strings(game.transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, 0);
+		// -cl-mad-enable -cl-no-signed-zeros -cl-unsafe-math-optimizations -cl-finite-math-only -cl-single-precision-constant -cl-denorms-are-zero -cl-strict-aliasing
+		char *build_options = "-cl-fast-relaxed-math";
+		cl_program program = cl_program_builder::create_from_strings(game.transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, build_options);
 
 		cl_int errcode_ret;
 
@@ -132,14 +143,15 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		cl_uint input_entity_count = 0;
 
-		cl_mem input_entities_mem;
+		cl_mem input_entity_geometry_mem;
+		cl_mem input_entity_material_mem;
 		{
 			CLEntity entities[16] = {};
 
 			{
 				CLEntity *plane = entities + input_entity_count++;
 				plane->type = 0;
-				plane->position = { 0, -100, 0 };
+				plane->position = { 0, 100, 0 };
 				plane->data = { 0, 1, 0 };
 				plane->reflection_color = { 0.5f, 0.5f, 0.5f };
 				plane->roughness = 1;
@@ -147,7 +159,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			{
 				CLEntity *plane = entities + input_entity_count++;
 				plane->type = 0;
-				plane->position = { 0, -400, 0 };
+				plane->position = { 0, 400, 0 };
 				plane->data = { 1, 0, 0 };
 				plane->reflection_color = { 0.5f, 0.5f, 0.5f };
 				plane->roughness = 1;
@@ -155,7 +167,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			{
 				CLEntity *plane = entities + input_entity_count++;
 				plane->type = 0;
-				plane->position = { 0, -500, 0 };
+				plane->position = { 0, 500, 0 };
 				plane->data = { -1, 0, 0.4f };
 				plane->reflection_color = { 1, 1, 1 };
 				plane->roughness = 0.01f;
@@ -163,7 +175,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			{
 				CLEntity *plane = entities + input_entity_count++;
 				plane->type = 0;
-				plane->position = { 0, -400, 0 };
+				plane->position = { 0, 400, 0 };
 				plane->data = { 0, 0, 1 };
 				plane->reflection_color = { 0.5f, 0.5f, 0.5f };
 				plane->roughness = 1;
@@ -171,10 +183,17 @@ EXPORT PLUGIN_UPDATE(update) {
 			{
 				CLEntity *plane = entities + input_entity_count++;
 				plane->type = 0;
-				plane->position = { 0, -400, 0 };
+				plane->position = { 0, 200, 0 };
 				plane->data = { 0, -1, 0 };
 				plane->reflection_color = { 0.5f, 0.5f, 0.5f };
-				plane->emittance_color = { 1.0f, 1.0f, 1.0f };
+				plane->roughness = 1;
+			}
+			{
+				CLEntity *plane = entities + input_entity_count++;
+				plane->type = 3;
+				plane->position = { 0, 199, 0 };
+				plane->data = { 0, -1, 0 };
+				plane->emittance_color = { 10.0f, 10.0f, 3.0f };
 				plane->roughness = 1;
 			}
 
@@ -213,22 +232,6 @@ EXPORT PLUGIN_UPDATE(update) {
 			}
 			{
 				CLEntity *sphere = entities + input_entity_count++;
-				sphere->type = 2;
-				sphere->position = { -260, 200, 0 };
-				sphere->data = { 50, 50, 50 };
-				sphere->reflection_color = { 1, 1, 1 };
-				sphere->roughness = 1.0f;
-			}
-			{
-				CLEntity *sphere = entities + input_entity_count++;
-				sphere->type = 2;
-				sphere->position = { -260, -60, 100 };
-				sphere->data = { 30, 50, 50 };
-				sphere->reflection_color = { 1, 1, 1 };
-				sphere->roughness = 1.0f;
-			}
-			{
-				CLEntity *sphere = entities + input_entity_count++;
 				sphere->type = 1;
 				sphere->position = { -60, 0, -50 };
 				sphere->data = { 40, 50, 50 };
@@ -236,11 +239,37 @@ EXPORT PLUGIN_UPDATE(update) {
 				sphere->roughness = 0.75f;
 			}
 
+			{
+				CLEntity *sphere = entities + input_entity_count++;
+				sphere->type = 4;
+				sphere->position = { 100, 40, 200 };
+				sphere->data = { 30, 50, 50 };
+				sphere->reflection_color = { 0.1f, 0.1f, 0.8f };
+				sphere->roughness = 1.0f;
+			}
 
-			input_entities_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntity) * ARRAY_COUNT(entities), entities, &errcode_ret);
+			CLEntityGeometry *geometry = PUSH_STRUCTS(game.transient_arena, input_entity_count, CLEntityGeometry);
+			for (u32 gi = 0; gi < input_entity_count; ++gi) {
+				geometry[gi].position = entities[gi].position;
+				geometry[gi].data = entities[gi].data;
+				geometry[gi].type = entities[gi].type;
+			}
+
+			CLEntityMaterial *material = PUSH_STRUCTS(game.transient_arena, input_entity_count, CLEntityMaterial);
+			for (u32 gi = 0; gi < input_entity_count; ++gi) {
+				material[gi].emittance_color = entities[gi].emittance_color;
+				material[gi].reflection_color = entities[gi].reflection_color;
+				material[gi].roughness = entities[gi].roughness;
+			}
+
+			input_entity_geometry_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntityGeometry) * input_entity_count, geometry, &errcode_ret);
+			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
+
+			input_entity_material_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntityMaterial) * input_entity_count, material, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 		}
-		game.input_entities_mem = input_entities_mem;
+		game.input_entity_geometry_mem = input_entity_geometry_mem;
+		game.input_entity_material_mem = input_entity_material_mem;
 
 		cl_mem input_settings_mem;
 		{
@@ -254,7 +283,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			settings.one_over_h = 1.0f / settings.height;
 			settings.half_pix_w = 0.5f * settings.one_over_w;
 			settings.half_pix_h = 0.5f * settings.one_over_h;
-			settings.rays_per_pixel = 32;
+			settings.rays_per_pixel = 8;
 
 			input_settings_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLRaytracerSettings), &settings, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
@@ -273,20 +302,23 @@ EXPORT PLUGIN_UPDATE(update) {
 			CL_CHECK_ERRORCODE(clCreateFromGLTexture, errcode_ret);
 		}
 
-		errcode_ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &input_entities_mem);
+		errcode_ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &input_entity_geometry_mem);
+		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
+
+		errcode_ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &input_entity_material_mem);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 
-		errcode_ret = clSetKernelArg(kernel, 1, sizeof(cl_uint), (void *) &input_entity_count);
+		errcode_ret = clSetKernelArg(kernel, 2, sizeof(cl_uint), (void *) &input_entity_count);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &input_settings_mem);
+		errcode_ret = clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &input_settings_mem);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(kernel, 6, sizeof(cl_mem), (void *) &accumulation_mem);
+		errcode_ret = clSetKernelArg(kernel, 7, sizeof(cl_mem), (void *) &accumulation_mem);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(kernel, 7, sizeof(cl_mem), (void *) &output_mem);
+		errcode_ret = clSetKernelArg(kernel, 8, sizeof(cl_mem), (void *) &output_mem);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		game.cl_info = cl_info;
@@ -310,7 +342,8 @@ EXPORT PLUGIN_UPDATE(update) {
 	}
 
 	{ // Setup opencl
-		u64 workGroupSize[] = { 1024, 768 };
+		u64 work_group_size[] = { 1024, 768 };
+		u64 *local_group_size = 0; // [] = { 48, 48 };
 		cl_int errcode_ret;
 		cl_event event;
 
@@ -331,22 +364,23 @@ EXPORT PLUGIN_UPDATE(update) {
 		// }
 
 		u64 time = rdtsc();
-		errcode_ret = clSetKernelArg(game.kernel, 3, sizeof(u64), (void *) &time);
+		errcode_ret = clSetKernelArg(game.kernel, 4, sizeof(u64), (void *) &time);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		static cl_ulong framecounter = 0;
 		framecounter++;
 
-		errcode_ret = clSetKernelArg(game.kernel, 4, sizeof(u64), (void *) &framecounter);
+		errcode_ret = clSetKernelArg(game.kernel, 5, sizeof(u64), (void *) &framecounter);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(game.kernel, 5, sizeof(cl_float3), (void *) &game.camera.position);
+		v3 camera_position = translation(game.camera.pose);
+		errcode_ret = clSetKernelArg(game.kernel, 6, sizeof(cl_float3), (void *) &camera_position);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		glFinish();
 		clEnqueueAcquireGLObjects(game.cl_info.command_queue, 1, &game.output_mem, 0, 0, 0);
 
-		errcode_ret = clEnqueueNDRangeKernel(game.cl_info.command_queue, game.kernel, ARRAY_COUNT(workGroupSize), 0, workGroupSize, 0, 0, 0, &event);
+		errcode_ret = clEnqueueNDRangeKernel(game.cl_info.command_queue, game.kernel, ARRAY_COUNT(work_group_size), 0, work_group_size, local_group_size, 0, 0, &event);
 		CL_CHECK_ERRORCODE(clEnqueueNDRangeKernel, errcode_ret);
 
 		// clWaitForEvents(1, &event);

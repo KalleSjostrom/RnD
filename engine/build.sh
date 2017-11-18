@@ -7,9 +7,10 @@ source ../common.sh
 echo Compiling engine
 frameworks="-framework OpenGL -framework Cocoa -framework SDL2 -framework SDL2_image"
 framework_path="-F/Library/Frameworks"
-includes="-I../"
+includes="-I../ -I../../dynamorio-master/core/"
 flags="-ggdb -mavx -fvisibility=hidden -nostartfiles -Werror -Weverything"
 defines="-D DEVELOPMENT"
+ignored="$ignored -Wno-reserved-id-macro -Wno-padded"
 all="$ignored $framework_path $frameworks $includes $flags $defines"
 
 clang -c utils/fibers/asm/jump_x86_64_sysv_macho_gas.S -o utils/fibers/out/jump_fcontext.o

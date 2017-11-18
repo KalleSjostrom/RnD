@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/common.h"
+#include "common.h"
 
 #define RES_WIDTH 1024
 #define RES_HEIGHT 768
@@ -72,6 +72,12 @@ enum InputKey {
 	InputKey_RightControl,
 	InputKey_Function,
 
+	InputKey_MouseLeft,
+	InputKey_MouseMiddle,
+	InputKey_MouseRight,
+	InputKey_MouseX1,
+	InputKey_MouseX2,
+
 	InputKey_Count
 };
 
@@ -82,6 +88,8 @@ struct InputTime {
 struct InputData {
 	b32 pressed[InputKey_Count];
 	b32 released[InputKey_Count];
+	int mouse_x; int mouse_y;
+	int mouse_xrel; int mouse_yrel;
 	InputTime times[InputKey_Count];
 };
 #define IS_HELD(input, key) ((input).times[(key)].pressed > (input).times[(key)].released)

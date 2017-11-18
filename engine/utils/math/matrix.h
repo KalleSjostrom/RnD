@@ -123,10 +123,31 @@ FORCE_INLINE v4 operator*(m4 a, v4 b) {
 	return c;
 }
 
+FORCE_INLINE v3 &right_axis(m4 &m) {
+	return *(v3*)(m.m + 0);
+}
+FORCE_INLINE v3 &forward_axis(m4 &m) {
+	return *(v3*)(m.m + 8);
+}
+FORCE_INLINE v3 &up_axis(m4 &m) {
+	return *(v3*)(m.m + 4);
+}
+FORCE_INLINE v3 &translation(m4 &m) {
+	return *(v3*)(m.m + 12);
+}
+
 FORCE_INLINE v3 multiply_perspective(m4 a, v3 b) {
 	v4 c = a * V4(b, 1.0f);
 	float t = 1.0f/c.w;
 	return V3(c.x, c.y, c.z) * t;
+}
+
+FORCE_INLINE m4 Matrix4x4(v3 right, v3 forward, v3 up, v3 position) {
+	return Matrix4x4(
+			right.x,   right.y,   right.z,   position.x,
+			up.x,      up.y,      up.z,      position.y,
+			forward.x, forward.y, forward.z, position.z,
+			0,         0,         0,         1);
 }
 
 FORCE_INLINE m4 Matrix4x4(float v) {
@@ -145,16 +166,6 @@ FORCE_INLINE m4 identity() {
 			0, 0, 0, 1);
 }
 
-FORCE_INLINE void set_translation(m4 &m, v3 translation) {
-	m.m[12] = translation.x;
-	m.m[13] = translation.y;
-	m.m[14] = translation.z;
-}
-FORCE_INLINE v3 translation(m4 &m) {
-	v3 t = { m.m[12], m.m[13], m.m[14] };
-	return t;
-}
-
 void print_matrix(float *m) {
 	for (int row = 0; row < 4; ++row) {
 		for (int col = 0; col < 4; ++col) {
@@ -169,6 +180,20 @@ FORCE_INLINE m4 look_at(v3 eye, v3 l, v3 up) {
 	v3 f = normalize(l - eye); // Look direction (Z-axis)
 	v3 s = normalize(cross(f, up)); // Horizontal direction (X-axis)
 	v3 u = cross(s, f); // Up direction (Y-axis)
+
+	m4 m = Matrix4x4(
+		s.x, s.y, s.z, -dot(s, eye),
+		u.x, u.y, u.z, -dot(u, eye),
+		-f.x, -f.y, -f.z, -dot(-f, eye),
+		0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+FORCE_INLINE m4 view_from_pose(m4 &pose) {
+	v3 &f = forward_axis(pose); // Look direction (Z-axis)
+	v3 &s = right_axis(pose); // Horizontal direction (X-axis)
+	v3 &u = up_axis(pose); // Up direction (Y-axis)
+	v3 eye = translation(pose);
 
 	m4 m = Matrix4x4(
 		s.x, s.y, s.z, -dot(s, eye),
@@ -198,6 +223,7 @@ FORCE_INLINE m4 perspective_fov(float v_fov, float aspect, float _near, float _f
 	float half_height = tanf(angle) * _near;
 	float height = half_height * 2;
 	float width = aspect * height;
+	printf("%g %g\n", width, height);
 	return perspective(width, height, _near, _far);
 }
 
