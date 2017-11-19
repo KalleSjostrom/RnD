@@ -26,7 +26,7 @@ FORCE_INLINE q4 operator*(q4 a, q4 b) {
 q4 Quaternion(v3 axis, float angle) {
 	float half_angle = angle / 2.0f;
 	float s, c;
-	__sincosf(half_angle, &s, &c);
+	sincosf(half_angle, &s, &c);
 
 	q4 q = {};
 	q.x = axis.x * s;

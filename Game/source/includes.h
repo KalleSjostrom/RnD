@@ -10,13 +10,13 @@
 #include <OpenGL/opengl.h>
 #endif
 
-#define GLSL(src) "#version 410\n" #src
-typedef uint16_t GLindex;
-// #define GL_INDEX GL_UNSIGNED_SHORT
-
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
+
+#define GLSL(src) "#version 410\n" #src
+typedef u16 GLindex;
+// #define GL_INDEX GL_UNSIGNED_SHORT
 #include "engine/opengl/gl_program_builder.cpp"
 
 #define USE_INTRINSICS 1

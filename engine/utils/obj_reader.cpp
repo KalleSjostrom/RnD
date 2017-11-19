@@ -12,7 +12,8 @@ struct ObjData {
 };
 
 ObjData read_obj(MemoryArena &arena, const char *filepath) {
-	FILE *objfile = fopen(filepath, "rb");
+	FILE *objfile;
+	fopen_s(&objfile, filepath, "rb");
 	ASSERT(objfile, "Could not open '%s'", filepath);
 
 	ObjData o = {};

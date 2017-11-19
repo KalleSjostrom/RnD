@@ -50,7 +50,7 @@ enum CpuFeatureFlag : unsigned {
 };
 
 unsigned detect_cpu_features() {
-	unsigned info[4];
+	int info[4];
 	cpuid(info, 0);
 	unsigned nIds = info[0];
 

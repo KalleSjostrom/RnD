@@ -251,7 +251,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		position += z * (m.y * dt * camera_speed);
 
 		if (IS_HELD(input, InputKey_MouseLeft)) {
-			static v3 world_up = V3(0, 1, 0);
+			v3 world_up = V3(0, 1, 0);
 			q4 qx = Quaternion(world_up, -input.mouse_xrel * dt * camera_rotation_speed);
 			q4 qy = Quaternion(x, -input.mouse_yrel * dt * camera_rotation_speed);
 			q4 q = qx * qy;

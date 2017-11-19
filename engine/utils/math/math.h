@@ -44,13 +44,17 @@ FORCE_INLINE f32 saturate(f32 value) {
 }
 
 FORCE_INLINE void sincosf(float x, float *sinx, float *cosx) {
-	__sincosf(x, sinx, cosx);
-}
+#ifdef OS_WINDOWS
+	// TODO(kalle): Which is faster?
+	// *sinx = sinf(x);
+	// *cosx = cosf(x);
 
-// FORCE_INLINE void sincosf(float x, float *sinx, float *cosx) {
-// 	*sinx = sinf(x);
-// 	*cosx = sqrtf(1 - *sinx);
-// }
+	*sinx = sinf(x);
+ 	*cosx = sqrtf(1 - *sinx);
+#else
+	__sincosf(x, sinx, cosx);
+#endif
+}
 
 #define ELEMENT_TYPE f32
 #include "math_v2.h"

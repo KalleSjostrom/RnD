@@ -12,13 +12,13 @@ namespace fluid_common {
 
 	static float DT = 1.0f / 240.0f; // timestep
 
-	static float ρ_0 = 100.0f;
-	static float inv_ρ_0 = 1.0f / ρ_0;
+	static float rho_0 = 100.0f;
+	static float inv_rho_0 = 1.0f / rho_0;
 
 	static float GRAVITY = -10.0f;
 
 	static float SCP = 1.0f;
-	static float H = (sqrtf((4*MASS) / (PI*SCP*ρ_0)));
+	static float H = (sqrtf((4*MASS) / (PI*SCP*rho_0)));
 	static float BOUNDS = 5.0f;
 
 	static const u32 MAX_NEIGHBORS = 7;

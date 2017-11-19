@@ -104,8 +104,11 @@ void setup_programs(ComponentGroup &components) {
 	components.renderer.program_count = 0;
 
 	add_program(components.renderer, default_program, RenderMask_ShadowCasters);
+	add_program(components.renderer, avatar_program, RenderMask_ShadowCasters);
 	add_program(components.renderer, sphere_program, RenderMask_ShadowCasters);
 	add_program(components.renderer, model_program, RenderMask_ShadowCasters);
+	add_program(components.renderer, ray_program, RenderMask_Rest);
+	add_program(components.renderer, fluid_program, RenderMask_Fluid);
 }
 
 void reload_programs(ComponentGroup &components) {
