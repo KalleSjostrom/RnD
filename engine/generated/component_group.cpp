@@ -5,9 +5,16 @@ typedef u16 cid;
 #include "engine/components/model_component.cpp"
 #include "engine/components/mover_component.cpp"
 #include "engine/components/actor_component.cpp"
+#include "engine/components/fluid_component.cpp"
 #include "engine/components/material_component.cpp"
 
 #include "engine/utils/renderer.cpp"
+
+#include "shaders/default.shader.cpp"
+#include "shaders/avatar.shader.cpp"
+#include "shaders/fluid.shader.cpp"
+#include "shaders/model.shader.cpp"
+#include "shaders/fullscreen_effects.shader.cpp"
 
 struct ComponentGroup {
 	InputComponent input;
@@ -17,6 +24,7 @@ struct ComponentGroup {
 
 	ModelComponent model;
 	ActorComponent actor;
+	FluidComponent fluid;
 	MaterialComponent material;
 
 	Renderer renderer;
@@ -35,6 +43,7 @@ void update_components(ComponentGroup &component_group, float dt) {
     component_group.input.update(dt);
 	component_group.animation.update(dt);
 	component_group.mover.update(dt);
+	component_group.fluid.update(dt);
 }
 
 // NOTE(kalle): We could probably use u16's for the entity ids
@@ -48,6 +57,7 @@ struct Entity {
 
 	cid model_id;
 	cid actor_id;
+	cid fluid_id;
 	cid material_id;
 };
 
@@ -59,6 +69,8 @@ enum EntityType : u32 {
 	EntityType_Fullscreen,
 	EntityType_Plane,
 	EntityType_Model,
+	EntityType_Fluid,
+	EntityType_Ruler,
 
 	EntityType_Count,
 };
@@ -68,19 +80,26 @@ enum RenderMask {
 	RenderMask_ShadowCasters = 1 << 0,
 	RenderMask_Lights = 1 << 1,
 	RenderMask_Rest = 1 << 2,
+	RenderMask_Fluid = 1 << 3,
 
 	RenderMask_All = 0xFFFFFFFF,
 };
 
 enum ProgramType {
 	ProgramType_default = 0,
+	ProgramType_avatar,
 	ProgramType_sphere,
 	ProgramType_model,
+	ProgramType_ray,
+	ProgramType_fluid,
 };
 void setup_programs(ComponentGroup &components) {
 	GLuint default_program = gl_program_builder::create_from_strings(shader_default::vertex, shader_default::fragment, 0);
+	GLuint avatar_program = gl_program_builder::create_from_strings(shader_avatar::vertex, shader_avatar::fragment, shader_avatar::geometry);
 	GLuint sphere_program = gl_program_builder::create_from_strings(shader_sphere::vertex, shader_sphere::fragment, shader_sphere::geometry);
 	GLuint model_program = gl_program_builder::create_from_strings(shader_model::vertex, shader_model::fragment, 0);
+	GLuint ray_program = gl_program_builder::create_from_strings(shader_ray::vertex, shader_ray::fragment, shader_ray::geometry);
+	GLuint fluid_program = gl_program_builder::create_from_strings(fluid::vertex, fluid::fragment, 0);
 
 	components.renderer.program_count = 0;
 
@@ -268,7 +287,28 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			entity.model_id = components.model.add(position, context.model);
 			add_to_program(components.renderer, context.model->program_type, &components.model.instances[entity.model_id].renderable);
 		} break;
+		case EntityType_Ruler: {
+			static v3 vertex_buffer_data[] = {
+				{ 0.0f, 0.0f, 0.0f },
+				{ 0.0f, 2.0f, 0.0f },
+			};
 
+			static short vertex_indices[] = { 0, 1 };
+
+			ModelCC model_cc = {};
+			model_cc.vertex.data = vertex_buffer_data;
+			model_cc.vertex.count = 4;
+
+			model_cc.indices = (GLindex*) vertex_indices;
+			model_cc.index_count = ARRAY_COUNT(vertex_indices);
+
+			model_cc.buffer_type = GL_DYNAMIC_DRAW;
+			model_cc.draw_mode = GL_LINE_STRIP;
+
+			// Model
+			entity.model_id = components.model.add(position, &model_cc);
+			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
+		} break;
 		case EntityType_Plane: {
 			static v3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
@@ -287,6 +327,10 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			// Actor
 			// m4 &pose = components.model.instances[entity.model_id].renderable.pose;
 			// entity.actor_id = components.actor.add(ShapeType_AABox, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
+		} break;
+		case EntityType_Fluid: {
+			entity.fluid_id = components.fluid.add();
+			add_to_program(components.renderer, ProgramType_fluid, &components.fluid.instances[entity.fluid_id].renderable);
 		} break;
 		default: {
 			ASSERT(false, "Unknown entity type! (type=%u)", type);

@@ -53,10 +53,6 @@
 					"working_dir": "${project_path}/fluid/"
 				},
 				{
-					"name": "Fibers",
-					"working_dir": "${project_path}/fibers/"
-				},
-				{
 					"name": "MyGL",
 					"working_dir": "${project_path}/mygl/"
 				},

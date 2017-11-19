@@ -1,24 +1,14 @@
-struct EntityData {
-	EntityType type;
-	float x;
-	float y;
-	float w;
-	float h;
-	float rotation;
-};
+#include "engine/levels.h"
 
-struct Level {
-	i32 count;
-	EntityData entity_data[512];
-};
+Level make_level() {
+	Level l = {};
 
-static Level level = {
-	5, {
-		{ EntityType_Block, -1000, -600, 2000, 400, 0 },
-		{ EntityType_BlockAvatar, -512, 300, 20, 40, 0 },
+	Context c = {};
+	l.entity_data[l.count++] = make_entity_data(EntityType_Block, { -1000, -600, 0 }, { 2000, 400, 1 }, 0, c);
+	l.entity_data[l.count++] = make_entity_data(EntityType_BlockAvatar, { -512, 300, 0 }, { 20, 40, 1 }, 0, c);
+	l.entity_data[l.count++] = make_entity_data(EntityType_Block, { 0, 0, 0 }, { 100, 100, 1 }, 0, c);
+	l.entity_data[l.count++] = make_entity_data(EntityType_Sphere, { -100, 100, 0 }, { 20, 20, 1 }, 0, c);
+	l.entity_data[l.count++] = make_entity_data(EntityType_Fluid, { 0, 0, 0 }, { 1, 1, 1 }, 0, c);
 
-		{ EntityType_Block, 0, 0, 100, 100, 0 },
-		{ EntityType_Sphere, 0, 0, 20, 20, 0 },
-		{ EntityType_Fluid, 0, 0, 0, 0, 0 },
-	},
+	return l;
 };

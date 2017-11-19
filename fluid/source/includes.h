@@ -16,6 +16,7 @@
 #else
 #include <OpenGL/gl3.h>
 #include <OpenGL/opengl.h>
+#include "OpenCL/opencl.h"
 #endif
 
 #define GLSL(src) "#version 410\n" #src
@@ -27,8 +28,8 @@ typedef uint16_t GLindex;
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
-#include "opengl/gl_program_builder.cpp"
-#include "opencl/cl_program_builder.cpp"
+#include "engine/opengl/gl_program_builder.cpp"
+#include "engine/opencl/cl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
 #include "engine/utils/math/math.h"
@@ -46,10 +47,5 @@ namespace globals {
 #include "engine/utils/animation.h"
 
 /////// ASSETS
-#include "shaders/default.shader.cpp"
-#include "shaders/avatar.shader.cpp"
-#include "shaders/fluid.shader.cpp"
-#include "shaders/fullscreen_effects.shader.cpp"
-
-#include "component_group.cpp"
+#include "engine/generated/component_group.cpp"
 #include "render_pipe.cpp"

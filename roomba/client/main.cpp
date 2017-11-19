@@ -93,7 +93,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		spawn_entity(state.components, state.entities[state.entity_count++], EntityType_Roomba, state.roomba_program_id, V3(0, 0, 0));
+		spawn_entity(state.components, state.entities[state.entity_count++], EntityType_Model, state.roomba_program_id, V3(0, 0, 0));
 		spawn_entity(state.components, state.entities[state.entity_count++], EntityType_Ruler, state.line_program_id, V3(0, 0, 0));
 
 		setup_camera(state.camera, V3(0, 0, 4), screen_width/1000.f, screen_height/1000.f);

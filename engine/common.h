@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include "engine/utils/platform.h"
+#include <limits.h>
+#include <float.h>
 
 #define KB 1024
 #define MB 1024 * KB

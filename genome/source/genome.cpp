@@ -60,7 +60,7 @@ Fitness calculate_fitness(Genome genome) {
 #include "generic_genetic_algorithm.cpp"
 #include "neural_net.cpp"
 
-struct Game {
+struct Application {
 	MemoryArena persistent_arena;
 	MemoryArena transient_arena;
 
@@ -78,94 +78,96 @@ struct Game {
 };
 
 EXPORT PLUGIN_RELOAD(reload) {
-	Game &game = *(Game*) memory;
+	Application &application = *(Application*) memory;
 
 	#ifdef OS_WINDOWS
 		setup_gl();
 	#endif
 
 	MemoryArena empty = {};
-	game.transient_arena = empty;
-	reset_arena(game.transient_arena, MB);
-	globals::transient_arena = &game.transient_arena;
+	application.transient_arena = empty;
+	reset_arena(application.transient_arena, MB);
+	globals::transient_arena = &application.transient_arena;
 
-	reload_programs(game.components);
-	setup_render_pipe(game.engine, game.render_pipe, game.components, screen_width, screen_height);
-	// game.components.input.set_input(&input);
+	reload_programs(application.components);
+	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
+	application.components.input.set_input_data(&input);
 
+	Level level = make_level();
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
 
 		Entity *entity = 0;
-		if (i < game.entity_count) {
-			entity = game.entities + i;
+		if (i < application.entity_count) {
+			entity = application.entities + i;
 		} else {
-			entity = game.entities + game.entity_count++;
+			entity = application.entities + application.entity_count++;
 		}
 
-		model__set_position(game.components, *entity, V3(data.x, data.y, 0));
-		model__set_rotation(game.components, *entity, data.rotation);
-		model__set_scale(game.components, *entity, V3(data.w, data.h, 0));
+		model__set_position(application.components, *entity, data.offset);
+		model__set_rotation(application.components, *entity, data.rotation);
+		model__set_scale(application.components, *entity, data.size);
 	}
-	game.entity_count = level.count;
+	application.entity_count = level.count;
 }
 
 EXPORT PLUGIN_UPDATE(update) {
-	Game &game = *(Game*) memory;
+	Application &application = *(Application*) memory;
 
-	if (!game.initialized) {
-		game.initialized = true;
+	if (!application.initialized) {
+		application.initialized = true;
 
 		#ifdef OS_WINDOWS
 			setup_gl();
 		#endif
 		MemoryArena empty = {};
-		game.persistent_arena = empty;
-		game.transient_arena = empty;
-		setup_arena(game.transient_arena, MB);
-		globals::transient_arena = &game.transient_arena;
+		application.persistent_arena = empty;
+		application.transient_arena = empty;
+		setup_arena(application.transient_arena, MB);
+		globals::transient_arena = &application.transient_arena;
 
-		game.engine = &engine;
+		application.engine = &engine;
 
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 		// glEnable(GL_DEPTH_TEST);
 
-		setup_programs(game.components);
-		setup_render_pipe(game.engine, game.render_pipe, game.components, screen_width, screen_height);
-		// game.components.input.set_input(&input);
+		setup_programs(application.components);
+		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
+		application.components.input.set_input_data(&input);
 
+		Level level = make_level();
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
-			Entity &entity = game.entities[game.entity_count++];
+			Entity &entity = application.entities[application.entity_count++];
 
-			spawn_entity(game.components, entity, data.type, V3(data.x, data.y, 0));
+			spawn_entity(application.components, entity, data.type, data.context, data.offset);
 
-			model__set_position(game.components, entity, V3(data.x, data.y, 0));
-			model__set_rotation(game.components, entity, data.rotation);
-			model__set_scale(game.components, entity, V3(data.w, data.h, 0));
+			model__set_position(application.components, entity, data.offset);
+			model__set_rotation(application.components, entity, data.rotation);
+			model__set_scale(application.components, entity, data.size);
 		}
 
 		// 	// Audio
-		// 	game.audio_manager.play(game.engine, "../../game/assets/test.wav");
-		setup_camera(game.camera, V3(0, 0, 500), ASPECT_RATIO);
+		// 	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
+		setup_camera(application.camera, V3(0, 0, 500), ASPECT_RATIO);
 	}
 
-	{ // Update the game
+	{ // Update the application
 		if (IS_PRESSED(input, InputKey_Space)) {
-			run(game.persistent_arena, ga_settings);
+			run(application.persistent_arena, ga_settings);
 		}
 		// Update all the components
-		update_components(game.components, dt);
+		update_components(application.components, dt);
 		// Handle component/component communication.
-		component_glue::update(game.components, game.entities, game.entity_count, dt);
+		component_glue::update(application.components, application.entities, application.entity_count, dt);
 		// Update sound
-		game.audio_manager.update(*globals::transient_arena, game.engine, dt);
+		application.audio_manager.update(*globals::transient_arena, application.engine, dt);
 	}
 
 	{ // Render
 		//// Render pipe ////
-		render(game.render_pipe, game.components, game.camera);
+		render(application.render_pipe, application.components, application.camera);
 	}
 
 	// globals::transient_arena.offset = 0;

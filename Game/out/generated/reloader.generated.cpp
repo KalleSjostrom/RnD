@@ -38,13 +38,12 @@ static void generate_layout() {
 	fprintf(output, "	ReloadType_double,\n");
 	fprintf(output, "	ReloadType_long,\n");
 	fprintf(output, "	ReloadType_BaseType,\n");
-	fprintf(output, "	ReloadType_FBO,\n");
 	fprintf(output, "	ReloadType_RenderPipe,\n");
+	fprintf(output, "	ReloadType_Reloader,\n");
+	fprintf(output, "	ReloadType_Application,\n");
 	fprintf(output, "	ReloadType_Keyframes,\n");
 	fprintf(output, "	ReloadType_AnimationData,\n");
 	fprintf(output, "	ReloadType_AnimationDataArray,\n");
-	fprintf(output, "	ReloadType_Application,\n");
-	fprintf(output, "	ReloadType_Reloader,\n");
 	fprintf(output, "}; \n");
 	fprintf(output, "#define __RELOAD_SIZE__int 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__bool 1\n");
@@ -53,10 +52,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_SIZE__float 4\n");
 	fprintf(output, "#define __RELOAD_SIZE__double 8\n");
 	fprintf(output, "#define __RELOAD_SIZE__long 8\n");
-	fprintf(output, "#define __RELOAD_SIZE__FBO %zu\n", sizeof(FBO));
-	fprintf(output, "#define __RELOAD_OFFSET__FBO_framebuffer_object %zu\n", offsetof(FBO, framebuffer_object));
-	fprintf(output, "#define __RELOAD_OFFSET__FBO_count %zu\n", offsetof(FBO, count));
-	fprintf(output, "#define __RELOAD_OFFSET__FBO_render_texture %zu\n", offsetof(FBO, render_texture));
 	fprintf(output, "#define __RELOAD_SIZE__RenderPipe %zu\n", sizeof(RenderPipe));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_screen_width %zu\n", offsetof(RenderPipe, screen_width));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_screen_height %zu\n", offsetof(RenderPipe, screen_height));
@@ -91,9 +86,18 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_shadow_texture %zu\n", offsetof(RenderPipe, shadow_texture));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_fsaa_tex %zu\n", offsetof(RenderPipe, fsaa_tex));
 	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_fsaa_fbo %zu\n", offsetof(RenderPipe, fsaa_fbo));
-	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_programs %zu\n", offsetof(RenderPipe, programs));
-	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe_program_count %zu\n", offsetof(RenderPipe, program_count));
-	fprintf(output, "#define __RELOAD_OFFSET__RenderPipe___padding %zu\n", offsetof(RenderPipe, __padding));
+	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
+	fprintf(output, "#define __RELOAD_SIZE__Application %zu\n", sizeof(Application));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_persistent_arena %zu\n", offsetof(Application, persistent_arena));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_transient_arena %zu\n", offsetof(Application, transient_arena));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_components %zu\n", offsetof(Application, components));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_audio_manager %zu\n", offsetof(Application, audio_manager));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_render_pipe %zu\n", offsetof(Application, render_pipe));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_camera %zu\n", offsetof(Application, camera));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_engine %zu\n", offsetof(Application, engine));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_initialized %zu\n", offsetof(Application, initialized));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_entity_count %zu\n", offsetof(Application, entity_count));
+	fprintf(output, "#define __RELOAD_OFFSET__Application_entities %zu\n", offsetof(Application, entities));
 	fprintf(output, "#define __RELOAD_SIZE__Keyframes %zu\n", sizeof(Keyframes));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_count %zu\n", offsetof(Keyframes, count));
 	fprintf(output, "#define __RELOAD_OFFSET__Keyframes_transforms %zu\n", offsetof(Keyframes, transforms));
@@ -107,18 +111,6 @@ static void generate_layout() {
 	fprintf(output, "#define __RELOAD_SIZE__AnimationDataArray %zu\n", sizeof(AnimationDataArray));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_count %zu\n", offsetof(AnimationDataArray, count));
 	fprintf(output, "#define __RELOAD_OFFSET__AnimationDataArray_entries %zu\n", offsetof(AnimationDataArray, entries));
-	fprintf(output, "#define __RELOAD_SIZE__Application %zu\n", sizeof(Application));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_persistent_arena %zu\n", offsetof(Application, persistent_arena));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_transient_arena %zu\n", offsetof(Application, transient_arena));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_components %zu\n", offsetof(Application, components));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_audio_manager %zu\n", offsetof(Application, audio_manager));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_render_pipe %zu\n", offsetof(Application, render_pipe));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_camera %zu\n", offsetof(Application, camera));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_engine %zu\n", offsetof(Application, engine));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_initialized %zu\n", offsetof(Application, initialized));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_entity_count %zu\n", offsetof(Application, entity_count));
-	fprintf(output, "#define __RELOAD_OFFSET__Application_entities %zu\n", offsetof(Application, entities));
-	fprintf(output, "#define __RELOAD_SIZE__Reloader %zu\n", sizeof(Reloader));
 
 	fclose(output);
 }

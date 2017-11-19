@@ -34,8 +34,9 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	reload_programs(application.components);
 	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
-	application.components.input.set_input(&input);
+	application.components.input.set_input_data(&input);
 
+	Level level = make_level();
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
 
@@ -46,9 +47,9 @@ EXPORT PLUGIN_RELOAD(reload) {
 			entity = application.entities + application.entity_count++;
 		}
 
-		model__set_position(application.components, *entity, V3(data.x, data.y, 0));
+		model__set_position(application.components, *entity, data.offset);
 		model__set_rotation(application.components, *entity, data.rotation);
-		model__set_scale(application.components, *entity, V3(data.w, data.h, 0));
+		model__set_scale(application.components, *entity, data.size);
 	}
 	application.entity_count = level.count;
 }
@@ -80,21 +81,22 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		setup_programs(application.components);
 		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
-		application.components.input.set_input(&input);
+		application.components.input.set_input_data(&input);
 
+		Level level = make_level();
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
 			Entity &entity = application.entities[application.entity_count++];
 
-			spawn_entity(application.components, entity, data.type, V3(data.x, data.y, 0));
+			spawn_entity(application.components, entity, data.type, data.context, data.offset);
 
-			model__set_position(application.components, entity, V3(data.x, data.y, 0));
+			model__set_position(application.components, entity, data.offset);
 			model__set_rotation(application.components, entity, data.rotation);
-			model__set_scale(application.components, entity, V3(data.w, data.h, 0));
+			model__set_scale(application.components, entity, data.size);
 		}
 
-		// Audio
-		// application.audio_manager.play(application.engine, "../../application/assets/test.wav");
+		// 	// Audio
+		// 	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
 		setup_camera(application.camera, V3(0, 0, 500), ASPECT_RATIO);
 	}
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-./run_generators.sh
+# ./run_generators.sh
 
 source ../common.sh
 

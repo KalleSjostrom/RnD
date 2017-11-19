@@ -3,7 +3,7 @@
 
 source ../common.sh
 
-local_flags="-mavx -fvisibility=hidden -nostartfiles -Wno-trigraphs -Wno-format-nonliteral -Wno-double-promotion"
+local_flags="-mavx -fvisibility=hidden -nostartfiles -Wno-trigraphs -Wno-format-nonliteral -Wno-double-promotion -Wno-embedded-directive"
 frameworks="-framework OpenGL -framework OpenCL"
 
 echo Building conetracer plugin

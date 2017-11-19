@@ -1,12 +1,5 @@
 #include "engine/utils/platform.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <limits.h>
-#include <float.h>
-
 #ifdef OS_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
@@ -40,9 +33,5 @@ namespace globals {
 #include "engine/utils/animation.h"
 
 /////// ASSETS
-#include "shaders/default.shader.cpp"
-#include "shaders/avatar.shader.cpp"
-#include "shaders/fullscreen_effects.shader.cpp"
-
-#include "component_group.cpp"
+#include "engine/generated/component_group.cpp"
 #include "render_pipe.cpp"

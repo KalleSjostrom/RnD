@@ -143,7 +143,7 @@ static const char *fragment = GLSL(
 		t = 1-t;
 		t = t*t*t;
 		// t = pow(t, 0.4f);
-    	float light_a = t * t * (3.0 - 2.0 * t);
+		float light_a = t * t * (3.0 - 2.0 * t);
 
 		color = vec4(0.1, 0.1, 0.1, 0) * light_a;
 		info = vec4(light_a, 0.01f*light_a, 0, 0);

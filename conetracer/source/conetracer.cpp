@@ -1,5 +1,7 @@
 #include "includes.h"
 
+#include "shaders/voxel_cone_tracing.cpp"
+
 #include "levels.cpp"
 #include "engine/utils/math/random.h"
 #include "engine/utils/profiler.c"

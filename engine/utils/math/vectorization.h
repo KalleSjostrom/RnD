@@ -3,7 +3,7 @@
 	#define cpuid(info, x) __cpuidex(info, x, 0)
 #else
 	#include <cpuid.h>
-	void cpuid(int info[4], int InfoType) {
+	void cpuid(unsigned info[4], unsigned InfoType) {
 		__cpuid_count(InfoType, 0, info[0], info[1], info[2], info[3]);
 	}
 #endif
@@ -50,9 +50,9 @@ enum CpuFeatureFlag : unsigned {
 };
 
 unsigned detect_cpu_features() {
-	int info[4];
+	unsigned info[4];
 	cpuid(info, 0);
-	int nIds = info[0];
+	unsigned nIds = info[0];
 
 	cpuid(info, 0x80000000);
 	unsigned nExIds = info[0];
@@ -62,48 +62,48 @@ unsigned detect_cpu_features() {
 	// Detect Features
 	if (nIds >= 0x00000001) {
 		cpuid(info, 0x00000001);
-		flags |= ((info[3] & ((int)1 << 23)) != 0) ? CpuFeatureFlag_MMX : 0;
-		flags |= ((info[3] & ((int)1 << 25)) != 0) ? CpuFeatureFlag_SSE : 0;
-		flags |= ((info[3] & ((int)1 << 26)) != 0) ? CpuFeatureFlag_SSE2 : 0;
-		flags |= ((info[2] & ((int)1 <<  0)) != 0) ? CpuFeatureFlag_SSE3 : 0;
+		flags |= ((info[3] & ((unsigned)1 << 23)) != 0) ? CpuFeatureFlag_MMX : 0;
+		flags |= ((info[3] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_SSE : 0;
+		flags |= ((info[3] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_SSE2 : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_SSE3 : 0;
 
-		flags |= ((info[2] & ((int)1 <<  9)) != 0) ? CpuFeatureFlag_SSSE3 : 0;
-		flags |= ((info[2] & ((int)1 << 19)) != 0) ? CpuFeatureFlag_SSE41 : 0;
-		flags |= ((info[2] & ((int)1 << 20)) != 0) ? CpuFeatureFlag_SSE42 : 0;
-		flags |= ((info[2] & ((int)1 << 25)) != 0) ? CpuFeatureFlag_AES : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  9)) != 0) ? CpuFeatureFlag_SSSE3 : 0;
+		flags |= ((info[2] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_SSE41 : 0;
+		flags |= ((info[2] & ((unsigned)1 << 20)) != 0) ? CpuFeatureFlag_SSE42 : 0;
+		flags |= ((info[2] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_AES : 0;
 
-		flags |= ((info[2] & ((int)1 << 28)) != 0) ? CpuFeatureFlag_AVX : 0;
-		flags |= ((info[2] & ((int)1 << 12)) != 0) ? CpuFeatureFlag_FMA3 : 0;
+		flags |= ((info[2] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX : 0;
+		flags |= ((info[2] & ((unsigned)1 << 12)) != 0) ? CpuFeatureFlag_FMA3 : 0;
 
-		flags |= ((info[2] & ((int)1 << 30)) != 0) ? CpuFeatureFlag_RDRAND : 0;
+		flags |= ((info[2] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_RDRAND : 0;
 	}
 	if (nIds >= 0x00000007) {
 		cpuid(info, 0x00000007);
-		flags |= ((info[1] & ((int)1 <<  5)) != 0) ? CpuFeatureFlag_AVX2 : 0;
+		flags |= ((info[1] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_AVX2 : 0;
 
-		flags |= ((info[1] & ((int)1 <<  3)) != 0) ? CpuFeatureFlag_BMI1 : 0;
-		flags |= ((info[1] & ((int)1 <<  8)) != 0) ? CpuFeatureFlag_BMI2 : 0;
-		flags |= ((info[1] & ((int)1 << 19)) != 0) ? CpuFeatureFlag_ADX : 0;
-		flags |= ((info[1] & ((int)1 << 29)) != 0) ? CpuFeatureFlag_SHA : 0;
-		flags |= ((info[2] & ((int)1 <<  0)) != 0) ? CpuFeatureFlag_PREFETCHWT1 : 0;
+		flags |= ((info[1] & ((unsigned)1 <<  3)) != 0) ? CpuFeatureFlag_BMI1 : 0;
+		flags |= ((info[1] & ((unsigned)1 <<  8)) != 0) ? CpuFeatureFlag_BMI2 : 0;
+		flags |= ((info[1] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_ADX : 0;
+		flags |= ((info[1] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_SHA : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_PREFETCHWT1 : 0;
 
-		flags |= ((info[1] & ((int)1 << 16)) != 0) ? CpuFeatureFlag_AVX512F : 0;
-		flags |= ((info[1] & ((int)1 << 28)) != 0) ? CpuFeatureFlag_AVX512CD : 0;
-		flags |= ((info[1] & ((int)1 << 26)) != 0) ? CpuFeatureFlag_AVX512PF : 0;
-		flags |= ((info[1] & ((int)1 << 27)) != 0) ? CpuFeatureFlag_AVX512ER : 0;
-		flags |= ((info[1] & ((int)1 << 31)) != 0) ? CpuFeatureFlag_AVX512VL : 0;
-		flags |= ((info[1] & ((int)1 << 30)) != 0) ? CpuFeatureFlag_AVX512BW : 0;
-		flags |= ((info[1] & ((int)1 << 17)) != 0) ? CpuFeatureFlag_AVX512DQ : 0;
-		flags |= ((info[1] & ((int)1 << 21)) != 0) ? CpuFeatureFlag_AVX512IFMA : 0;
-		flags |= ((info[2] & ((int)1 <<  1)) != 0) ? CpuFeatureFlag_AVX512VBMI : 0;
+		flags |= ((info[1] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_AVX512F : 0;
+		flags |= ((info[1] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX512CD : 0;
+		flags |= ((info[1] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_AVX512PF : 0;
+		flags |= ((info[1] & ((unsigned)1 << 27)) != 0) ? CpuFeatureFlag_AVX512ER : 0;
+		flags |= ((info[1] & ((unsigned)1 << 31)) != 0) ? CpuFeatureFlag_AVX512VL : 0;
+		flags |= ((info[1] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_AVX512BW : 0;
+		flags |= ((info[1] & ((unsigned)1 << 17)) != 0) ? CpuFeatureFlag_AVX512DQ : 0;
+		flags |= ((info[1] & ((unsigned)1 << 21)) != 0) ? CpuFeatureFlag_AVX512IFMA : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  1)) != 0) ? CpuFeatureFlag_AVX512VBMI : 0;
 	}
 	if (nExIds >= 0x80000001) {
 		cpuid(info, 0x80000001);
-		flags |= ((info[3] & ((int)1 << 29)) != 0) ? CpuFeatureFlag_x64 : 0;
-		flags |= ((info[2] & ((int)1 <<  5)) != 0) ? CpuFeatureFlag_ABM : 0;
-		flags |= ((info[2] & ((int)1 <<  6)) != 0) ? CpuFeatureFlag_SSE4a : 0;
-		flags |= ((info[2] & ((int)1 << 16)) != 0) ? CpuFeatureFlag_FMA4 : 0;
-		flags |= ((info[2] & ((int)1 << 11)) != 0) ? CpuFeatureFlag_XOP : 0;
+		flags |= ((info[3] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_x64 : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_ABM : 0;
+		flags |= ((info[2] & ((unsigned)1 <<  6)) != 0) ? CpuFeatureFlag_SSE4a : 0;
+		flags |= ((info[2] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_FMA4 : 0;
+		flags |= ((info[2] & ((unsigned)1 << 11)) != 0) ? CpuFeatureFlag_XOP : 0;
 	}
 
 	return flags;

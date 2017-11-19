@@ -1,47 +1,46 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <stdarg.h>
-#include <float.h>
-#include <errno.h>
+#include "engine/utils/platform.h"
 
-#include <unistd.h>
-#include <mach/mach_time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#ifdef OS_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include "windows.h"
+#include <gl/gl.h>
+#include "engine/utils/win32_setup_gl.h"
+#else
 #include <OpenGL/gl3.h>
 #include <OpenGL/opengl.h>
+#endif
 
 #define GLSL(src) "#version 410\n" #src
 typedef uint16_t GLindex;
-#define GL_INDEX GL_UNSIGNED_SHORT
 
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
-#include "opengl/gl_program_builder.cpp"
+#include "engine/opengl/gl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
 #include "engine/utils/math/math.h"
 
 #include "engine/utils/string.h"
 #include "engine/utils/camera.cpp"
+#include "engine/utils/animation.h"
 #include "engine/utils/gui.cpp"
 
 ///// PLUGIN SPECIFICS
 #include "roomba.shader.cpp"
-
-#define CALL(components, owner, compname, command, ...) (components.compname.command(owner.compname ## _id, ## __VA_ARGS__))
-#define GET(components, owner, compname, member) (components.compname.instances[owner.compname ## _id].member)
-#include "component_group.cpp"
+#include "engine/generated/component_group.cpp"
 
 #include <fcntl.h>
 
-#include "engine/utils/common.h"
+#include "engine/common.h"
+
+#include <errno.h>
+#include <unistd.h>
+#include <mach/mach_time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "../sci.h"
 #include "../tcp_socket.cpp"
 
