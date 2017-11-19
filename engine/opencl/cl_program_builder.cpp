@@ -65,7 +65,7 @@ namespace cl_program_builder {
 
 	cl_program create_from_binary_file(MemoryArena &arena, cl_context context, const char *filename, cl_device_id *devices) {
 		FILE *file;
-		fopen_s(&file, filename, "r");
+		fopen_s(&file, filename, "rb");
 
 		cl_uint count;
 		fread(&count, sizeof(cl_uint), 1, file);

@@ -14,9 +14,6 @@
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
 
-#define GLSL(src) "#version 410\n" #src
-typedef u16 GLindex;
-// #define GL_INDEX GL_UNSIGNED_SHORT
 #include "engine/opengl/gl_program_builder.cpp"
 
 #define USE_INTRINSICS 1
@@ -30,10 +27,10 @@ namespace globals {
 
 #include "engine/utils/audio_manager.cpp"
 #include "engine/utils/camera.cpp"
-#include "engine/utils/animation.h"
 
 /////// ASSETS
+#include "engine/generated/component_group.cpp"
+
 #include "../generated/animations.generated.cpp"
 
-#include "engine/generated/component_group.cpp"
 #include "render_pipe.cpp"

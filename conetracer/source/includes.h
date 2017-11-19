@@ -20,9 +20,6 @@
 #include "OpenCL/opencl.h"
 #endif
 
-#define GLSL(src) "#version 410\n" #src
-typedef unsigned GLindex;
-
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
@@ -53,7 +50,6 @@ namespace globals {
 
 #include "engine/utils/audio_manager.cpp"
 #include "engine/utils/camera.cpp"
-#include "engine/utils/animation.h"
 
 /////// ASSETS
 #include "engine/generated/component_group.cpp"

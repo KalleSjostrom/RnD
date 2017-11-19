@@ -30,6 +30,8 @@ EXPORT PLUGIN_RELOAD(reload) {
 	reset_arena(application.transient_arena, MB);
 	globals::transient_arena = &application.transient_arena;
 
+	application.components.arena = &application.persistent_arena;
+
 	reload_programs(application.components);
 	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
 	application.components.input.set_input_data(&input);

@@ -1,3 +1,5 @@
+#include "engine/utils/animation.h"
+
 #define ANIM(name) &animation::name::data
 
 static f32 frames_per_second = 30.0f;

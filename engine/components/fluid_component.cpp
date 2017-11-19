@@ -210,20 +210,24 @@ struct FluidComponent {
 	Fluid instances[8];
 	cid count;
 
-	cid add() {
+	cid add(MemoryArena &arena) {
 		ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
 		cid id = count++;
 		Fluid &instance = instances[id];
 		Renderable &renderable = instance.renderable;
 
 		renderable.pose = identity();
+		renderable.mesh_count = 1;
+		renderable.meshes = PUSH_STRUCTS(arena, renderable.mesh_count, Mesh);
 
-		renderable.index_count = PARTICLE_COUNT;
+		Mesh &mesh = renderable.meshes[0];
+
+		mesh.index_count = PARTICLE_COUNT;
 		renderable.datatype = RenderableDataType_Arrays;
 		renderable.draw_mode = GL_POINTS;
 
-		glGenVertexArrays(1, &renderable.vertex_array_object);
-		glBindVertexArray(renderable.vertex_array_object);
+		glGenVertexArrays(1, &mesh.vertex_array_object);
+		glBindVertexArray(mesh.vertex_array_object);
 
 		instance.positions = gen_buffer(gen_random_pos);
 		instance.velocities = gen_buffer(zero);

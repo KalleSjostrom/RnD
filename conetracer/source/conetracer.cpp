@@ -38,8 +38,10 @@ EXPORT PLUGIN_RELOAD(reload) {
 	reset_arena(application.transient_arena, MB);
 	globals::transient_arena = &application.transient_arena;
 
+	application.components.arena = &application.persistent_arena;
+
 	reload_programs(application.components);
-	setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
+	setup_render_pipe(application.persistent_arena, application.engine, application.render_pipe, application.components, screen_width, screen_height);
 	application.components.input.set_input_data(&input);
 
 	Level level = make_level();
@@ -62,25 +64,11 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 #define DATA_FOLDER "../../conetracer/out/data/"
 
-#pragma pack()
-struct Face {
-	v3 vertices[3];
-};
-
-
 ModelCC load_model(MemoryArena &arena, const char *path) {
-	ObjData obj_data = read_obj(arena, path);
-
+	MeshDataArray mesh_data_array = read_obj(arena, path);
 	ModelCC model_cc = {};
-
-	model_cc.indices = (GLindex*) obj_data.indices;
-	model_cc.index_count = (i32)obj_data.index_count;
-
-	model_cc.vertex.data = obj_data.vertices;
-	model_cc.vertex.count = (i32)obj_data.vertex_count;
-
-	model_cc.normal.data = obj_data.normals;
-	model_cc.normal.count = (i32)obj_data.normal_count;
+	model_cc.mesh_data = mesh_data_array.meshes;
+	model_cc.mesh_count = mesh_data_array.count;
 
 	model_cc.buffer_type = GL_STATIC_DRAW;
 	model_cc.draw_mode = GL_TRIANGLES;
@@ -106,6 +94,8 @@ EXPORT PLUGIN_UPDATE(update) {
 		setup_arena(application.transient_arena, MB);
 		globals::transient_arena = &application.transient_arena;
 
+		application.components.arena = &application.persistent_arena;
+
 		application.engine = &engine;
 		application.random = {};
 		random_init(application.random, rdtsc(), 54u);
@@ -113,11 +103,9 @@ EXPORT PLUGIN_UPDATE(update) {
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LESS);
 		// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
-		// glEnable(GL_PROGRAM_POINT_SIZE);
-		// glPointSize(12);
 
 		setup_programs(application.components);
-		setup_render_pipe(application.engine, application.render_pipe, application.components, screen_width, screen_height);
+		setup_render_pipe(application.persistent_arena, application.engine, application.render_pipe, application.components, screen_width, screen_height);
 		application.components.input.set_input_data(&input);
 
 		Level level = make_level();
@@ -132,85 +120,13 @@ EXPORT PLUGIN_UPDATE(update) {
 			model__set_scale(application.components, entity, data.size);
 		}
 
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"buddha.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"bunny.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(0, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"cornell.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"cube.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
 		{
 			Context c = {};
-			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"dragon.cobj");
+			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sponza.cobj");
 			c.model = &model_cc;
 			Entity &entity = application.entities[application.entity_count++];
-			spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
+			spawn_entity(application.components, entity, EntityType_Model, c, V3(0, 0, 0));
 		}
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"quad.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"quadn.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sphere.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"susanne.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
-
-		// {
-		// 	Context c = {};
-		// 	ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"teapot.cobj");
-		// 	c.model = &model_cc;
-		// 	Entity &entity = application.entities[application.entity_count++];
-		// 	spawn_entity(application.components, entity, EntityType_Model, c, V3(8, 0, 0));
-		// }
 
 		// Audio
 		//	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
@@ -233,7 +149,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			m.y = 1;
 		}
 
-		float camera_speed = 16.0f;
+		float camera_speed = 64.0f;
 		float camera_rotation_speed = 0.5f;
 
 		if (IS_HELD(input, InputKey_Shift)) {

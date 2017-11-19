@@ -251,7 +251,7 @@ namespace parser {
 		}
 	}
 
-	float parse_number(Tokenizer *tok, int sign, int integer, bool do_fraction, bool do_sientific = false) {
+	float parse_number(Tokenizer *tok, int sign, int integer, bool do_fraction) {
 		if (do_fraction) {
 			int divisor = 1;
 			int fraction = 0;
@@ -284,9 +284,6 @@ namespace parser {
 		} else if (tok->at[0] == '.') {
 			tok->at++;
 			return parse_number(tok, sign, integer, true);
-		} else if (tok->at[0] == 'e') {
-			tok->at++;
-			return parse_number(tok, sign, integer, false, true);
 		} else {
 			while (is_numeric(tok->at[0])) {
 				char c = tok->at[0];
@@ -502,14 +499,6 @@ namespace parser {
 		}
 	}
 
-	bool ends_in(Token &token, char end) {
-		for (i32 i = token.length-1; ; i--) {
-			if (token.string[i] != end && !is_whitespace(token.string[i]))
-				return false;
-		}
-		return false;
-	}
-
 	Token all_until(Tokenizer *tok, char end) {
 		consume_whitespace(tok);
 
@@ -574,8 +563,8 @@ namespace parser {
 
 #define PARSER_ASSERT(arg, format, ...) { \
 	if (!(arg)) { \
-		char buf[1024]; \
-		sprintf(buf, (format), ##__VA_ARGS__); \
+		static char buf[1024]; \
+		snprintf(buf, ARRAY_COUNT(buf), (format), ##__VA_ARGS__); \
 		int row, column; \
 		parser::get_current_position(*parser::global_last_parser_context, &row, &column); \
 		fprintf(stderr, "%s(%d) : error : %s\n", parser::global_last_parser_context->filepath, row, buf); \
@@ -585,8 +574,8 @@ namespace parser {
 }
 #define PARSER_ERROR(arg, format, ...) { \
 	if (!(arg)) { \
-		char buf[1024]; \
-		sprintf(buf, (format), __VA_ARGS__); \
+		static char buf[1024]; \
+		snprintf(buf, ARRAY_COUNT(buf), (format), __VA_ARGS__); \
 		char filepath_buffer[1024]; \
 		GetFullPathName(parser::global_last_parser_context->filepath, 1024, filepath_buffer, 0); \
 		int row, column; \

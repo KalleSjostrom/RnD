@@ -90,7 +90,7 @@ void alloc_image(MemoryArena &arena, RenderPipe &r) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex, 0);
 }
 
-void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+void setup_render_pipe(MemoryArena &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
 		Context c = {};
 		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen, c);

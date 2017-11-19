@@ -1,5 +1,8 @@
 typedef u16 cid;
 
+#define GLSL(src) "#version 410\n" #src
+typedef u32 GLindex;
+
 #include "engine/components/input_component.cpp"
 #include "engine/components/animation_component.cpp"
 #include "engine/components/model_component.cpp"
@@ -28,6 +31,7 @@ struct ComponentGroup {
 	MaterialComponent material;
 
 	Renderer renderer;
+	MemoryArena *arena;
 };
 
 struct Context {
@@ -185,18 +189,22 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			// Mover
 			entity.mover_id = components.mover.add(position);
 
-			ModelCC model_cc = {};
-			model_cc.vertex.data = vertex_buffer_data;
-			model_cc.vertex.count = 4;
+			MeshData md = {};
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			model_cc.indices = (GLindex*) quad_vertex_indices;
-			model_cc.index_count = ARRAY_COUNT(quad_vertex_indices);
+			md.indices = (GLindex*) quad_vertex_indices;
+			md.index_count = ARRAY_COUNT(quad_vertex_indices);
+
+			ModelCC model_cc = {};
+			model_cc.mesh_data = &md;
+			model_cc.mesh_count = 1;
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(position, &model_cc);
+			entity.model_id = components.model.add(*components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 
 			// Actor
@@ -208,18 +216,22 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 0.0f, 0.0f, 0.0f },
 			};
 
-			ModelCC model_cc = {};
-			model_cc.vertex.data = vertex_buffer_data;
-			model_cc.vertex.count = 1;
+			MeshData md = {};
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			model_cc.indices = (GLindex*) quad_vertex_indices;
-			model_cc.index_count = ARRAY_COUNT(quad_vertex_indices);
+			md.indices = (GLindex*) quad_vertex_indices;
+			md.index_count = 1;
+
+			ModelCC model_cc = {};
+			model_cc.mesh_data = &md;
+			model_cc.mesh_count = 1;
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_POINTS;
 
 			// Model
-			entity.model_id = components.model.add(position, &model_cc);
+			entity.model_id = components.model.add(*components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_sphere, &components.model.instances[entity.model_id].renderable);
 
 			// Material
@@ -243,18 +255,22 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 1.0f, 1.0f, 0.0f },
 			};
 
-			ModelCC model_cc = {};
-			model_cc.vertex.data = vertex_buffer_data;
-			model_cc.vertex.count = 4;
+			MeshData md = {};
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			model_cc.indices = (GLindex*) quad_vertex_indices;
-			model_cc.index_count = ARRAY_COUNT(quad_vertex_indices);
+			md.indices = (GLindex*) quad_vertex_indices;
+			md.index_count = ARRAY_COUNT(quad_vertex_indices);
+
+			ModelCC model_cc = {};
+			model_cc.mesh_data = &md;
+			model_cc.mesh_count = 1;
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(position, &model_cc);
+			entity.model_id = components.model.add(*components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 
 			// Actor
@@ -269,25 +285,29 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{  1.0f,  1.0f, 0.0f },
 			};
 
-			ModelCC model_cc = {};
-			model_cc.vertex.data = vertex_buffer_data;
-			model_cc.vertex.count = 4;
+			MeshData md = {};
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			model_cc.indices = (GLindex*) quad_vertex_indices;
-			model_cc.index_count = ARRAY_COUNT(quad_vertex_indices);
+			md.indices = (GLindex*) quad_vertex_indices;
+			md.index_count = ARRAY_COUNT(quad_vertex_indices);
+
+			ModelCC model_cc = {};
+			model_cc.mesh_data = &md;
+			model_cc.mesh_count = 1;
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(position, &model_cc);
+			entity.model_id = components.model.add(*components.arena, position, &model_cc);
 		} break;
 
 		case EntityType_Model: {
 			ASSERT(context.model, "Cannot create a model without creation context");
 
 			// Model
-			entity.model_id = components.model.add(position, context.model);
+			entity.model_id = components.model.add(*components.arena, position, context.model);
 			add_to_program(components.renderer, context.model->program_type, &components.model.instances[entity.model_id].renderable);
 		} break;
 		case EntityType_Ruler: {
@@ -296,20 +316,22 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 0.0f, 2.0f, 0.0f },
 			};
 
-			static short vertex_indices[] = { 0, 1 };
+			MeshData md = {};
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
+
+			md.indices = (GLindex*) quad_vertex_indices;
+			md.index_count = 2;
 
 			ModelCC model_cc = {};
-			model_cc.vertex.data = vertex_buffer_data;
-			model_cc.vertex.count = 4;
-
-			model_cc.indices = (GLindex*) vertex_indices;
-			model_cc.index_count = ARRAY_COUNT(vertex_indices);
+			model_cc.mesh_data = &md;
+			model_cc.mesh_count = 1;
 
 			model_cc.buffer_type = GL_DYNAMIC_DRAW;
 			model_cc.draw_mode = GL_LINE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(position, &model_cc);
+			entity.model_id = components.model.add(*components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 		} break;
 		case EntityType_Plane: {
@@ -332,7 +354,7 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			// entity.actor_id = components.actor.add(ShapeType_AABox, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Fluid: {
-			entity.fluid_id = components.fluid.add();
+			entity.fluid_id = components.fluid.add(*components.arena);
 			add_to_program(components.renderer, ProgramType_fluid, &components.fluid.instances[entity.fluid_id].renderable);
 		} break;
 		default: {
