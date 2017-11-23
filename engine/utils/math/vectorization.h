@@ -190,7 +190,7 @@ p0 = _mm_shuffle_ps(a, a, 0x93) //10010011=0x93
 // p0 = a2, a1, a0, a3
 // whenever AVX is enabled, use _mm_permute_ps(latency~1, throughput~1)  instead of _mm_shuffle_ps(latency~1~6, throughput~1)
 p0 = _mm_permute_ps(a, 0x93)*/
-
+#if 0
 struct wf32 {
 	__m128 v;
 	wf32(__m128 _v) { v = _v; }
@@ -354,4 +354,4 @@ FORCE_INLINE wv3 cross(wv3 a, wv3 b) {
 // FORCE_INLINE wv3 lerp(wv3 a, wv3 b, wf32 t) {
 // 	return wV3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 // }
-
+#endif

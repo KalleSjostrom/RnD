@@ -47,7 +47,10 @@ struct v3i {
 typedef unsigned GLindex;
 
 struct HashEntry {
-	u64 key;
+	u64 hash;
+	u32 vi;
+	u32 ci;
+	u32 ni;
 	GLindex value;
 };
 
@@ -100,17 +103,19 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	parser::Token t_mtllib = TOKENIZE("mtllib");
 
 	bool parsing = true;
-	bool test = false;
+	int mode = 0;
 	while (parsing) {
 		parser::Token token = parser::next_token(&tok);
 		switch (token.type) {
 			case TokenType_Identifier: {
 				// v - vertices
 				if (parser::is_equal(token, t_v)) {
+					mode = 1;
 					array_push(vertices, V3(next_number(tok), next_number(tok), next_number(tok)));
 				}
 				// vt - texture coordinates
 				else if (parser::is_equal(token, t_vt)) {
+					mode = 2;
 					array_push(coords, V2_f32(next_number(tok), next_number(tok)));
 
 					// OPTIMIZE(kalle): Reuse the peeked token
@@ -121,10 +126,18 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 				}
 				// vn - vertex normals
 				else if (parser::is_equal(token, t_vn)) {
+					mode = 3;
 					array_push(normals, V3(next_number(tok), next_number(tok), next_number(tok)));
 				}
 				// f - faces
 				else if (parser::is_equal(token, t_f)) {
+					if (mode != 4) {
+						array_new_entry(groups);
+						Group &group = array_last(groups);
+						group.face_vertices = 0;
+						array_init(group.face_vertices, 1024 * 32);
+					}
+					mode = 4;
 					int face_done = 0;
 					int vi = 0;
 					while (!face_done && tok.at[0] != '\0') {
@@ -139,14 +152,6 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 						int vertex_index = 0;
 						int coord_index = 0;
 						int normal_index = 0;
-
-						if (!test) {
-							test = true;
-							array_new_entry(groups);
-							Group &group = array_last(groups);
-							group.face_vertices = 0;
-							array_init(group.face_vertices, 1024*32);
-						}
 
 						Group &group = array_last(groups);
 						for (int j = 0; j < 3; ++j) {
@@ -175,25 +180,28 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 							}
 						}
 
-						v3i face_vertex = { vertex_index, coord_index, normal_index };
-						array_push(group.face_vertices, face_vertex); // v0
-
 						vi++;
 						if (vi > 3) {
 							int current_count = array_count(group.face_vertices);
-							array_push(group.face_vertices, group.face_vertices[current_count - vi]); // v0
+							array_push(group.face_vertices, group.face_vertices[current_count - vi + 1]); // v0
 							array_push(group.face_vertices, group.face_vertices[current_count - 1]); // v(n-1)
 						}
+
+						v3i face_vertex = { vertex_index, coord_index, normal_index };
+						array_push(group.face_vertices, face_vertex); // v0
 					}
 				}
 				// g - group
 				else if (parser::is_equal(token, t_g)) {
+				#if 0
+					mode = 4;
 					token = parser::next_token(&tok);
 
 					array_new_entry(groups);
 					Group &group = array_last(groups);
 					group.face_vertices = 0;
 					array_init(group.face_vertices, 1024*32);
+				#endif
 				}
 				// s - smoothing groups - "Smooth shading across polygons is enabled by smoothing groups."
 				else if (parser::is_equal(token, t_s)) {
@@ -238,15 +246,15 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	array_init(out_normals, normal_count);
 
 	HashEntry *vertex_cache = 0;
-	unsigned hashmap_count = (unsigned)next_power_of_2(sum * 2);
-	unsigned hashmap_mask = hashmap_count-1;
-	u64 invalid_key = ~0u;
+	u64 hashmap_count = (u64)next_power_of_2(sum * 4);
+	u64 hashmap_mask = hashmap_count-1;
+	u64 invalid_hash = ~0u;
 	GLindex element_index = 0;
 
 	hashmap_mask = hashmap_count - 1;
-	vertex_cache = PUSH_STRUCTS(arena, hashmap_count, HashEntry);
+	vertex_cache = PUSH_STRUCTS(arena, hashmap_count, HashEntry, true);
 	for (unsigned i = 0; i < hashmap_count; ++i) {
-		vertex_cache[i].key = invalid_key;
+		vertex_cache[i].hash = invalid_hash;
 	}
 
 	for (int i = 0; i < array_count(groups); ++i) {
@@ -255,50 +263,55 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 		for (int j = 0; j < array_count(group.face_vertices); ++j) {
 			v3i &fv = group.face_vertices[j];
 
-			u64 vi64 = 0;
-			u64 ci64 = 0;
-			u64 ni64 = 0;
+			u32 vi = 0;
+			u32 ci = 0;
+			u32 ni = 0;
 
 			if (fv.vertex_index != 0) {
-				vi64 = (u64)(fv.vertex_index < 0 ? vertex_count + fv.vertex_index : fv.vertex_index - 1);
+				vi = (u32)(fv.vertex_index < 0 ? vertex_count + fv.vertex_index : fv.vertex_index - 1);
 			}
 			if (fv.coord_index != 0) {
-				ci64 = (u64)(fv.coord_index < 0 ? coord_count + fv.coord_index : fv.coord_index - 1);
+				ci = (u32)(fv.coord_index < 0 ? coord_count + fv.coord_index : fv.coord_index - 1);
 			}
 			if (fv.normal_index != 0) {
-				ni64 = (u64)(fv.normal_index < 0 ? normal_count + fv.normal_index : fv.normal_index - 1);
+				ni = (u32)(fv.normal_index < 0 ? normal_count + fv.normal_index : fv.normal_index - 1);
 			}
 
-			static u64 channel_max = 1<<20;
-			u64 key = vi64 + ci64 * channel_max + ni64 * channel_max * 2;
+			static int xprime = 492876863; /* arbitrary large prime */
+			static int yprime = 633910099; /* arbitrary large prime */
+			static int zprime = 805306457; /* arbitrary large prime */
+			u64 hash = ((vi * xprime) ^ (ci * yprime) ^ (ni * zprime)) & hashmap_mask;
 
 			bool found = false;
 			for (u64 offset = 0; offset < hashmap_count; offset++) {
-				u64 index = (key + offset) & hashmap_mask;
+				u64 index = (hash + offset) & hashmap_mask;
 
 				HashEntry *entry = vertex_cache + index;
-				if (entry->key == invalid_key) {
+				if (entry->hash == invalid_hash) {
 					// New entry!
-					entry->key = key;
+					entry->hash = hash;
+					entry->vi = vi; entry->ci = ci; entry->ni = ni;
 
 					if (fv.vertex_index != 0) {
-						array_push(out_vertices, vertices[vi64]);
+						array_push(out_vertices, vertices[vi]);
 					}
 					if (fv.coord_index != 0) {
-						array_push(out_coords, coords[ci64]);
+						array_push(out_coords, coords[ci]);
 					}
 					if (fv.normal_index != 0) {
-						array_push(out_normals, normals[ni64]);
+						array_push(out_normals, normals[ni]);
 					}
 
 					entry->value = element_index;
 					array_push(group.indices, element_index++);
 					found = true;
 					break;
-				} else if (entry->key == key) {
-					array_push(group.indices, entry->value);
-					found = true;
-					break;
+				} else if (entry->hash == hash) {
+					if (entry->vi == vi && entry->ci == ci && entry->ni == ni) {
+						array_push(group.indices, entry->value);
+						found = true;
+						break;
+					}
 				}
 			}
 			ASSERT(found, "Hash full!");
@@ -319,9 +332,9 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	fwrite(&out_normal_count, sizeof(int), 1, output);
 	fwrite(&group_count, sizeof(int), 1, output);
 
-	fwrite(out_vertices, sizeof(GLindex), (size_t)out_vertex_count, output);
-	fwrite(out_coords, sizeof(GLindex), (size_t)out_coord_count, output);
-	fwrite(out_normals, sizeof(GLindex), (size_t)out_normal_count, output);
+	fwrite(out_vertices, sizeof(v3), (size_t)out_vertex_count, output);
+	fwrite(out_coords, sizeof(v2), (size_t)out_coord_count, output);
+	fwrite(out_normals, sizeof(v3), (size_t)out_normal_count, output);
 
 	for (int i = 0; i < group_count; ++i) {
 		Group &group = groups[i];

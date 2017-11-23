@@ -37,3 +37,6 @@ __reload_marker
 *.ppm
 *.sublime-workspace
 *.dSYM/
+*.sln
+*.db
+*.opendb

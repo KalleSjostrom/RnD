@@ -5,24 +5,22 @@ MeshData read_obj(MemoryArena &arena, const char *filepath) {
 
 	MeshData mesh = {};
 
-	int vertex_count;
-	int coord_count;
-	int normal_count;
-	int group_count;
+	fread(&mesh.vertex_count, sizeof(int), 1, objfile);
+	fread(&mesh.coord_count, sizeof(int), 1, objfile);
+	fread(&mesh.normal_count, sizeof(int), 1, objfile);
+	fread(&mesh.group_count, sizeof(int), 1, objfile);
 
-	fread(&vertex_count, sizeof(int), 1, objfile);
-	fread(&coord_count, sizeof(int), 1, objfile);
-	fread(&normal_count, sizeof(int), 1, objfile);
-	fread(&group_count, sizeof(int), 1, objfile);
+	mesh.vertices = PUSH_STRUCTS(arena, mesh.vertex_count, v3);
+	mesh.coords = PUSH_STRUCTS(arena, mesh.coord_count, v2);
+	mesh.normals = PUSH_STRUCTS(arena, mesh.normal_count, v3);
+	mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, GroupData);
 
-	mesh.vertices = PUSH_STRUCTS(arena, vertex_count, v3);
-	mesh.coords = PUSH_STRUCTS(arena, coord_count, v2);
-	mesh.normals = PUSH_STRUCTS(arena, normal_count, v3);
+	fread(mesh.vertices, sizeof(v3), mesh.vertex_count, objfile);
+	fread(mesh.coords, sizeof(v2), mesh.coord_count, objfile);
+	fread(mesh.normals, sizeof(v3), mesh.normal_count, objfile);
 
-	GroupData *groups = PUSH_STRUCTS(arena, group_count, GroupData);
-
-	for (int i = 0; i < group_count; ++i) {
-		GroupData &group = groups[i];
+	for (int i = 0; i < mesh.group_count; ++i) {
+		GroupData &group = mesh.groups[i];
 		fread(&group.index_count, sizeof(int), 1, objfile);
 
 		group.indices = PUSH_STRUCTS(arena, group.index_count, GLindex);

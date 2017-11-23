@@ -121,7 +121,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		{
 			Context c = {};
-			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"cube.cobj");
+			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sponza.cobj");
 			c.model = &model_cc;
 			Entity &entity = application.entities[application.entity_count++];
 			spawn_entity(application.components, entity, EntityType_Model, c, V3(0, 0, 0));
