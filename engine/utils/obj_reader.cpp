@@ -1,3 +1,11 @@
+#include "engine/utils/string.h"
+
+void read_string(MemoryArena &arena, String string, FILE *file) {
+	fread(&string.length, sizeof(i32), 1, file);
+	string.text = PUSH_STRING(arena, string.length);
+	fread(&string.text, sizeof(char), string.length, file);
+}
+
 MeshData read_obj(MemoryArena &arena, const char *filepath) {
 	FILE *objfile;
 	fopen_s(&objfile, filepath, "rb");
@@ -25,6 +33,25 @@ MeshData read_obj(MemoryArena &arena, const char *filepath) {
 
 		group.indices = PUSH_STRUCTS(arena, group.index_count, GLindex);
 		fread(group.indices, sizeof(GLindex), (size_t)group.index_count, objfile);
+	}
+
+	// TODO(kalle): Move the materials elsewhere
+	fread(&mesh.material_count, sizeof(int), 1, objfile);
+
+	mesh.materials = PUSH_STRUCTS(arena, mesh.material_count, MaterialData);
+	for (i32 i = 0; i < mesh.material_count; ++i) {
+		MaterialData &m = mesh.materials[i];
+
+		fread(&m.Ns, sizeof(float), 4, objfile); // Ns to Tf
+		fread(&m.illum, sizeof(u32), 1, objfile);
+		fread(&m.Ka, sizeof(u32), 4, objfile); // Ka to Ke
+
+		read_string(arena, m.map_Ka, objfile);
+		read_string(arena, m.map_Kd, objfile);
+		read_string(arena, m.map_Ks, objfile);
+		read_string(arena, m.map_Ke, objfile);
+		read_string(arena, m.map_d, objfile);
+		read_string(arena, m.map_bump, objfile);
 	}
 
 	fclose(objfile);

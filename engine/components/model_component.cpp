@@ -1,6 +1,40 @@
+#include "engine/utils/string.h"
+
 struct GroupData {
 	i32 index_count;
 	GLindex *indices;
+};
+
+enum IlluminationMode {
+	IlluminationMode_ColorOn_AmbientOff = 0, // 0. Color on and Ambient off
+	IlluminationMode_ColorOn_AmbientOn = 1, // 1. Color on and Ambient on
+	IlluminationMode_HighlightOn = 2, // 2. Highlight on
+	IlluminationMode_ReflectionOn_RayTraceOn = 3, // 3. Reflection on and Ray trace on
+	IlluminationMode_Transparency = 4, // 4. Transparency: Glass on, Reflection: Ray trace on
+	// 5. Reflection: Fresnel on and Ray trace on
+	// 6. Transparency: Refraction on, Reflection: Fresnel off and Ray trace on
+	// 7. Transparency: Refraction on, Reflection: Fresnel on and Ray trace on
+	// 8. Reflection on and Ray trace off
+	// 9. Transparency: Glass on, Reflection: Ray trace off
+	// 10. Casts shadows onto invisible surfaces
+};
+
+struct MaterialData {
+	float Ns; // Specular exponent
+	float Ni; // optical_density - Index of refraction
+	float Tr; // Translucent (1 - d)
+	float Tf; // Transmission filter
+	IlluminationMode illum; // Illumination mode
+	v3 Ka; // Ambient color
+	v3 Kd; // Diffuse color
+	v3 Ks; // Specular color
+	v3 Ke; // Emissive color
+	String map_Ka; // Path to ambient texture
+	String map_Kd; // Path to diffuse texture
+	String map_Ks; // Path to specular texture
+	String map_Ke; // Path to emissive texture
+	String map_d; // Path to translucency mask texture
+	String map_bump; // Path to bump map texture
 };
 
 struct MeshData {
@@ -8,11 +42,13 @@ struct MeshData {
 	i32 coord_count;
 	i32 normal_count;
 	i32 group_count;
+	i32 material_count;
 
 	v3 *vertices;
 	v2 *coords;
 	v3 *normals;
 	GroupData *groups;
+	MaterialData *materials;
 };
 
 enum RenderableDataType {

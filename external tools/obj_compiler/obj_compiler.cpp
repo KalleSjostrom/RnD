@@ -19,17 +19,13 @@
 ./external\ tools/obj_compiler/obj_compiler conetracer/assets/sponza.obj conetracer/out/data/sponza.cobj
 */
 
-parser::Tokenizer make_tokenizer(char *text) {
-	parser::Tokenizer tok = { };
-	tok.at = text;
-	return tok;
-}
-
 inline float next_number(parser::Tokenizer &tok) {
 	parser::Token token = parser::next_token(&tok);
 	ASSERT_TOKEN_TYPE(token, TokenType_Number);
 	return token.number;
 }
+
+#include "parse_mtllib.cpp"
 
 #define b2(x)   (   (x) | (   (x) >> 1))
 #define b4(x)   ( b2(x) | ( b2(x) >> 2))
@@ -57,15 +53,32 @@ struct HashEntry {
 struct Group {
 	v3i *face_vertices;
 	GLindex *indices;
+	i32 material_index;
 };
 
-void compile_obj(const char *input_filepath, const char *output_filepath) {
+i32 pick_material(Material *materials, u32 name_id) {
+	ASSERT(materials, "There is no materials to pick from!");
+	for (i32 i = 0; i < array_count(materials); ++i) {
+		if (materials[i].name_id == name_id)
+			return i;
+	}
+	return -1;
+}
+
+void write_string(String string, FILE *file) {
+	fwrite(&string.length, sizeof(i32), 1, file);
+	fwrite(&string.text, sizeof(char), string.length, file);
+}
+
+void compile_obj(const char *input_directory, const char *input_filename, const char *output_directory, const char *output_filename) {
 	MemoryArena arena = {};
 
 	size_t filesize;
-	FILE *file = open_file(input_filepath, &filesize);
+	static char buffer[1024];
+	sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%s", input_directory, input_filename);
+	FILE *file = open_file(buffer, &filesize);
 
-	char *source = (char *)PUSH_SIZE(arena, filesize);
+	char *source = (char *)PUSH_SIZE(arena, filesize + 1);
 	fread(source, filesize, 1, file);
 	source[filesize] = '\0';
 	fclose(file);
@@ -91,7 +104,7 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 
 	parser::Tokenizer tok = parser::make_tokenizer(source, filesize, TokenizerFlags_KeepLineComments);
 	parser::ParserContext pcontext;
-	parser::set_parser_context(pcontext, &tok, (char*)input_filepath);
+	parser::set_parser_context(pcontext, &tok, (char*)buffer);
 
 	parser::Token t_v = TOKENIZE("v");
 	parser::Token t_vt = TOKENIZE("vt");
@@ -101,6 +114,9 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	parser::Token t_s = TOKENIZE("s");
 	parser::Token t_usemtl = TOKENIZE("usemtl");
 	parser::Token t_mtllib = TOKENIZE("mtllib");
+
+	Material *materials = 0;
+	unsigned current_material_index = ~0u;
 
 	bool parsing = true;
 	int mode = 0;
@@ -135,6 +151,7 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 						array_new_entry(groups);
 						Group &group = array_last(groups);
 						group.face_vertices = 0;
+						group.material_index = current_material_index;
 						array_init(group.face_vertices, 1024 * 32);
 					}
 					mode = 4;
@@ -215,12 +232,14 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 				// usemtl - use material
 				else if (parser::is_equal(token, t_usemtl)) {
 					token = parser::next_line(&tok);
-					printf("Using material: %.*s\n", token.length, *token.string);
+					u32 name_id = make_string_id32(token.string);
+					current_material_index = pick_material(materials, name_id);
 				}
 				// mtllib
 				else if (parser::is_equal(token, t_mtllib)) {
-					token = parser::next_token(&tok);
-					printf("Mtl lib: %.*s\n", token.length, *token.string);
+					token = parser::next_line(&tok);
+					sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%.*s", input_directory, token.string.length, *token.string);
+					materials = parse_mtllib(arena, buffer);
 				}
 			} break;
 			case '#': {
@@ -319,8 +338,9 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	}
 
 	FILE *output;
-	fopen_s(&output, output_filepath, "wb");
-	ASSERT(file, "Could not open '%s'", output_filepath);
+	sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%s", output_directory, output_filename);
+	fopen_s(&output, buffer, "wb");
+	ASSERT(file, "Could not open '%s'", buffer);
 
 	int out_vertex_count = (int)array_count(out_vertices);
 	int out_coord_count = (int)array_count(out_coords);
@@ -343,14 +363,31 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 		fwrite(group.indices, sizeof(GLindex), (size_t)index_count, output);
 	}
 
+	int material_count = array_count(materials);
+	fwrite(&material_count, sizeof(int), 1, output);
+	for (i32 i = 0; i < material_count; ++i) {
+		Material &m = materials[i];
+
+		fwrite(&m.Ns, sizeof(float), 4, output); // Ns to Tf
+		fwrite(&m.illum, sizeof(u32), 1, output);
+		fwrite(&m.Ka, sizeof(u32), 4, output); // Ka to Ke
+
+		write_string(m.map_Ka, output);
+		write_string(m.map_Kd, output);
+		write_string(m.map_Ks, output);
+		write_string(m.map_Ke, output);
+		write_string(m.map_d, output);
+		write_string(m.map_bump, output);
+	}
+
 	fclose(output);
 }
 
 int main(int argc, char const *argv[]) {
-	if (argc != 3) {
-		fprintf(stderr, "Needs 2 argument! Got %d\nUsage: ./obj_compiler input_filepath output_filepath\n", argc - 1);
+	if (argc != 5) {
+		fprintf(stderr, "Needs 4 argument! Got %d\nUsage: ./obj_compiler input_directory input_filename output_directory output_filename\n", argc - 1);
 		return -1;
 	}
 
-	compile_obj(argv[1], argv[2]);
+	compile_obj(argv[1], argv[2], argv[3], argv[4]);
 }
