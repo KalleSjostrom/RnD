@@ -46,19 +46,21 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 				Renderable &re = *p.renderables[j];
 				glUniformMatrix4fv(p.model_location, 1, GL_FALSE, (GLfloat*)(re.pose.m));
 
-				// for (i32 k = 0; k < re.mesh_count; ++k) {
-					Mesh &mesh = re.meshes[0];
-					glBindVertexArray(mesh.vertex_array_object);
+				Mesh &mesh = re.mesh;
+				glBindVertexArray(mesh.vertex_array_object);
+
+				for (i32 k = 0; k < mesh.group_count; ++k) {
+					Group &group = mesh.groups[k];
 					switch (re.datatype) {
 						case RenderableDataType_Arrays: {
-							glDrawArrays(re.draw_mode, 0, mesh.index_count);
+							glDrawArrays(re.draw_mode, 0, group.index_count);
 						} break;
 						case RenderableDataType_Elements: {
-							glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.element_array_buffer);
-							glDrawElements(re.draw_mode, mesh.index_count, GL_UNSIGNED_INT, (void*)0);
+							glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, group.element_array_buffer);
+							glDrawElements(re.draw_mode, group.index_count, GL_UNSIGNED_INT, (void*)0);
 						} break;
 					}
-				// }
+				}
 			}
 		}
 	}

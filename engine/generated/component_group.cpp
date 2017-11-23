@@ -189,16 +189,16 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			// Mover
 			entity.mover_id = components.mover.add(position);
 
-			MeshData md = {};
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			md.indices = (GLindex*) quad_vertex_indices;
-			md.index_count = ARRAY_COUNT(quad_vertex_indices);
-
-			ModelCC model_cc = {};
-			model_cc.mesh_data = &md;
-			model_cc.mesh_count = 1;
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
@@ -216,16 +216,16 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 0.0f, 0.0f, 0.0f },
 			};
 
-			MeshData md = {};
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			md.indices = (GLindex*) quad_vertex_indices;
-			md.index_count = 1;
-
-			ModelCC model_cc = {};
-			model_cc.mesh_data = &md;
-			model_cc.mesh_count = 1;
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = 1;
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_POINTS;
@@ -255,16 +255,16 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 1.0f, 1.0f, 0.0f },
 			};
 
-			MeshData md = {};
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			md.indices = (GLindex*) quad_vertex_indices;
-			md.index_count = ARRAY_COUNT(quad_vertex_indices);
-
-			ModelCC model_cc = {};
-			model_cc.mesh_data = &md;
-			model_cc.mesh_count = 1;
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
@@ -285,16 +285,16 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{  1.0f,  1.0f, 0.0f },
 			};
 
-			MeshData md = {};
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			md.indices = (GLindex*) quad_vertex_indices;
-			md.index_count = ARRAY_COUNT(quad_vertex_indices);
-
-			ModelCC model_cc = {};
-			model_cc.mesh_data = &md;
-			model_cc.mesh_count = 1;
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
 			model_cc.buffer_type = GL_STATIC_DRAW;
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
@@ -316,16 +316,16 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 				{ 0.0f, 2.0f, 0.0f },
 			};
 
-			MeshData md = {};
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
-			md.indices = (GLindex*) quad_vertex_indices;
-			md.index_count = 2;
-
-			ModelCC model_cc = {};
-			model_cc.mesh_data = &md;
-			model_cc.mesh_count = 1;
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = 2;
 
 			model_cc.buffer_type = GL_DYNAMIC_DRAW;
 			model_cc.draw_mode = GL_LINE_STRIP;

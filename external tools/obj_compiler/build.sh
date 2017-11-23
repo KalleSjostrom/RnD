@@ -5,4 +5,4 @@ source ../../common.sh
 # frameworks="-framework OpenGL -framework OpenCL"
 
 echo Building obj_compiler
-clang $release $common -I../../ obj_compiler.cpp -o obj_compiler $flags
+clang $debug $common -I../../ obj_compiler.cpp -o obj_compiler $flags

@@ -1,42 +1,35 @@
-struct MeshDataArray {
-	MeshData *meshes;
-	i32 count;
-};
-
-MeshDataArray read_obj(MemoryArena &arena, const char *filepath) {
+MeshData read_obj(MemoryArena &arena, const char *filepath) {
 	FILE *objfile;
 	fopen_s(&objfile, filepath, "rb");
 	ASSERT(objfile, "Could not open '%s'", filepath);
 
-	int mesh_count;
-	fread(&mesh_count, sizeof(int), 1, objfile);
+	MeshData mesh = {};
 
-	MeshData *meshes = PUSH_STRUCTS(arena, mesh_count, MeshData);
+	int vertex_count;
+	int coord_count;
+	int normal_count;
+	int group_count;
 
-	for (int i = 0; i < mesh_count; ++i) {
-		MeshData &o = meshes[i];
+	fread(&vertex_count, sizeof(int), 1, objfile);
+	fread(&coord_count, sizeof(int), 1, objfile);
+	fread(&normal_count, sizeof(int), 1, objfile);
+	fread(&group_count, sizeof(int), 1, objfile);
 
-		fread(&o.vertex_count, sizeof(int), 1, objfile);
-		fread(&o.coord_count, sizeof(int), 1, objfile);
-		fread(&o.normal_count, sizeof(int), 1, objfile);
-		fread(&o.index_count, sizeof(int), 1, objfile);
+	mesh.vertices = PUSH_STRUCTS(arena, vertex_count, v3);
+	mesh.coords = PUSH_STRUCTS(arena, coord_count, v2);
+	mesh.normals = PUSH_STRUCTS(arena, normal_count, v3);
 
-		o.vertices = PUSH_STRUCTS(arena, o.vertex_count, v3);
-		o.coords = PUSH_STRUCTS(arena, o.coord_count, v2);
-		o.normals = PUSH_STRUCTS(arena, o.normal_count, v3);
-		o.indices = PUSH_STRUCTS(arena, o.index_count, GLindex);
+	GroupData *groups = PUSH_STRUCTS(arena, group_count, GroupData);
 
-		fread(o.vertices, sizeof(v3), o.vertex_count, objfile);
-		fread(o.coords, sizeof(v2), o.coord_count, objfile);
-		fread(o.normals, sizeof(v3), o.normal_count, objfile);
-		fread(o.indices, sizeof(GLindex), o.index_count, objfile);
+	for (int i = 0; i < group_count; ++i) {
+		GroupData &group = groups[i];
+		fread(&group.index_count, sizeof(int), 1, objfile);
+
+		group.indices = PUSH_STRUCTS(arena, group.index_count, GLindex);
+		fread(group.indices, sizeof(GLindex), (size_t)group.index_count, objfile);
 	}
 
 	fclose(objfile);
 
-	MeshDataArray data = {};
-	data.meshes = meshes;
-	data.count = mesh_count;
-
-	return data;
+	return mesh;
 }

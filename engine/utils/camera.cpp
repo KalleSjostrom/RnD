@@ -18,7 +18,7 @@ void setup_camera(Camera &camera, v3 position, float aspect_ratio) {
 	forward_axis(camera.pose) = V3(0.0f, 0.0f, -1.0f);
 	set_position(camera, position);
 
-	camera.projection = perspective_fov(60, aspect_ratio, 0.1f, 1000.0f);
+	camera.projection = perspective_fov(60, aspect_ratio, 0.1f, 10000.0f);
 }
 
 void begin_frame(Camera &camera, GLint projection_location, GLint view_location) {

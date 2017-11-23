@@ -1,13 +1,18 @@
+struct GroupData {
+	i32 index_count;
+	GLindex *indices;
+};
+
 struct MeshData {
 	i32 vertex_count;
 	i32 coord_count;
 	i32 normal_count;
-	i32 index_count;
+	i32 group_count;
 
 	v3 *vertices;
 	v2 *coords;
 	v3 *normals;
-	GLindex *indices;
+	GroupData *groups;
 };
 
 enum RenderableDataType {
@@ -16,17 +21,20 @@ enum RenderableDataType {
 };
 
 struct Channel {
-	// GLuint vertex_array_object;
 	GLuint vertex_buffer_object;
 };
 
-struct Mesh {
+struct Group {
 	i32 index_count;
 	GLuint element_array_buffer;
+};
 
+struct Mesh {
+	Group *groups;
+	i32 group_count;
+
+	// Channels - vertex array
 	GLuint vertex_array_object;
-
-	// Channel
 	Channel vertex;
 	Channel normal;
 	Channel tex_coord;
@@ -37,8 +45,7 @@ struct Renderable {
 	RenderableDataType datatype;
 	GLenum draw_mode; // e.g. GL_TRIANGLE_STRIP;
 
-	Mesh *meshes;
-	i32 mesh_count;
+	Mesh mesh;
 };
 
 struct Model {
@@ -51,8 +58,7 @@ struct Model {
 };
 
 struct ModelCC {
-	MeshData *mesh_data;
-	i32 mesh_count;
+	MeshData mesh_data;
 
 	GLenum buffer_type; //  = GL_STATIC_DRAW
 	GLenum draw_mode; // = GL_TRIANGLE_STRIP
@@ -77,64 +83,67 @@ struct ModelComponent {
 		renderable.draw_mode = cc->draw_mode;
 		renderable.datatype = RenderableDataType_Elements;
 
-		renderable.mesh_count = cc->mesh_count;
-		renderable.meshes = PUSH_STRUCTS(arena, renderable.mesh_count, Mesh);
+		MeshData &mesh_data = cc->mesh_data;
+		Mesh &mesh = renderable.mesh;
 
-		for (int i = 0; i < renderable.mesh_count; ++i) {
-			MeshData &mesh_data = cc->mesh_data[i];
-			Mesh &mesh = renderable.meshes[i];
+		mesh.group_count = mesh_data.group_count;
+		mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, Group);
 
-			mesh.index_count = mesh_data.index_count;
+		for (i32 group_index = 0; group_index < mesh.group_count; ++group_index) {
+			GroupData &group_data = mesh_data.groups[group_index];
+			Group &group = mesh.groups[group_index];
 
-			glGenBuffers(1, &mesh.element_array_buffer);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.element_array_buffer);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (u32)mesh.index_count * sizeof(GLindex), mesh_data.indices, GL_STATIC_DRAW); // Indices are not assumed to change, only the vertices
+			group.index_count = group_data.index_count;
 
-			glGenVertexArrays(1, &mesh.vertex_array_object);
+			glGenBuffers(1, &group.element_array_buffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, group.element_array_buffer);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (u32)group.index_count * sizeof(GLindex), group_data.indices, GL_STATIC_DRAW); // Indices are not assumed to change, only the vertices
+		}
 
-			{ // Vertex channel
-				Channel &c = mesh.vertex;
-				if (mesh_data.vertex_count) {
-					glGenBuffers(1, &c.vertex_buffer_object);
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.vertex_count * sizeof(v3), mesh_data.vertices, cc->buffer_type);
+		glGenVertexArrays(1, &mesh.vertex_array_object);
 
-					glBindVertexArray(mesh.vertex_array_object);
+		{ // Vertex channel
+			Channel &c = mesh.vertex;
+			if (mesh_data.vertex_count) {
+				glGenBuffers(1, &c.vertex_buffer_object);
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.vertex_count * sizeof(v3), mesh_data.vertices, cc->buffer_type);
 
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-					glEnableVertexAttribArray(0);
-				}
+				glBindVertexArray(mesh.vertex_array_object);
+
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(0);
 			}
+		}
 
-			{ // Normal channel
-				Channel &c = mesh.normal;
-				if (mesh_data.normal_count) {
-					glGenBuffers(1, &c.vertex_buffer_object);
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.normal_count * sizeof(v3), mesh_data.normals, cc->buffer_type);
+		{ // Normal channel
+			Channel &c = mesh.normal;
+			if (mesh_data.normal_count) {
+				glGenBuffers(1, &c.vertex_buffer_object);
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.normal_count * sizeof(v3), mesh_data.normals, cc->buffer_type);
 
-					glBindVertexArray(mesh.vertex_array_object);
+				glBindVertexArray(mesh.vertex_array_object);
 
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-					glEnableVertexAttribArray(1);
-				}
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(1);
 			}
+		}
 
-			{ // Tex coord channel
-				Channel &c = mesh.tex_coord;
-				if (mesh_data.coord_count) {
-					glGenBuffers(1, &c.vertex_buffer_object);
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.coord_count * sizeof(v2), mesh_data.coords, cc->buffer_type);
+		{ // Tex coord channel
+			Channel &c = mesh.tex_coord;
+			if (mesh_data.coord_count) {
+				glGenBuffers(1, &c.vertex_buffer_object);
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.coord_count * sizeof(v2), mesh_data.coords, cc->buffer_type);
 
-					glBindVertexArray(mesh.vertex_array_object);
+				glBindVertexArray(mesh.vertex_array_object);
 
-					glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
-					glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-					glEnableVertexAttribArray(2);
-				}
+				glBindBuffer(GL_ARRAY_BUFFER, c.vertex_buffer_object);
+				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(2);
 			}
 		}
 
@@ -267,11 +276,12 @@ struct ModelComponent {
 
 		glUniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)(re.pose.m));
 
-		for (i32 i = 0; i < re.mesh_count; ++i) {
-			Mesh &mesh = re.meshes[i];
-			glBindVertexArray(mesh.vertex_array_object);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.element_array_buffer);
-			glDrawElements(re.draw_mode, mesh.index_count, GL_UNSIGNED_INT, (void*)0);
+		glBindVertexArray(re.mesh.vertex_array_object);
+
+		for (i32 i = 0; i < re.mesh.group_count; ++i) {
+			Group &group = re.mesh.groups[i];
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, group.element_array_buffer);
+			glDrawElements(re.draw_mode, group.index_count, GL_UNSIGNED_INT, (void*)0);
 		}
 	}
 };

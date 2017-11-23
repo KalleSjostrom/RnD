@@ -65,10 +65,9 @@ EXPORT PLUGIN_RELOAD(reload) {
 #define DATA_FOLDER "../../conetracer/out/data/"
 
 ModelCC load_model(MemoryArena &arena, const char *path) {
-	MeshDataArray mesh_data_array = read_obj(arena, path);
+	MeshData mesh_data = read_obj(arena, path);
 	ModelCC model_cc = {};
-	model_cc.mesh_data = mesh_data_array.meshes;
-	model_cc.mesh_count = mesh_data_array.count;
+	model_cc.mesh_data = mesh_data;
 
 	model_cc.buffer_type = GL_STATIC_DRAW;
 	model_cc.draw_mode = GL_TRIANGLES;
@@ -122,7 +121,7 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		{
 			Context c = {};
-			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sponza.cobj");
+			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"cube.cobj");
 			c.model = &model_cc;
 			Entity &entity = application.entities[application.entity_count++];
 			spawn_entity(application.components, entity, EntityType_Model, c, V3(0, 0, 0));
@@ -130,7 +129,6 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		// Audio
 		//	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
-		// setup_camera(application.camera, V3(0, 0, 7), ASPECT_RATIO);
 		setup_camera(application.camera, V3(0, 0, 10), ASPECT_RATIO);
 	}
 

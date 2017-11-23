@@ -3,7 +3,7 @@
 	#define cpuid(info, x) __cpuidex(info, x, 0)
 #else
 	#include <cpuid.h>
-	void cpuid(unsigned info[4], unsigned InfoType) {
+	void cpuid(int info[4], unsigned InfoType) {
 		__cpuid_count(InfoType, 0, info[0], info[1], info[2], info[3]);
 	}
 #endif
@@ -52,58 +52,58 @@ enum CpuFeatureFlag : unsigned {
 unsigned detect_cpu_features() {
 	int info[4];
 	cpuid(info, 0);
-	unsigned nIds = info[0];
+	int nIds = info[0];
 
 	cpuid(info, 0x80000000);
-	unsigned nExIds = info[0];
+	int nExIds = info[0];
 
 	unsigned flags = 0;
 
 	// Detect Features
 	if (nIds >= 0x00000001) {
 		cpuid(info, 0x00000001);
-		flags |= ((info[3] & ((unsigned)1 << 23)) != 0) ? CpuFeatureFlag_MMX : 0;
-		flags |= ((info[3] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_SSE : 0;
-		flags |= ((info[3] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_SSE2 : 0;
-		flags |= ((info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_SSE3 : 0;
+		flags |= (((unsigned)info[3] & ((unsigned)1 << 23)) != 0) ? CpuFeatureFlag_MMX : 0;
+		flags |= (((unsigned)info[3] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_SSE : 0;
+		flags |= (((unsigned)info[3] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_SSE2 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_SSE3 : 0;
 
-		flags |= ((info[2] & ((unsigned)1 <<  9)) != 0) ? CpuFeatureFlag_SSSE3 : 0;
-		flags |= ((info[2] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_SSE41 : 0;
-		flags |= ((info[2] & ((unsigned)1 << 20)) != 0) ? CpuFeatureFlag_SSE42 : 0;
-		flags |= ((info[2] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_AES : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  9)) != 0) ? CpuFeatureFlag_SSSE3 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_SSE41 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 20)) != 0) ? CpuFeatureFlag_SSE42 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 25)) != 0) ? CpuFeatureFlag_AES : 0;
 
-		flags |= ((info[2] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX : 0;
-		flags |= ((info[2] & ((unsigned)1 << 12)) != 0) ? CpuFeatureFlag_FMA3 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 12)) != 0) ? CpuFeatureFlag_FMA3 : 0;
 
-		flags |= ((info[2] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_RDRAND : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_RDRAND : 0;
 	}
 	if (nIds >= 0x00000007) {
 		cpuid(info, 0x00000007);
-		flags |= ((info[1] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_AVX2 : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_AVX2 : 0;
 
-		flags |= ((info[1] & ((unsigned)1 <<  3)) != 0) ? CpuFeatureFlag_BMI1 : 0;
-		flags |= ((info[1] & ((unsigned)1 <<  8)) != 0) ? CpuFeatureFlag_BMI2 : 0;
-		flags |= ((info[1] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_ADX : 0;
-		flags |= ((info[1] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_SHA : 0;
-		flags |= ((info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_PREFETCHWT1 : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 <<  3)) != 0) ? CpuFeatureFlag_BMI1 : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 <<  8)) != 0) ? CpuFeatureFlag_BMI2 : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 19)) != 0) ? CpuFeatureFlag_ADX : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_SHA : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  0)) != 0) ? CpuFeatureFlag_PREFETCHWT1 : 0;
 
-		flags |= ((info[1] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_AVX512F : 0;
-		flags |= ((info[1] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX512CD : 0;
-		flags |= ((info[1] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_AVX512PF : 0;
-		flags |= ((info[1] & ((unsigned)1 << 27)) != 0) ? CpuFeatureFlag_AVX512ER : 0;
-		flags |= ((info[1] & ((unsigned)1 << 31)) != 0) ? CpuFeatureFlag_AVX512VL : 0;
-		flags |= ((info[1] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_AVX512BW : 0;
-		flags |= ((info[1] & ((unsigned)1 << 17)) != 0) ? CpuFeatureFlag_AVX512DQ : 0;
-		flags |= ((info[1] & ((unsigned)1 << 21)) != 0) ? CpuFeatureFlag_AVX512IFMA : 0;
-		flags |= ((info[2] & ((unsigned)1 <<  1)) != 0) ? CpuFeatureFlag_AVX512VBMI : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_AVX512F : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 28)) != 0) ? CpuFeatureFlag_AVX512CD : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 26)) != 0) ? CpuFeatureFlag_AVX512PF : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 27)) != 0) ? CpuFeatureFlag_AVX512ER : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 31)) != 0) ? CpuFeatureFlag_AVX512VL : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 30)) != 0) ? CpuFeatureFlag_AVX512BW : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 17)) != 0) ? CpuFeatureFlag_AVX512DQ : 0;
+		flags |= (((unsigned)info[1] & ((unsigned)1 << 21)) != 0) ? CpuFeatureFlag_AVX512IFMA : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  1)) != 0) ? CpuFeatureFlag_AVX512VBMI : 0;
 	}
-	if (nExIds >= 0x80000001) {
+	if ((unsigned)nExIds >= 0x80000001) {
 		cpuid(info, 0x80000001);
-		flags |= ((info[3] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_x64 : 0;
-		flags |= ((info[2] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_ABM : 0;
-		flags |= ((info[2] & ((unsigned)1 <<  6)) != 0) ? CpuFeatureFlag_SSE4a : 0;
-		flags |= ((info[2] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_FMA4 : 0;
-		flags |= ((info[2] & ((unsigned)1 << 11)) != 0) ? CpuFeatureFlag_XOP : 0;
+		flags |= (((unsigned)info[3] & ((unsigned)1 << 29)) != 0) ? CpuFeatureFlag_x64 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  5)) != 0) ? CpuFeatureFlag_ABM : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 <<  6)) != 0) ? CpuFeatureFlag_SSE4a : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 16)) != 0) ? CpuFeatureFlag_FMA4 : 0;
+		flags |= (((unsigned)info[2] & ((unsigned)1 << 11)) != 0) ? CpuFeatureFlag_XOP : 0;
 	}
 
 	return flags;
@@ -191,4 +191,167 @@ p0 = _mm_shuffle_ps(a, a, 0x93) //10010011=0x93
 // whenever AVX is enabled, use _mm_permute_ps(latency~1, throughput~1)  instead of _mm_shuffle_ps(latency~1~6, throughput~1)
 p0 = _mm_permute_ps(a, 0x93)*/
 
+struct wf32 {
+	__m128 v;
+	wf32(__m128 _v) { v = _v; }
+	operator __m128() const { return v; }
+};
+struct wf64 {
+	__m128d v;
+	wf64(__m128d _v) { v = _v; }
+	operator __m128() const { return v; }
+};
+struct wi32 {
+	__m128i v;
+	wi32(__m128i _v) { v = _v; }
+	operator __m128i() const { return v; }
+};
+struct wi16 {
+	__m128i v;
+	wi16(__m128i _v) { v = _v; }
+	operator __m128i() const { return v; }
+};
+struct wi8 {
+	__m128i v;
+	wi8(__m128i _v) { v = _v; }
+	operator __m128i() const { return v; }
+};
+
+FORCE_INLINE wf32 operator*(wf32 a, wf32 b) {
+	wf32 result = { _mm_mul_ps(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wf32 operator/(wf32 a, wf32 b) {
+	wf32 result = _mm_div_ps(a.v, b.v);
+	return result;
+}
+FORCE_INLINE wf32 operator+(wf32 a, wf32 b) {
+	wf32 result = { _mm_add_ps(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wf32 operator-(wf32 a, wf32 b) {
+	wf32 result = { _mm_sub_ps(a.v, b.v) };
+	return result;
+}
+static wf32 wf32_zero = { _mm_set1_ps(0) };
+FORCE_INLINE wf32 operator-(wf32 a) {
+	wf32 result = { _mm_sub_ps(wf32_zero, a.v) };
+	return result;
+}
+
+FORCE_INLINE wf64 operator*(wf64 a, wf64 b) {
+	wf64 result = { _mm_mul_pd(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wf64 operator/(wf64 a, wf64 b) {
+	wf64 result = { _mm_div_pd(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wf64 operator+(wf64 a, wf64 b) {
+	wf64 result = { _mm_add_pd(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wf64 operator-(wf64 a, wf64 b) {
+	wf64 result = { _mm_sub_pd(a.v, b.v) };
+	return result;
+}
+
+
+FORCE_INLINE wi32 operator*(wi32 a, wi32 b) {
+	wi32 result = { _mm_mul_epi32(a.v, b.v) };
+	return result;
+}
+// FORCE_INLINE wi32 operator/(wi32 a, wi32 b) {
+// 	wi32 result = { _mm_div_epi32(a.v, b.v) };
+// 	return result;
+// }
+FORCE_INLINE wi32 operator+(wi32 a, wi32 b) {
+	wi32 result = { _mm_add_epi32(a.v, b.v) };
+	return result;
+}
+FORCE_INLINE wi32 operator-(wi32 a, wi32 b) {
+	wi32 result = { _mm_sub_epi32(a.v, b.v) };
+	return result;
+}
+
+struct wv3 {
+	wf32 x;
+	wf32 y;
+	wf32 z;
+};
+
+FORCE_INLINE wv3 wV3(wf32 x, wf32 y, wf32 z) {
+	wv3 result = {x, y, z};
+	return result;
+}
+
+FORCE_INLINE wv3 operator*(wf32 a, wv3 b) {
+	return wV3(a * b.x, a * b.y, a * b.z);
+}
+FORCE_INLINE wv3 operator*(wv3 a, wf32 b) {
+	return b * a;
+}
+FORCE_INLINE wv3 & operator*=(wv3 &a, wf32 b) {
+	a = a * b;
+	return a;
+}
+
+FORCE_INLINE wv3 operator/(wv3 a, wf32 b) {
+	return wV3(a.x/b, a.y/b, a.z/b);
+}
+
+FORCE_INLINE wv3 & operator/=(wv3 &a, wf32 b) {
+	a = a/b;
+	return a;
+}
+
+FORCE_INLINE wv3 operator+(wv3 a, wv3 b) {
+	return wV3(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+FORCE_INLINE wv3 & operator+=(wv3 &a, wv3 b) {
+	a = a + b;
+	return a;
+}
+
+FORCE_INLINE wv3 operator-(wv3 a) {
+	return wV3(-a.x, -a.y, -a.z);
+}
+FORCE_INLINE wv3 operator-(wv3 a, wv3 b) {
+	return wV3(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+FORCE_INLINE wv3 & operator-=(wv3 &a, wv3 b) {
+	a = a - b;
+	return a;
+}
+
+FORCE_INLINE wv3 hadamard(wv3 a, wv3 b) {
+	return wV3(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+FORCE_INLINE wf32 dot(wv3 a, wv3 b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+FORCE_INLINE wf32 length_squared(wv3 a) {
+	return dot(a, a);
+}
+// FORCE_INLINE wf32 length(wv3 a) {
+// 	return sqrtf(length_squared(a));
+// }
+// FORCE_INLINE wv3 normalize(wv3 a) {
+// 	wf32 l = length(a);
+// 	return (1.0f/l) * a;
+// }
+// FORCE_INLINE wv3 normalize_or_zero(wv3 a) {
+// 	wf32 l = length(a);
+// 	return l > 0 ? (1.0f/l) * a : wV3(0, 0, 0);
+// }
+FORCE_INLINE wv3 cross(wv3 a, wv3 b) {
+	wf32 x = a.y*b.z - a.z*b.y;
+	wf32 y = a.z*b.x - a.x*b.z;
+	wf32 z = a.x*b.y - a.y*b.x;
+	return wV3(x, y, z);
+}
+
+// FORCE_INLINE wv3 lerp(wv3 a, wv3 b, wf32 t) {
+// 	return wV3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
+// }
 

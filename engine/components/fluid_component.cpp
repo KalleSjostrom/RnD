@@ -217,17 +217,16 @@ struct FluidComponent {
 		Renderable &renderable = instance.renderable;
 
 		renderable.pose = identity();
-		renderable.mesh_count = 1;
-		renderable.meshes = PUSH_STRUCTS(arena, renderable.mesh_count, Mesh);
+		renderable.mesh.groups = PUSH_STRUCTS(arena, 1, Group);
 
-		Mesh &mesh = renderable.meshes[0];
+		Group &group = renderable.mesh.groups[0];
 
-		mesh.index_count = PARTICLE_COUNT;
+		group.index_count = PARTICLE_COUNT;
 		renderable.datatype = RenderableDataType_Arrays;
 		renderable.draw_mode = GL_POINTS;
 
-		glGenVertexArrays(1, &mesh.vertex_array_object);
-		glBindVertexArray(mesh.vertex_array_object);
+		glGenVertexArrays(1, &renderable.mesh.vertex_array_object);
+		glBindVertexArray(renderable.mesh.vertex_array_object);
 
 		instance.positions = gen_buffer(gen_random_pos);
 		instance.velocities = gen_buffer(zero);

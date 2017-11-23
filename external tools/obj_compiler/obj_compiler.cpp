@@ -16,6 +16,7 @@
 ./external\ tools/obj_compiler/obj_compiler conetracer/assets/sphere.obj conetracer/out/data/sphere.cobj
 ./external\ tools/obj_compiler/obj_compiler conetracer/assets/susanne.obj conetracer/out/data/susanne.cobj
 ./external\ tools/obj_compiler/obj_compiler conetracer/assets/teapot.obj conetracer/out/data/teapot.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets/sponza.obj conetracer/out/data/sponza.cobj
 */
 
 parser::Tokenizer make_tokenizer(char *text) {
@@ -37,6 +38,12 @@ inline float next_number(parser::Tokenizer &tok) {
 #define b32(x)  (b16(x) | (b16(x) >>16))
 #define next_power_of_2(x)(b32(x-1) + 1)
 
+struct v3i {
+	int vertex_index;
+	int coord_index;
+	int normal_index;
+};
+
 typedef unsigned GLindex;
 
 struct HashEntry {
@@ -44,10 +51,8 @@ struct HashEntry {
 	GLindex value;
 };
 
-struct Mesh {
-	v3 *vertices;
-	v2 *coords;
-	v3 *normals;
+struct Group {
+	v3i *face_vertices;
 	GLindex *indices;
 };
 
@@ -59,7 +64,7 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 
 	char *source = (char *)PUSH_SIZE(arena, filesize);
 	fread(source, filesize, 1, file);
-	source[filesize-1] = '\0';
+	source[filesize] = '\0';
 	fclose(file);
 
 	v3 *vertices = 0;
@@ -78,18 +83,12 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	array_init(coord_indices, 1024*32);
 	array_init(normal_indices, 1024*32);
 
-	Mesh *meshes = 0;
-	array_init(meshes, 32);
+	Group *groups = 0;
+	array_init(groups, 32);
 
 	parser::Tokenizer tok = parser::make_tokenizer(source, filesize, TokenizerFlags_KeepLineComments);
 	parser::ParserContext pcontext;
 	parser::set_parser_context(pcontext, &tok, (char*)input_filepath);
-
-	HashEntry *vertex_cache = 0;
-	unsigned hashmap_count = 0;
-	unsigned hashmap_mask = 0;
-	u64 invalid_key = ~0u;
-	GLindex element_index = 0;
 
 	parser::Token t_v = TOKENIZE("v");
 	parser::Token t_vt = TOKENIZE("vt");
@@ -101,6 +100,7 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 	parser::Token t_mtllib = TOKENIZE("mtllib");
 
 	bool parsing = true;
+	bool test = false;
 	while (parsing) {
 		parser::Token token = parser::next_token(&tok);
 		switch (token.type) {
@@ -111,9 +111,13 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 				}
 				// vt - texture coordinates
 				else if (parser::is_equal(token, t_vt)) {
-					// TODO(kalle): Do optional w coord
 					array_push(coords, V2_f32(next_number(tok), next_number(tok)));
-					next_number(tok);
+
+					// OPTIMIZE(kalle): Reuse the peeked token
+					token = parser::peek_next_token(&tok);
+					if (token.type == TokenType_Number) {
+						next_number(tok);
+					}
 				}
 				// vn - vertex normals
 				else if (parser::is_equal(token, t_vn)) {
@@ -121,40 +125,9 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 				}
 				// f - faces
 				else if (parser::is_equal(token, t_f)) {
-					if (hashmap_count == 0) {
-						// TODO(kalle): Pull this out as a mesh init thing.
-						int vertex_count = (int)array_count(vertices);
-						int coord_count = (int)array_count(coords);
-						int normal_count = (int)array_count(normals);
-
-						int sum = vertex_count + coord_count + normal_count;
-						hashmap_count = (unsigned)next_power_of_2(sum * 2);
-						hashmap_mask = hashmap_count - 1;
-						vertex_cache = PUSH_STRUCTS(arena, hashmap_count, HashEntry);
-						for (unsigned i = 0; i < hashmap_count; ++i) {
-							vertex_cache[i].key = invalid_key;
-						}
-
-						array_new_entry(meshes);
-						Mesh &mesh = array_last(meshes);
-
-						mesh.vertices = 0;
-						mesh.coords = 0;
-						mesh.normals = 0;
-						mesh.indices = 0;
-
-						array_init(mesh.vertices, 1024 * 32);
-						array_init(mesh.coords, 1024 * 32);
-						array_init(mesh.normals, 1024 * 32);
-						array_init(mesh.indices, 1024 * 32);
-					}
-					int vertex_count = (int)array_count(vertices);
-					int coord_count = (int)array_count(coords);
-					int normal_count = (int)array_count(normals);
-
 					int face_done = 0;
 					int vi = 0;
-					while (!face_done) {
+					while (!face_done && tok.at[0] != '\0') {
 						token = parser::peek_next_token(&tok);
 						if (token.type == TokenType_Number) {
 							token = parser::next_token(&tok);
@@ -167,8 +140,15 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 						int coord_index = 0;
 						int normal_index = 0;
 
-						Mesh &mesh = array_last(meshes);
+						if (!test) {
+							test = true;
+							array_new_entry(groups);
+							Group &group = array_last(groups);
+							group.face_vertices = 0;
+							array_init(group.face_vertices, 1024*32);
+						}
 
+						Group &group = array_last(groups);
 						for (int j = 0; j < 3; ++j) {
 							ASSERT_TOKEN_TYPE(token, TokenType_Number);
 
@@ -195,58 +175,14 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 							}
 						}
 
-						u64 vi64 = 0;
-						u64 ci64 = 0;
-						u64 ni64 = 0;
+						v3i face_vertex = { vertex_index, coord_index, normal_index };
+						array_push(group.face_vertices, face_vertex); // v0
 
-						if (vertex_index != 0) {
-							vi64 = (u64)(vertex_index < 0 ? vertex_count + vertex_index : vertex_index - 1);
-						}
-						if (coord_index != 0) {
-							ci64 = (u64)(coord_index < 0 ? coord_count + coord_index : coord_index - 1);
-						}
-						if (normal_index != 0) {
-							ni64 = (u64)(normal_index < 0 ? normal_count + normal_index : normal_index - 1);
-						}
-
-						static u64 channel_max = 1<<20;
-						u64 key = vi64 + ci64 * channel_max + ni64 * channel_max * 2;
-
-						bool found = false;
-						for (u64 offset = 0; offset < hashmap_count; offset++) {
-							u64 index = (key + offset) & hashmap_mask;
-
-							HashEntry *entry = vertex_cache + index;
-							if (entry->key == invalid_key) {
-								// New entry!
-								entry->key = key;
-
-								if (vertex_index != 0) {
-									array_push(mesh.vertices, vertices[vi64]);
-								}
-								if (coord_index != 0) {
-									array_push(mesh.coords, coords[ci64]);
-								}
-								if (normal_index != 0) {
-									array_push(mesh.normals, normals[ni64]);
-								}
-
-								entry->value = element_index;
-								array_push(mesh.indices, element_index++);
-								found = true;
-								break;
-							} else if (entry->key == key) {
-								array_push(mesh.indices, entry->value);
-								found = true;
-								break;
-							}
-						}
-						ASSERT(found, "Hash full!");
 						vi++;
 						if (vi > 3) {
-							int current_count = array_count(mesh.indices);
-							array_push(mesh.indices, mesh.indices[current_count - vi]); // v0
-							array_push(mesh.indices, mesh.indices[current_count - 1]); // v(n-1)
+							int current_count = array_count(group.face_vertices);
+							array_push(group.face_vertices, group.face_vertices[current_count - vi]); // v0
+							array_push(group.face_vertices, group.face_vertices[current_count - 1]); // v(n-1)
 						}
 					}
 				}
@@ -254,30 +190,10 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 				else if (parser::is_equal(token, t_g)) {
 					token = parser::next_token(&tok);
 
-					int vertex_count = (int)array_count(vertices);
-					int coord_count = (int)array_count(coords);
-					int normal_count = (int)array_count(normals);
-
-					int sum = vertex_count + coord_count + normal_count;
-					hashmap_count = (unsigned)next_power_of_2(sum * 2);
-					hashmap_mask = hashmap_count-1;
-					vertex_cache = PUSH_STRUCTS(arena, hashmap_count, HashEntry);
-					for (unsigned i = 0; i < hashmap_count; ++i) {
-						vertex_cache[i].key = invalid_key;
-					}
-
-					array_new_entry(meshes);
-					Mesh &mesh = array_last(meshes);
-
-					mesh.vertices = 0;
-					mesh.coords = 0;
-					mesh.normals = 0;
-					mesh.indices = 0;
-
-					array_init(mesh.vertices, 1024*32);
-					array_init(mesh.coords, 1024*32);
-					array_init(mesh.normals, 1024*32);
-					array_init(mesh.indices, 1024*32);
+					array_new_entry(groups);
+					Group &group = array_last(groups);
+					group.face_vertices = 0;
+					array_init(group.face_vertices, 1024*32);
 				}
 				// s - smoothing groups - "Smooth shading across polygons is enabled by smoothing groups."
 				else if (parser::is_equal(token, t_s)) {
@@ -308,29 +224,110 @@ void compile_obj(const char *input_filepath, const char *output_filepath) {
 		}
 	}
 
+	int vertex_count = (int)array_count(vertices);
+	int coord_count = (int)array_count(coords);
+	int normal_count = (int)array_count(normals);
+	int sum = vertex_count + coord_count + normal_count;
+
+	v3 *out_vertices = 0;
+	v2 *out_coords = 0;
+	v3 *out_normals = 0;
+
+	array_init(out_vertices, vertex_count);
+	array_init(out_coords, coord_count);
+	array_init(out_normals, normal_count);
+
+	HashEntry *vertex_cache = 0;
+	unsigned hashmap_count = (unsigned)next_power_of_2(sum * 2);
+	unsigned hashmap_mask = hashmap_count-1;
+	u64 invalid_key = ~0u;
+	GLindex element_index = 0;
+
+	hashmap_mask = hashmap_count - 1;
+	vertex_cache = PUSH_STRUCTS(arena, hashmap_count, HashEntry);
+	for (unsigned i = 0; i < hashmap_count; ++i) {
+		vertex_cache[i].key = invalid_key;
+	}
+
+	for (int i = 0; i < array_count(groups); ++i) {
+		Group &group = groups[i];
+
+		for (int j = 0; j < array_count(group.face_vertices); ++j) {
+			v3i &fv = group.face_vertices[j];
+
+			u64 vi64 = 0;
+			u64 ci64 = 0;
+			u64 ni64 = 0;
+
+			if (fv.vertex_index != 0) {
+				vi64 = (u64)(fv.vertex_index < 0 ? vertex_count + fv.vertex_index : fv.vertex_index - 1);
+			}
+			if (fv.coord_index != 0) {
+				ci64 = (u64)(fv.coord_index < 0 ? coord_count + fv.coord_index : fv.coord_index - 1);
+			}
+			if (fv.normal_index != 0) {
+				ni64 = (u64)(fv.normal_index < 0 ? normal_count + fv.normal_index : fv.normal_index - 1);
+			}
+
+			static u64 channel_max = 1<<20;
+			u64 key = vi64 + ci64 * channel_max + ni64 * channel_max * 2;
+
+			bool found = false;
+			for (u64 offset = 0; offset < hashmap_count; offset++) {
+				u64 index = (key + offset) & hashmap_mask;
+
+				HashEntry *entry = vertex_cache + index;
+				if (entry->key == invalid_key) {
+					// New entry!
+					entry->key = key;
+
+					if (fv.vertex_index != 0) {
+						array_push(out_vertices, vertices[vi64]);
+					}
+					if (fv.coord_index != 0) {
+						array_push(out_coords, coords[ci64]);
+					}
+					if (fv.normal_index != 0) {
+						array_push(out_normals, normals[ni64]);
+					}
+
+					entry->value = element_index;
+					array_push(group.indices, element_index++);
+					found = true;
+					break;
+				} else if (entry->key == key) {
+					array_push(group.indices, entry->value);
+					found = true;
+					break;
+				}
+			}
+			ASSERT(found, "Hash full!");
+		}
+	}
+
 	FILE *output;
 	fopen_s(&output, output_filepath, "wb");
 	ASSERT(file, "Could not open '%s'", output_filepath);
 
-	int mesh_count = (int)array_count(meshes);
-	fwrite(&mesh_count, sizeof(int), 1, output);
+	int out_vertex_count = (int)array_count(out_vertices);
+	int out_coord_count = (int)array_count(out_coords);
+	int out_normal_count = (int)array_count(out_normals);
+	int group_count = (int)array_count(groups);
 
-	for (int i = 0; i < mesh_count; ++i) {
-		Mesh &mesh = meshes[i];
-		int vertex_count = (int)array_count(mesh.vertices);
-		int coord_count = (int)array_count(mesh.coords);
-		int normal_count = (int)array_count(mesh.normals);
-		int index_count = (int)array_count(mesh.indices);
+	fwrite(&out_vertex_count, sizeof(int), 1, output);
+	fwrite(&out_coord_count, sizeof(int), 1, output);
+	fwrite(&out_normal_count, sizeof(int), 1, output);
+	fwrite(&group_count, sizeof(int), 1, output);
 
-		fwrite(&vertex_count, sizeof(int), 1, output);
-		fwrite(&coord_count, sizeof(int), 1, output);
-		fwrite(&normal_count, sizeof(int), 1, output);
+	fwrite(out_vertices, sizeof(GLindex), (size_t)out_vertex_count, output);
+	fwrite(out_coords, sizeof(GLindex), (size_t)out_coord_count, output);
+	fwrite(out_normals, sizeof(GLindex), (size_t)out_normal_count, output);
+
+	for (int i = 0; i < group_count; ++i) {
+		Group &group = groups[i];
+		int index_count = (int)array_count(group.indices);
 		fwrite(&index_count, sizeof(int), 1, output);
-
-		fwrite(mesh.vertices, sizeof(v3), vertex_count, output);
-		fwrite(mesh.coords, sizeof(v2), coord_count, output);
-		fwrite(mesh.normals, sizeof(v3), normal_count, output);
-		fwrite(mesh.indices, sizeof(GLindex), index_count, output);
+		fwrite(group.indices, sizeof(GLindex), (size_t)index_count, output);
 	}
 
 	fclose(output);
