@@ -10,6 +10,7 @@ static const char *vertex = GLSL(
 
 	out vec4 fpos;
 	out vec4 fnormal;
+	out vec4 flight;
 	out vec2 fuv;
 
 	void main() {
@@ -20,36 +21,38 @@ static const char *vertex = GLSL(
 		fpos = mv * vec4(position, 1.0f);
 
 		// Read up on why the transpose of the inverse works!
+		vec3 light_direction = normalize(vec3(1, -1, 0));
 		fnormal = transpose(inverse(mv)) * vec4(normal, 1.0f);
+		flight = transpose(inverse(mv)) * vec4(light_direction, 1.0f);
 		fuv = uv;
 	}
 );
 
 static const char *fragment = GLSL(
+	uniform sampler2D diffuse;
+	uniform sampler2D specular;
+	uniform sampler2D emissive;
+	uniform sampler2D bump;
+	uniform sampler2D translucency;
+
+	uniform vec3 camera;
+
 	in vec4 fpos;
 	in vec4 fnormal;
+	in vec4 flight;
 	in vec2 fuv;
 	out vec4 color;
 
-	uniform sampler2D diffuse;
-
 	void main() {
-		vec3 n = (fnormal.xyz + vec3(1)) * 0.5f;
+		vec3 normal = texture(bump, fuv).xyz;
+		normal += fnormal.xyz;
+		vec3 n = (normal + vec3(1)) * 0.5f;
 
-		vec3 p = vec3(0, 0, 0); // fpos.xyz
-		vec3 v = vec3(0, 0, 10);
-		vec3 l = vec3(5, 10, 10);
-
-		vec3 light_to_frag = normalize(p - l);
-		vec3 r = 2 * dot(light_to_frag, n) * n - light_to_frag; //  reflect(light_to_frag, n);
-		vec3 view_to_frag = normalize(p - v);
-		float spec = dot(r, view_to_frag);
-
-		vec3 c = vec3(1, 1, 1);
-		c *= (spec+1)*0.5f;
-
-		// color = vec4(c, 1);
 		color = texture(diffuse, fuv);
+		color.a = texture(translucency, fuv).x;
+
+		float d = dot(-flight.xyz, normal);
+		color.xyz *= clamp(d, 0.0f, 1.0f);
 	}
 );
 }

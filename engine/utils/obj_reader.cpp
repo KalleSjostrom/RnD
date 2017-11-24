@@ -29,8 +29,8 @@ MeshData read_obj(MemoryArena &arena, const char *filepath) {
 
 	for (int i = 0; i < mesh.group_count; ++i) {
 		GroupData &group = mesh.groups[i];
+		fread(&group.material_index, sizeof(int), 1, objfile);
 		fread(&group.index_count, sizeof(int), 1, objfile);
-
 		group.indices = PUSH_STRUCTS(arena, group.index_count, GLindex);
 		fread(group.indices, sizeof(GLindex), (size_t)group.index_count, objfile);
 	}

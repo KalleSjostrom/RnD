@@ -10,6 +10,7 @@ enum PixelFormat {
 	PixelFormat_RGBA,
 	PixelFormat_ARGB,
 	PixelFormat_RGB,
+	PixelFormat_BGR,
 };
 
 struct ImageData {

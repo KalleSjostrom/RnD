@@ -3,6 +3,7 @@ struct Program {
 	GLint projection_location;
 	GLint view_location;
 	GLint model_location;
+	GLint camera_location;
 
 	i32 count;
 	Renderable *renderables[8];
@@ -26,6 +27,7 @@ i32 add_program(Renderer &r, GLuint shader_program, u32 render_mask) {
 	p.projection_location = glGetUniformLocation(shader_program, "projection");
 	p.view_location = glGetUniformLocation(shader_program, "view");
 	p.model_location = glGetUniformLocation(shader_program, "model");
+	p.camera_location = glGetUniformLocation(shader_program, "camera");
 	p.render_mask = render_mask;
 	return id;
 }
@@ -40,7 +42,13 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 		Program &p = r.programs[i];
 		if (p.render_mask & render_mask) {
 			glUseProgram(p.program);
-			begin_frame(camera, p.projection_location, p.view_location);
+			GLint diffuse      = glGetUniformLocation(p.program, "diffuse");
+			GLint specular     = glGetUniformLocation(p.program, "specular");
+			GLint emissive     = glGetUniformLocation(p.program, "emissive");
+			GLint bump         = glGetUniformLocation(p.program, "bump");
+			GLint translucency = glGetUniformLocation(p.program, "translucency");
+
+			begin_frame(camera, p.projection_location, p.view_location, p.camera_location);
 
 			for (i32 j = 0; j < p.count; ++j) {
 				Renderable &re = *p.renderables[j];
@@ -53,7 +61,21 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 					Group &group = mesh.groups[k];
 					Material *m = group.material;
 					if (m) {
-						GLint diffuse = glGetUniformLocation(p.program, "diffuse");
+						glActiveTexture(GL_TEXTURE4);
+						glBindTexture(GL_TEXTURE_2D, m->map_d);
+						glUniform1i(translucency, 4);
+
+						glActiveTexture(GL_TEXTURE3);
+						glBindTexture(GL_TEXTURE_2D, m->map_bump);
+						glUniform1i(bump, 3);
+
+						glActiveTexture(GL_TEXTURE2);
+						glBindTexture(GL_TEXTURE_2D, m->map_Ke);
+						glUniform1i(emissive, 2);
+
+						glActiveTexture(GL_TEXTURE1);
+						glBindTexture(GL_TEXTURE_2D, m->map_Ks);
+						glUniform1i(specular, 1);
 
 						glActiveTexture(GL_TEXTURE0);
 						glBindTexture(GL_TEXTURE_2D, m->map_Kd);

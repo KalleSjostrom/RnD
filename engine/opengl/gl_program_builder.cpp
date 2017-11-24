@@ -1,4 +1,5 @@
 #include "engine/utils/file_utils.h"
+#include "engine/utils/logger.h"
 #include "gl_errors.cpp"
 
 namespace gl_program_builder {
@@ -16,9 +17,10 @@ namespace gl_program_builder {
 		glGetShaderInfoLog(shader, 2048, &length, buffer);
 		GL_CHECK_ERROR(glGetShaderInfoLog);
 		if (length > 0) {
-			printf("Failed compiling Shades!: %s\n\n%s\n", buffer, shader_source);
+			LOG_INFO("GlProgram", "Failed compiling shader!: %s\n", buffer);
+			ASSERT(false, "Failed compiling shader!: %s\n", buffer);
 		} else {
-			printf("Shader compile successful!\n");
+			LOG_INFO("GlProgram", "Shader compile successful!\n");
 		}
 
 		return shader;
@@ -66,12 +68,12 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		if (link_status == GL_TRUE) {
-			printf("Gl link successful!\n");
+			LOG_INFO("GlProgram", "Gl link successful!\n");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			printf("glGetProgramInfoLog: %s\n", info_log);
+			LOG_INFO("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
 		}
 
 		return program;
@@ -106,12 +108,12 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		if (link_status == GL_TRUE) {
-			printf("Gl link successful!\n");
+			LOG_INFO("GlProgram", "Gl link successful!\n");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			printf("glGetProgramInfoLog: %s\n", info_log);
+			LOG_INFO("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
 		}
 
 		return program;
@@ -119,7 +121,7 @@ namespace gl_program_builder {
 
 	GLuint create_from_binary_file(const char *filename) {
 		(void)filename;
-		printf("create_from_binary_file not implemented!\n");
+		LOG_INFO("GlProgram", "create_from_binary_file not implemented!\n");
 		return 0;
 	}
 
@@ -134,12 +136,12 @@ namespace gl_program_builder {
 		bool is_valid = validate_status == GL_TRUE;
 
 		if (is_valid) {
-			printf("Gl program is valid!\n");
+			LOG_INFO("GlProgram", "Gl program is valid!\n");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			printf("glGetProgramInfoLog: %s\n", info_log);
+			LOG_INFO("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
 		}
 		return is_valid;
 	}

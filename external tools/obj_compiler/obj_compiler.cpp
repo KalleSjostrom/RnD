@@ -132,13 +132,18 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 				// vt - texture coordinates
 				else if (parser::is_equal(token, t_vt)) {
 					mode = 2;
-					array_push(coords, V2_f32(next_number(tok), next_number(tok)));
+					float u = next_number(tok);
+					float v = next_number(tok);
+					float w = 0.0f;
 
 					// OPTIMIZE(kalle): Reuse the peeked token
 					token = parser::peek_next_token(&tok);
 					if (token.type == TokenType_Number) {
-						next_number(tok);
+						w = next_number(tok);
 					}
+
+					// TODO(kalle): Why is the vertical flipped??
+					array_push(coords, V2_f32(u, -v));
 				}
 				// vn - vertex normals
 				else if (parser::is_equal(token, t_vn)) {
@@ -368,6 +373,8 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 
 	for (int i = 0; i < group_count; ++i) {
 		Group &group = groups[i];
+		fwrite(&group.material_index, sizeof(int), 1, output);
+
 		int index_count = (int)array_count(group.indices);
 		fwrite(&index_count, sizeof(int), 1, output);
 		fwrite(group.indices, sizeof(GLindex), (size_t)index_count, output);

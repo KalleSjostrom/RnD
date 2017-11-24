@@ -15,15 +15,15 @@ rem Check if we still have pdbs after the clear above. If so, it's locked by run
 if exist "%OUT_PATH%\*.pdb" set INSTANCE_RUNNING=1
 if exist "%OUT_PATH%\*.dll" set INSTANCE_RUNNING=1
 
-if %INSTANCE_RUNNING%==1 (
-	rem therefore, we need to append a random name to the plugin name
-	set PLUGIN_NAME="%PLUGIN_NAME%_%random%"
-)
-
 rem Setup the compiler parameters and general variables
 set DEFINES=-D DEVELOPMENT
 set INCLUDES=-I ../ -I ../engine/include/opencl22/
 set ENTRY_POINT=source/%PLUGIN_NAME%
+
+if %INSTANCE_RUNNING%==1 (
+	rem therefore, we need to append a random name to the plugin name
+	set PLUGIN_NAME="%PLUGIN_NAME%_%random%"
+)
 set PDB_NAME=%PLUGIN_NAME%.pdb
 
 set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd4668 /wd4820 /wd4625 /wd4710 /wd4626 /wd4582 /wd4623

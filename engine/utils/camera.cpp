@@ -21,7 +21,11 @@ void setup_camera(Camera &camera, v3 position, float aspect_ratio) {
 	camera.projection = perspective_fov(60, aspect_ratio, 0.1f, 10000.0f);
 }
 
-void begin_frame(Camera &camera, GLint projection_location, GLint view_location) {
+void begin_frame(Camera &camera, GLint projection_location, GLint view_location, GLint camera_location) {
 	glUniformMatrix4fv(projection_location, 1, GL_FALSE, (GLfloat*)(camera.projection.m));
 	glUniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)(camera.view.m));
+
+	// TODO(kalle): Better to extract the position from the view matrix inside the shader??
+	v3 camera_position = translation(camera.pose);
+	glUniform3fv(view_location, 1, (GLfloat*)(&camera_position));
 }

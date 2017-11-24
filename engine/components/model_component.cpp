@@ -126,17 +126,41 @@ struct ModelCC {
 	i32 program_type;
 };
 
-GLuint load_texture(EngineApi *engine, const char *path) {
+GLuint load_white() {
+	GLuint texture;
+	glGenTextures(1, &texture);
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	unsigned pixel = 0xffffffff;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &pixel);
+	return texture;
+}
+
+GLuint load_texture(EngineApi *engine, String &path, GLuint default_texture = 0) {
+	if (path.length == 0) {
+		return default_texture;
+	}
+
 	ImageData image_data;
 	char buf[1024] = {};
-	int count = snprintf(buf, ARRAY_COUNT(buf), "../../conetracer/assets/%s", path);
+	int count = snprintf(buf, ARRAY_COUNT(buf), "../../conetracer/assets/%.*s", path.length, *path);
 	for (int i = 0; i < count; ++i) {
 		if (buf[i] == '\\')
 			buf[i] = '/';
 	}
 
 	b32 success = engine->image_load(buf, image_data);
-	ASSERT(success, "Could not load image '%s'!", buf);
+	if (!success) {
+		LOG_ERROR("Model", "Could not load image '%s'!\n", buf);
+		return default_texture;
+	}
 
 	GLuint texture;
 	glGenTextures(1, &texture);
@@ -146,10 +170,11 @@ GLuint load_texture(EngineApi *engine, const char *path) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// The png is stored as ARGB, appearently
+	// The png is stored as ARGB
+	// The tga is stored as BGR
 	switch(image_data.format) {
 		case PixelFormat_RGBA: {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data.pixels);
@@ -160,7 +185,14 @@ GLuint load_texture(EngineApi *engine, const char *path) {
 		case PixelFormat_RGB: {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_data.width, image_data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.pixels);
 		} break;
+		case PixelFormat_BGR: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_data.width, image_data.height, 0, GL_BGR, GL_UNSIGNED_BYTE, image_data.pixels);
+		} break;
 	}
+
+
+	glGenerateMipmap(GL_TEXTURE_2D); // This has to happen after we've sent the pixel-data to the card, i.e. after glTexImage2D
+
 	return texture;
 }
 
@@ -187,25 +219,28 @@ struct ModelComponent {
 		mesh.material_count = mesh_data.material_count;
 		mesh.materials = PUSH_STRUCTS(arena, mesh.material_count, Material);
 
+		GLuint white = load_white();
+
 		for (i32 material_index = 0; material_index < mesh_data.material_count; ++material_index) {
 			MaterialData &material_data = mesh_data.materials[material_index];
 			Material &material = mesh.materials[material_index];
 
-			material.Ns	   = material_data.Ns;
-			material.Ni	   = material_data.Ni;
-			material.Tr	   = material_data.Tr;
-			material.Tf	   = material_data.Tf;
-			material.illum	= material_data.illum;
-			material.Ka	   = material_data.Ka;
-			material.Kd	   = material_data.Kd;
-			material.Ks	   = material_data.Ks;
-			material.Ke	   = material_data.Ke;
-			material.map_Ka   = load_texture(engine, *material_data.map_Ka);
-			material.map_Kd   = load_texture(engine, *material_data.map_Kd);
-			material.map_Ks   = load_texture(engine, *material_data.map_Ks);
-			material.map_Ke   = load_texture(engine, *material_data.map_Ke);
-			material.map_d	= load_texture(engine, *material_data.map_d);
-			material.map_bump = load_texture(engine, *material_data.map_bump);
+			material.Ns    = material_data.Ns;
+			material.Ni    = material_data.Ni;
+			material.Tr    = material_data.Tr;
+			material.Tf    = material_data.Tf;
+			material.illum = material_data.illum;
+			material.Ka    = material_data.Ka;
+			material.Kd    = material_data.Kd;
+			material.Ks    = material_data.Ks;
+			material.Ke    = material_data.Ke;
+
+			material.map_Ka   = load_texture(engine, material_data.map_Ka);
+			material.map_Kd   = load_texture(engine, material_data.map_Kd);
+			material.map_Ks   = load_texture(engine, material_data.map_Ks);
+			material.map_Ke   = load_texture(engine, material_data.map_Ke);
+			material.map_d    = load_texture(engine, material_data.map_d, white);
+			material.map_bump = load_texture(engine, material_data.map_bump);
 		}
 
 		mesh.group_count = mesh_data.group_count;
