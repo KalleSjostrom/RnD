@@ -3,6 +3,8 @@
 struct GroupData {
 	i32 index_count;
 	GLindex *indices;
+
+	i32 material_index;
 };
 
 enum IlluminationMode {
@@ -37,6 +39,24 @@ struct MaterialData {
 	String map_bump; // Path to bump map texture
 };
 
+struct Material {
+	float Ns; // Specular exponent
+	float Ni; // optical_density - Index of refraction
+	float Tr; // Translucent (1 - d)
+	float Tf; // Transmission filter
+	IlluminationMode illum; // Illumination mode
+	v3 Ka; // Ambient color
+	v3 Kd; // Diffuse color
+	v3 Ks; // Specular color
+	v3 Ke; // Emissive color
+	GLuint map_Ka; // ambient texture
+	GLuint map_Kd; // diffuse texture
+	GLuint map_Ks; // specular texture
+	GLuint map_Ke; // emissive texture
+	GLuint map_d; // translucency mask texture
+	GLuint map_bump; // bump map texture
+};
+
 struct MeshData {
 	i32 vertex_count;
 	i32 coord_count;
@@ -63,11 +83,15 @@ struct Channel {
 struct Group {
 	i32 index_count;
 	GLuint element_array_buffer;
+	Material *material;
 };
 
 struct Mesh {
-	Group *groups;
 	i32 group_count;
+	i32 material_count;
+
+	Group *groups;
+	Material *materials;
 
 	// Channels - vertex array
 	GLuint vertex_array_object;
@@ -102,11 +126,49 @@ struct ModelCC {
 	i32 program_type;
 };
 
+GLuint load_texture(EngineApi *engine, const char *path) {
+	ImageData image_data;
+	char buf[1024] = {};
+	int count = snprintf(buf, ARRAY_COUNT(buf), "../../conetracer/assets/%s", path);
+	for (int i = 0; i < count; ++i) {
+		if (buf[i] == '\\')
+			buf[i] = '/';
+	}
+
+	b32 success = engine->image_load(buf, image_data);
+	ASSERT(success, "Could not load image '%s'!", buf);
+
+	GLuint texture;
+	glGenTextures(1, &texture);
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// The png is stored as ARGB, appearently
+	switch(image_data.format) {
+		case PixelFormat_RGBA: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data.pixels);
+		} break;
+		case PixelFormat_ARGB: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
+		} break;
+		case PixelFormat_RGB: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_data.width, image_data.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.pixels);
+		} break;
+	}
+	return texture;
+}
+
 struct ModelComponent {
 	Model instances[32];
 	cid count;
 
-	cid add(MemoryArena &arena, v3 position, ModelCC *cc) {
+	cid add(EngineApi *engine, MemoryArena &arena, v3 position, ModelCC *cc) {
 		ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
 		cid id = count++;
 		Model &instance = instances[id];
@@ -122,12 +184,42 @@ struct ModelComponent {
 		MeshData &mesh_data = cc->mesh_data;
 		Mesh &mesh = renderable.mesh;
 
+		mesh.material_count = mesh_data.material_count;
+		mesh.materials = PUSH_STRUCTS(arena, mesh.material_count, Material);
+
+		for (i32 material_index = 0; material_index < mesh_data.material_count; ++material_index) {
+			MaterialData &material_data = mesh_data.materials[material_index];
+			Material &material = mesh.materials[material_index];
+
+			material.Ns	   = material_data.Ns;
+			material.Ni	   = material_data.Ni;
+			material.Tr	   = material_data.Tr;
+			material.Tf	   = material_data.Tf;
+			material.illum	= material_data.illum;
+			material.Ka	   = material_data.Ka;
+			material.Kd	   = material_data.Kd;
+			material.Ks	   = material_data.Ks;
+			material.Ke	   = material_data.Ke;
+			material.map_Ka   = load_texture(engine, *material_data.map_Ka);
+			material.map_Kd   = load_texture(engine, *material_data.map_Kd);
+			material.map_Ks   = load_texture(engine, *material_data.map_Ks);
+			material.map_Ke   = load_texture(engine, *material_data.map_Ke);
+			material.map_d	= load_texture(engine, *material_data.map_d);
+			material.map_bump = load_texture(engine, *material_data.map_bump);
+		}
+
 		mesh.group_count = mesh_data.group_count;
 		mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, Group);
 
 		for (i32 group_index = 0; group_index < mesh.group_count; ++group_index) {
 			GroupData &group_data = mesh_data.groups[group_index];
 			Group &group = mesh.groups[group_index];
+
+			if (group_data.material_index >= 0) {
+				group.material = &mesh.materials[group_data.material_index];
+			} else {
+				group.material = 0;
+			}
 
 			group.index_count = group_data.index_count;
 

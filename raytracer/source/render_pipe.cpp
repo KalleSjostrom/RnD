@@ -113,6 +113,32 @@ void setup_render_pipe(EngineApi *engine, MemoryArena &arena, RenderPipe &r, Com
 	}
 }
 
+void load_image(EngineApi *engine, GLuint &texture, const char *path) {
+	ImageData image_data;
+	b32 success = engine->image_load(path, image_data);
+	ASSERT(success, "Could not load image!");
+
+	glGenTextures(1, &texture);
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// The png is stored as ARGB, appearently
+	switch(image_data.format) {
+		case PixelFormat_RGBA: {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data.pixels);
+		} break;
+		case PixelFormat_ARGB: {
+    		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
+		} break;
+	}
+}
+
 void render(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	// Push viewport and blend state
 	glClearColor(0, 0, 0, 0);

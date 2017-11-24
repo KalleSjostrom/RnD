@@ -34,7 +34,9 @@ struct Material {
 
 Material *parse_mtllib(MemoryArena &arena, const char *mtllib_filepath) {
 	size_t filesize;
-	FILE *file = open_file(mtllib_filepath, &filesize);
+	FILE *file = try_open_file(mtllib_filepath, &filesize);
+	if (!file)
+		return 0;
 
 	char *source = (char *)PUSH_SIZE(arena, filesize + 1);
 	fread(source, filesize, 1, file);
@@ -97,14 +99,19 @@ Material *parse_mtllib(MemoryArena &arena, const char *mtllib_filepath) {
 				} else if (parser::is_equal(token, t_Ke)) {
 					array_last(materials).Ke = V3(next_number(tok), next_number(tok), next_number(tok));
 				} else if (parser::is_equal(token, t_map_Ka)) {
+					token = parser::next_line(&tok);
 					array_last(materials).map_Ka = clone_string(arena, token.string);
 				} else if (parser::is_equal(token, t_map_Kd)) {
+					token = parser::next_line(&tok);
 					array_last(materials).map_Kd = clone_string(arena, token.string);
 				} else if (parser::is_equal(token, t_map_d)) {
+					token = parser::next_line(&tok);
 					array_last(materials).map_d = clone_string(arena, token.string);
 				} else if (parser::is_equal(token, t_map_bump)) {
+					token = parser::next_line(&tok);
 					array_last(materials).map_bump = clone_string(arena, token.string);
 				} else if (parser::is_equal(token, t_bump)) {
+					token = parser::next_line(&tok);
 					array_last(materials).map_bump = clone_string(arena, token.string);
 				}
 			} break;

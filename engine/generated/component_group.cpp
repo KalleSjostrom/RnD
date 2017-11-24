@@ -171,7 +171,7 @@ b32 input__get_jump(ComponentGroup &components, Entity &entity) {
 	return components.input.inputs[entity.input_id].jump;
 }
 
-void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, Context &context, v3 position = V3(0,0,0)) {
+void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity, EntityType type, Context &context, v3 position = V3(0,0,0)) {
 	entity.type = type;
 
 	switch (type) {
@@ -204,7 +204,7 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, &model_cc);
+			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 
 			// Actor
@@ -231,7 +231,7 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			model_cc.draw_mode = GL_POINTS;
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, &model_cc);
+			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_sphere, &components.model.instances[entity.model_id].renderable);
 
 			// Material
@@ -270,7 +270,7 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, &model_cc);
+			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 
 			// Actor
@@ -300,14 +300,14 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, &model_cc);
+			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
 		} break;
 
 		case EntityType_Model: {
 			ASSERT(context.model, "Cannot create a model without creation context");
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, context.model);
+			entity.model_id = components.model.add(engine, *components.arena, position, context.model);
 			add_to_program(components.renderer, context.model->program_type, &components.model.instances[entity.model_id].renderable);
 		} break;
 		case EntityType_Ruler: {
@@ -331,7 +331,7 @@ void spawn_entity(ComponentGroup &components, Entity &entity, EntityType type, C
 			model_cc.draw_mode = GL_LINE_STRIP;
 
 			// Model
-			entity.model_id = components.model.add(*components.arena, position, &model_cc);
+			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
 		} break;
 		case EntityType_Plane: {

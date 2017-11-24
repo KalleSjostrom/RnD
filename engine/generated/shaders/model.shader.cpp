@@ -6,9 +6,11 @@ static const char *vertex = GLSL(
 
 	layout(location = 0) in vec3 position;
 	layout(location = 1) in vec3 normal;
+	layout(location = 2) in vec2 uv;
 
 	out vec4 fpos;
 	out vec4 fnormal;
+	out vec2 fuv;
 
 	void main() {
 		mat4 mv = view * model;
@@ -19,13 +21,17 @@ static const char *vertex = GLSL(
 
 		// Read up on why the transpose of the inverse works!
 		fnormal = transpose(inverse(mv)) * vec4(normal, 1.0f);
+		fuv = uv;
 	}
 );
 
 static const char *fragment = GLSL(
 	in vec4 fpos;
 	in vec4 fnormal;
+	in vec2 fuv;
 	out vec4 color;
+
+	uniform sampler2D diffuse;
 
 	void main() {
 		vec3 n = (fnormal.xyz + vec3(1)) * 0.5f;
@@ -42,7 +48,8 @@ static const char *fragment = GLSL(
 		vec3 c = vec3(1, 1, 1);
 		c *= (spec+1)*0.5f;
 
-		color = vec4(c, 1);
+		// color = vec4(c, 1);
+		color = texture(diffuse, fuv);
 	}
 );
 }

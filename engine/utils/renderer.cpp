@@ -51,6 +51,15 @@ void render(Renderer &r, Camera &camera, u32 render_mask = 0xFFFFFFFF) {
 
 				for (i32 k = 0; k < mesh.group_count; ++k) {
 					Group &group = mesh.groups[k];
+					Material *m = group.material;
+					if (m) {
+						GLint diffuse = glGetUniformLocation(p.program, "diffuse");
+
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, m->map_Kd);
+						glUniform1i(diffuse, 0);
+					}
+
 					switch (re.datatype) {
 						case RenderableDataType_Arrays: {
 							glDrawArrays(re.draw_mode, 0, group.index_count);

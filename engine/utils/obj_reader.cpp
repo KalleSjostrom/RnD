@@ -1,9 +1,9 @@
 #include "engine/utils/string.h"
 
-void read_string(MemoryArena &arena, String string, FILE *file) {
+void read_string(MemoryArena &arena, String &string, FILE *file) {
 	fread(&string.length, sizeof(i32), 1, file);
 	string.text = PUSH_STRING(arena, string.length);
-	fread(&string.text, sizeof(char), string.length, file);
+	fread(string.text, sizeof(char), (size_t)string.length, file);
 }
 
 MeshData read_obj(MemoryArena &arena, const char *filepath) {
@@ -23,9 +23,9 @@ MeshData read_obj(MemoryArena &arena, const char *filepath) {
 	mesh.normals = PUSH_STRUCTS(arena, mesh.normal_count, v3);
 	mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, GroupData);
 
-	fread(mesh.vertices, sizeof(v3), mesh.vertex_count, objfile);
-	fread(mesh.coords, sizeof(v2), mesh.coord_count, objfile);
-	fread(mesh.normals, sizeof(v3), mesh.normal_count, objfile);
+	fread(mesh.vertices, sizeof(v3), (size_t)mesh.vertex_count, objfile);
+	fread(mesh.coords, sizeof(v2), (size_t)mesh.coord_count, objfile);
+	fread(mesh.normals, sizeof(v3), (size_t)mesh.normal_count, objfile);
 
 	for (int i = 0; i < mesh.group_count; ++i) {
 		GroupData &group = mesh.groups[i];

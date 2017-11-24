@@ -1,11 +1,5 @@
 #include "engine/levels.h"
 
-static Material materials[8] = {
-	{ { 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 1 }, // Plane
-	{ { 0.7f, 0.5f, 0.3f }, { 0, 0, 0 }, 0.3f },
-	{ { 0.2f, 0.8f, 0.2f }, { 0, 0, 0 }, 0.15f },
-};
-
 Level make_level() {
 	Level l = {};
 

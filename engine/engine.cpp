@@ -198,7 +198,7 @@ static void unload_plugin_code(Plugin &plugin) {
 static b32 image_load(const char *filepath, ImageData &data) {
 	SDL_Surface *surface = IMG_Load(filepath);
 	if (!surface) {
-		printf("Image load failed: %s", IMG_GetError());
+		printf("Image load failed: %s\n", IMG_GetError());
 		return false;
 	}
 
@@ -209,9 +209,43 @@ static b32 image_load(const char *filepath, ImageData &data) {
 	data.width = surface->w;
 	data.height = surface->h;
 
-	switch(surface->format->format) {
+	switch (surface->format->format) {
 		case SDL_PIXELFORMAT_RGBA32: { data.format = PixelFormat_RGBA; } break;
 		case SDL_PIXELFORMAT_BGRA32: { data.format = PixelFormat_ARGB; } break;
+		case SDL_PIXELFORMAT_RGB24: { data.format = PixelFormat_RGB; } break;
+		case SDL_PIXELFORMAT_RGB888: { data.format = PixelFormat_RGB; } break;
+		case SDL_PIXELFORMAT_UNKNOWN: { printf("SDL_PIXELFORMAT_UNKNOWN\n"); } break;
+		case SDL_PIXELFORMAT_INDEX1LSB: { printf("SDL_PIXELFORMAT_INDEX1LSB\n"); } break;
+		case SDL_PIXELFORMAT_INDEX1MSB: { printf("SDL_PIXELFORMAT_INDEX1MSB\n"); } break;
+		case SDL_PIXELFORMAT_INDEX4LSB: { printf("SDL_PIXELFORMAT_INDEX4LSB\n"); } break;
+		case SDL_PIXELFORMAT_INDEX4MSB: { printf("SDL_PIXELFORMAT_INDEX4MSB\n"); } break;
+		case SDL_PIXELFORMAT_INDEX8: { printf("SDL_PIXELFORMAT_INDEX8\n"); } break;
+		case SDL_PIXELFORMAT_RGB332: { printf("SDL_PIXELFORMAT_RGB332\n"); } break;
+		case SDL_PIXELFORMAT_RGB444: { printf("SDL_PIXELFORMAT_RGB444\n"); } break;
+		case SDL_PIXELFORMAT_RGB555: { printf("SDL_PIXELFORMAT_RGB555\n"); } break;
+		case SDL_PIXELFORMAT_BGR555: { printf("SDL_PIXELFORMAT_BGR555\n"); } break;
+		case SDL_PIXELFORMAT_ARGB4444: { printf("SDL_PIXELFORMAT_ARGB4444\n"); } break;
+		case SDL_PIXELFORMAT_RGBA4444: { printf("SDL_PIXELFORMAT_RGBA4444\n"); } break;
+		case SDL_PIXELFORMAT_ABGR4444: { printf("SDL_PIXELFORMAT_ABGR4444\n"); } break;
+		case SDL_PIXELFORMAT_BGRA4444: { printf("SDL_PIXELFORMAT_BGRA4444\n"); } break;
+		case SDL_PIXELFORMAT_ARGB1555: { printf("SDL_PIXELFORMAT_ARGB1555\n"); } break;
+		case SDL_PIXELFORMAT_RGBA5551: { printf("SDL_PIXELFORMAT_RGBA5551\n"); } break;
+		case SDL_PIXELFORMAT_ABGR1555: { printf("SDL_PIXELFORMAT_ABGR1555\n"); } break;
+		case SDL_PIXELFORMAT_BGRA5551: { printf("SDL_PIXELFORMAT_BGRA5551\n"); } break;
+		case SDL_PIXELFORMAT_RGB565: { printf("SDL_PIXELFORMAT_RGB565\n"); } break;
+		case SDL_PIXELFORMAT_BGR565: { printf("SDL_PIXELFORMAT_BGR565\n"); } break;
+		case SDL_PIXELFORMAT_BGR24: { printf("SDL_PIXELFORMAT_BGR24\n"); } break;
+		case SDL_PIXELFORMAT_RGBX8888: { printf("SDL_PIXELFORMAT_RGBX8888\n"); } break;
+		case SDL_PIXELFORMAT_BGR888: { printf("SDL_PIXELFORMAT_BGR888\n"); } break;
+		case SDL_PIXELFORMAT_BGRX8888: { printf("SDL_PIXELFORMAT_BGRX8888\n"); } break;
+		case SDL_PIXELFORMAT_ARGB2101010: { printf("SDL_PIXELFORMAT_ARGB2101010\n"); } break;
+		case SDL_PIXELFORMAT_YV12: { printf("SDL_PIXELFORMAT_YV12\n"); } break;
+		case SDL_PIXELFORMAT_IYUV: { printf("SDL_PIXELFORMAT_IYUV\n"); } break;
+		case SDL_PIXELFORMAT_YUY2: { printf("SDL_PIXELFORMAT_YUY2\n"); } break;
+		case SDL_PIXELFORMAT_UYVY: { printf("SDL_PIXELFORMAT_UYVY\n"); } break;
+		case SDL_PIXELFORMAT_YVYU: { printf("SDL_PIXELFORMAT_YVYU\n"); } break;
+		case SDL_PIXELFORMAT_NV12: { printf("SDL_PIXELFORMAT_NV12\n"); } break;
+		case SDL_PIXELFORMAT_NV21		: { printf("SDL_PIXELFORMAT_NV21\n"); } break;
 		default: {
 			ASSERT(0, "Unsuported pixel format!");
 			return false;

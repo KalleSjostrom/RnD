@@ -93,7 +93,7 @@ void alloc_image(MemoryArena &arena, RenderPipe &r) {
 void setup_render_pipe(MemoryArena &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
 		Context c = {};
-		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen, c);
+		spawn_entity(engine, components, r.fullscreen_quad, EntityType_Fullscreen, c);
 	}
 
 	r.screen_width = screen_width;

@@ -112,7 +112,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			EntityData &data = level.entity_data[i];
 			Entity &entity = application.entities[application.entity_count++];
 
-			spawn_entity(application.components, entity, data.type, data.context, data.offset);
+			spawn_entity(&engine, application.components, entity, data.type, data.context, data.offset);
 
 			model__set_position(application.components, entity, data.offset);
 			model__set_rotation(application.components, entity, data.rotation);
@@ -124,7 +124,7 @@ EXPORT PLUGIN_UPDATE(update) {
 			ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sponza.cobj");
 			c.model = &model_cc;
 			Entity &entity = application.entities[application.entity_count++];
-			spawn_entity(application.components, entity, EntityType_Model, c, V3(0, 0, 0));
+			spawn_entity(&engine, application.components, entity, EntityType_Model, c, V3(0, 0, 0));
 		}
 
 		// Audio

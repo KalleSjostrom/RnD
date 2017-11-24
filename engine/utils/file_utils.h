@@ -23,6 +23,16 @@ inline FILE *open_file(const char *filename, size_t *filesize) {
 	return file;
 }
 
+inline FILE *try_open_file(const char *filename, size_t *filesize) {
+	FILE *file;
+	fopen_s(&file, filename, "rb");
+	if (!file)
+		return 0;
+
+	*filesize = get_filesize(file);
+	return file;
+}
+
 inline b32 file_exists(const char *filename) {
 	// TODO(kalle): Replace with something sane.
 	FILE *file;

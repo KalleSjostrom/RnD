@@ -4,19 +4,20 @@
 #include "engine/utils/parser.cpp"
 #include "engine/utils/file_utils.h"
 #include "engine/utils/containers/dynamic_array.h"
+#include "engine/utils/logger.h"
 
 /*
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/buddha.obj conetracer/out/data/buddha.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/bunny.obj conetracer/out/data/bunny.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/cornell.obj conetracer/out/data/cornell.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/cube.obj conetracer/out/data/cube.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/dragon.obj conetracer/out/data/dragon.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/quad.obj conetracer/out/data/quad.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/quadn.obj conetracer/out/data/quadn.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/sphere.obj conetracer/out/data/sphere.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/susanne.obj conetracer/out/data/susanne.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/teapot.obj conetracer/out/data/teapot.cobj
-./external\ tools/obj_compiler/obj_compiler conetracer/assets/sponza.obj conetracer/out/data/sponza.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets buddha.obj conetracer/out/data buddha.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets bunny.obj conetracer/out/data bunny.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets cornell.obj conetracer/out/data cornell.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets cube.obj conetracer/out/data cube.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets dragon.obj conetracer/out/data dragon.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets quad.obj conetracer/out/data quad.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets quadn.obj conetracer/out/data quadn.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets sphere.obj conetracer/out/data sphere.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets susanne.obj conetracer/out/data susanne.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets teapot.obj conetracer/out/data teapot.cobj
+./external\ tools/obj_compiler/obj_compiler conetracer/assets sponza.obj conetracer/out/data sponza.cobj
 */
 
 inline float next_number(parser::Tokenizer &tok) {
@@ -57,7 +58,6 @@ struct Group {
 };
 
 i32 pick_material(Material *materials, u32 name_id) {
-	ASSERT(materials, "There is no materials to pick from!");
 	for (i32 i = 0; i < array_count(materials); ++i) {
 		if (materials[i].name_id == name_id)
 			return i;
@@ -67,7 +67,7 @@ i32 pick_material(Material *materials, u32 name_id) {
 
 void write_string(String string, FILE *file) {
 	fwrite(&string.length, sizeof(i32), 1, file);
-	fwrite(&string.text, sizeof(char), string.length, file);
+	fwrite(string.text, sizeof(char), (size_t)string.length, file);
 }
 
 void compile_obj(const char *input_directory, const char *input_filename, const char *output_directory, const char *output_filename) {
@@ -75,7 +75,7 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 
 	size_t filesize;
 	static char buffer[1024];
-	sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%s", input_directory, input_filename);
+	snprintf(buffer, ARRAY_COUNT(buffer), "%s/%s", input_directory, input_filename);
 	FILE *file = open_file(buffer, &filesize);
 
 	char *source = (char *)PUSH_SIZE(arena, filesize + 1);
@@ -116,7 +116,7 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 	parser::Token t_mtllib = TOKENIZE("mtllib");
 
 	Material *materials = 0;
-	unsigned current_material_index = ~0u;
+	i32 current_material_index = -1;
 
 	bool parsing = true;
 	int mode = 0;
@@ -223,23 +223,33 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 				// s - smoothing groups - "Smooth shading across polygons is enabled by smoothing groups."
 				else if (parser::is_equal(token, t_s)) {
 					token = parser::next_token(&tok);
-					if (token.type == TokenType_Number) {
-						printf("Smoothing group: %g\n", token.number);
-					} else {
-						printf("Smoothing group: %.*s\n", token.length, *token.string);
-					}
+					// if (token.type == TokenType_Number) {
+					// 	printf("Smoothing group: %g\n", token.number);
+					// } else {
+					// 	printf("Smoothing group: %.*s\n", token.length, *token.string);
+					// }
 				}
 				// usemtl - use material
 				else if (parser::is_equal(token, t_usemtl)) {
 					token = parser::next_line(&tok);
-					u32 name_id = make_string_id32(token.string);
-					current_material_index = pick_material(materials, name_id);
+					if (materials) {
+						u32 name_id = make_string_id32(token.string);
+						current_material_index = pick_material(materials, name_id);
+						if (current_material_index == -1) {
+							LOG_WARNING("Compiler", "No material named '%.*s' loaded!\n", token.string.length, *token.string);
+						}
+					} else {
+						LOG_WARNING("Compiler", "Trying to load '%.*s' when there are no materials loaded!\n", token.string.length, *token.string);
+					}
 				}
 				// mtllib
 				else if (parser::is_equal(token, t_mtllib)) {
 					token = parser::next_line(&tok);
-					sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%.*s", input_directory, token.string.length, *token.string);
+					snprintf(buffer, ARRAY_COUNT(buffer), "%s/%.*s", input_directory, token.string.length, *token.string);
 					materials = parse_mtllib(arena, buffer);
+					if (!materials) {
+						LOG_WARNING("Compiler", "Couldn't load material file '%s'\n", buffer);
+					}
 				}
 			} break;
 			case '#': {
@@ -296,9 +306,9 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 				ni = (u32)(fv.normal_index < 0 ? normal_count + fv.normal_index : fv.normal_index - 1);
 			}
 
-			static int xprime = 492876863; /* arbitrary large prime */
-			static int yprime = 633910099; /* arbitrary large prime */
-			static int zprime = 805306457; /* arbitrary large prime */
+			static u32 xprime = 492876863; /* arbitrary large prime */
+			static u32 yprime = 633910099; /* arbitrary large prime */
+			static u32 zprime = 805306457; /* arbitrary large prime */
 			u64 hash = ((vi * xprime) ^ (ci * yprime) ^ (ni * zprime)) & hashmap_mask;
 
 			bool found = false;
@@ -338,7 +348,7 @@ void compile_obj(const char *input_directory, const char *input_filename, const 
 	}
 
 	FILE *output;
-	sprintf_s(buffer, ARRAY_COUNT(buffer), "%s/%s", output_directory, output_filename);
+	snprintf(buffer, ARRAY_COUNT(buffer), "%s/%s", output_directory, output_filename);
 	fopen_s(&output, buffer, "wb");
 	ASSERT(file, "Could not open '%s'", buffer);
 
