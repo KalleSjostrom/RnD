@@ -30,7 +30,6 @@ EXPORT PLUGIN_RELOAD(reload) {
 
 	#ifdef OS_WINDOWS
 		setup_gl();
-		setup_cl();
 	#endif
 
 	MemoryArena empty = {};
@@ -85,7 +84,6 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		#ifdef OS_WINDOWS
 			setup_gl();
-			setup_cl();
 		#endif
 		MemoryArena empty = {};
 		application.persistent_arena = empty;

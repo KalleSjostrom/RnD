@@ -22,9 +22,11 @@ set ENTRY_POINT=source/%PLUGIN_NAME%
 
 if %INSTANCE_RUNNING%==1 (
 	rem therefore, we need to append a random name to the plugin name
-	set PLUGIN_NAME="%PLUGIN_NAME%_%random%"
+	set PLUGIN_NAME=%PLUGIN_NAME%_%random%
 )
 set PDB_NAME=%PLUGIN_NAME%.pdb
+
+echo "PDB NAME %PDB_NAME%"
 
 set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd4668 /wd4820 /wd4625 /wd4710 /wd4626 /wd4582 /wd4623
 set DISABLE_WARNINGS=%DISABLE_WARNINGS% /wd4060 /wd4068 /wd4201 /wd4127 /wd4191 /wd4505 /wd4100 /wd4324
