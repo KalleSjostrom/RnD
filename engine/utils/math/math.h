@@ -227,5 +227,5 @@ FORCE_INLINE v4 normalize(v4 a) {
 	return (1.0f/l) * a;
 }
 
-#include "matrix.h"
 #include "quaternion.h"
+#include "matrix.h"

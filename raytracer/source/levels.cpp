@@ -1,26 +1,6 @@
-struct EntityData {
-	EntityType type;
-	v3 offset;
-	v3 size;
-	float rotation;
-	Context context;
-};
-EntityData make_entity_data(EntityType type, v3 offset, v3 size, float rotation, Context &context) {
-	EntityData data = {};
-	data.type = type;
-	data.offset = offset;
-	data.size = size;
-	data.rotation = rotation;
-	data.context = context;
-	return data;
-};
+#include "engine/levels.h"
 
-struct Level {
-	i32 count;
-	EntityData entity_data[512];
-};
-
-static Material materials[8] = {
+static RayMaterial materials[8] = {
 	{ { 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 1 }, // Plane
 	{ { 0.7f, 0.5f, 0.3f }, { 0, 0, 0 }, 0.3f },
 	{ { 0.2f, 0.8f, 0.2f }, { 0, 0, 0 }, 0.15f },

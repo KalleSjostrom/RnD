@@ -13,10 +13,6 @@
 #include "OpenCL/opencl.h"
 #endif
 
-#define GLSL(src) "#version 410\n" #src
-typedef uint16_t GLindex;
-// #define GL_INDEX GL_UNSIGNED_SHORT
-
 #include "engine/plugin.h"
 #include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/file_utils.h"
@@ -47,7 +43,6 @@ namespace globals {
 
 #include "engine/utils/audio_manager.cpp"
 #include "engine/utils/camera.cpp"
-#include "engine/utils/animation.h"
 
 /////// ASSETS
 #include "shaders/default.cl_shader.cpp"

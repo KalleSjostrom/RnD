@@ -242,3 +242,64 @@ FORCE_INLINE m4 orthographic(float right, float left, float top, float bottom, f
 		0, 0, -2/(_far-_near), -(_far+_near)/(_far-_near),
 		0, 0, 0, 1); // No homogenous coordinates, w is not needed.
 }
+
+
+FORCE_INLINE void rotate_around(m4 &pose, q4 q) {
+	v3 &x = *(v3*)(pose.m + 0);
+	v3 &y = *(v3*)(pose.m + 4);
+	v3 &z = *(v3*)(pose.m + 8);
+
+	x = ::rotate_around(q, x);
+	y = ::rotate_around(q, y);
+	z = ::rotate_around(q, z);
+}
+
+FORCE_INLINE void rotate_around(m4 &pose, float angle, float x, float y) {
+	float ca = cosf(angle);
+	float sa = sinf(angle);
+
+	float rx = -ca*x + sa*y + x;
+	float ry = -sa*x - ca*y + y;
+
+	m4 rotation = identity();
+
+	rotation.m[INDEX(0, 3)] = rx;
+	rotation.m[INDEX(1, 3)] = ry;
+
+	rotation.m[INDEX(0, 0)] = ca;
+	rotation.m[INDEX(0, 1)] = -sa;
+	rotation.m[INDEX(1, 0)] = sa;
+	rotation.m[INDEX(1, 1)] = ca;
+
+	pose *= rotation;
+}
+
+FORCE_INLINE void rotate(m4 &pose, float angle) {
+	float ca = cosf(angle);
+	float sa = sinf(angle);
+
+	m4 rotation = identity();
+
+	rotation.m[INDEX(0, 0)] = ca;
+	rotation.m[INDEX(0, 1)] = -sa;
+	rotation.m[INDEX(1, 0)] = sa;
+	rotation.m[INDEX(1, 1)] = ca;
+
+	pose *= rotation;
+}
+
+FORCE_INLINE void set_rotation(m4 &pose, float angle) {
+	float ca = cosf(angle);
+	float sa = sinf(angle);
+
+	pose.m[INDEX(0, 0)] = ca;
+	pose.m[INDEX(0, 1)] = -sa;
+	pose.m[INDEX(1, 0)] = sa;
+	pose.m[INDEX(1, 1)] = ca;
+}
+
+FORCE_INLINE void set_scale(m4 &pose, v3 scale) {
+	pose.m[INDEX(0, 0)] = scale.x;
+	pose.m[INDEX(1, 1)] = scale.y;
+	pose.m[INDEX(2, 2)] = scale.z;
+}

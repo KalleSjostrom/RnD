@@ -44,15 +44,13 @@ static const char *fragment = GLSL(
 	out vec4 color;
 
 	void main() {
-		vec3 normal = texture(bump, fuv).xyz;
-		normal += fnormal.xyz;
-		vec3 n = (normal + vec3(1)) * 0.5f;
+		vec3 normal = fnormal.xyz;
 
 		color = texture(diffuse, fuv);
 		color.a = texture(translucency, fuv).x;
 
 		float d = dot(-flight.xyz, normal);
-		color.xyz *= clamp(d, 0.0f, 1.0f);
+		color.xyz *= clamp(d, 0.3f, 1.0f);
 	}
 );
 }

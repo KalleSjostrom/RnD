@@ -1,8 +1,4 @@
-struct FBO {
-	GLuint framebuffer_object;
-	i32 count;
-	GLuint render_texture[8];
-};
+#include "engine/utils/fbo.h"
 
 static const u32 fsaa_num_samples = 8;
 
@@ -28,33 +24,6 @@ struct RenderPipe {
 	i32 program_count;
 	i32 __padding;
 };
-
-static GLenum draw_buffers[] = {
-	GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
-	GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7,
-};
-
-void setup_fbo(FBO &fbo, i32 width, i32 height, i32 count = 1) {
-	glGenFramebuffers(1, &fbo.framebuffer_object);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo.framebuffer_object);
-
-	fbo.count = count;
-	for (i32 i = 0; i < count; ++i) {
-		glGenTextures(1, &fbo.render_texture[i]);
-		glBindTexture(GL_TEXTURE_2D, fbo.render_texture[i]);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-		glFramebufferTexture2D(GL_FRAMEBUFFER, draw_buffers[i], GL_TEXTURE_2D, fbo.render_texture[i], 0);
-	}
-
-	glDrawBuffers(count, draw_buffers);
-
-	ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE, "glCheckFramebufferStatus failed!");
-}
 
 void update_image(RenderPipe &r) {
 	glBindTexture(GL_TEXTURE_2D, r.ray_texture);
@@ -93,7 +62,7 @@ void alloc_image(MemoryArena &arena, RenderPipe &r) {
 void setup_render_pipe(EngineApi *engine, MemoryArena &arena, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
 		Context c = {};
-		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen, c);
+		spawn_entity(engine, components, r.fullscreen_quad, EntityType_Fullscreen, c);
 	}
 
 	r.screen_width = screen_width;
@@ -113,32 +82,6 @@ void setup_render_pipe(EngineApi *engine, MemoryArena &arena, RenderPipe &r, Com
 	}
 }
 
-void load_image(EngineApi *engine, GLuint &texture, const char *path) {
-	ImageData image_data;
-	b32 success = engine->image_load(path, image_data);
-	ASSERT(success, "Could not load image!");
-
-	glGenTextures(1, &texture);
-
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// The png is stored as ARGB, appearently
-	switch(image_data.format) {
-		case PixelFormat_RGBA: {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data.pixels);
-		} break;
-		case PixelFormat_ARGB: {
-    		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data.width, image_data.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, image_data.pixels);
-		} break;
-	}
-}
-
 void render(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	// Push viewport and blend state
 	glClearColor(0, 0, 0, 0);
@@ -150,16 +93,20 @@ void render(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 
 	if (1) {
 		// Get the fullscreen quad and set it up for rendering
-		i32 model_id = r.fullscreen_quad.model_id;
-		Renderable &renderable = components.model.instances[model_id].renderable;
-		glBindVertexArray(renderable.vertex_array_object);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderable.element_array_buffer);
-
 		glUseProgram(r.passthrough_program);
 		glBindTexture(GL_TEXTURE_2D, r.ray_texture);
-		glUniform1i(r.passthrough_render_texture_location, 0);
-		glDrawElements(renderable.draw_mode, renderable.index_count, GL_UNSIGNED_SHORT, (void*)0);
 
+		glUniform1i(r.passthrough_render_texture_location, 0);
+
+		i32 model_id = r.fullscreen_quad.model_id;
+		Renderable &re = components.model.instances[model_id];
+		glBindVertexArray(re.mesh.vertex_array_object);
+
+		for (i32 i = 0; i < re.mesh.group_count; ++i) {
+			Group &group = re.mesh.groups[i];
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, group.element_array_buffer);
+			glDrawElements(re.draw_mode, group.index_count, GL_UNSIGNED_INT, (void*)0);
+		}
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, r.fsaa_fbo); // Make sure your multisampled FBO is the read framebuffer

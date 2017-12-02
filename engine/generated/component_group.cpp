@@ -50,7 +50,6 @@ void update_components(ComponentGroup &component_group, float dt) {
 	component_group.fluid.update(dt);
 }
 
-// NOTE(kalle): We could probably use u16's for the entity ids
 struct Entity {
 	u32 type;
 
@@ -128,9 +127,9 @@ v3 *animation__get_skeleton_vertices(ComponentGroup &components, Entity &entity)
 i32 animation__get_skeleton_vertex_count(ComponentGroup &components, Entity &entity) {
 	return components.animation.get_skeleton_vertex_count(entity.animation_id);
 }
-void model__update_vertices(ComponentGroup &components, Entity &entity, v3 *vertices) {
-	components.model.update_vertices(entity.model_id, vertices);
-}
+// void model__update_vertices(ComponentGroup &components, Entity &entity, v3 *vertices) {
+// 	components.model.update_vertices(entity.model_id, vertices);
+// }
 void model__set_position(ComponentGroup &components, Entity &entity, v3 position) {
 	components.model.set_position(entity.model_id, position);
 }
@@ -205,10 +204,10 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
-			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id]);
 
 			// Actor
-			m4 &pose = components.model.instances[entity.model_id].renderable.pose;
+			m4 &pose = components.model.instances[entity.model_id].pose;
 			entity.actor_id = components.actor.add(ShapeType_AABox, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Sphere: {
@@ -232,7 +231,7 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
-			add_to_program(components.renderer, ProgramType_sphere, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, ProgramType_sphere, &components.model.instances[entity.model_id]);
 
 			// Material
 			entity.material_id = components.material.add(context.material);
@@ -244,7 +243,7 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 				{  50.0f,  50.0f, 0.0f },
 				{ -50.0f,  50.0f, 0.0f },
 			};
-			m4 &pose = components.model.instances[entity.model_id].renderable.pose;
+			m4 &pose = components.model.instances[entity.model_id].pose;
 			entity.actor_id = components.actor.add(ShapeType_Sphere, pose, bounding_box, ARRAY_COUNT(bounding_box));
 		} break;
 		case EntityType_Block: {
@@ -271,10 +270,10 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
-			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id]);
 
 			// Actor
-			m4 &pose = components.model.instances[entity.model_id].renderable.pose;
+			m4 &pose = components.model.instances[entity.model_id].pose;
 			entity.actor_id = components.actor.add(ShapeType_Box, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Fullscreen: {
@@ -308,7 +307,7 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			entity.model_id = components.model.add(engine, *components.arena, position, context.model);
-			add_to_program(components.renderer, context.model->program_type, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, context.model->program_type, &components.model.instances[entity.model_id]);
 		} break;
 		case EntityType_Ruler: {
 			static v3 vertex_buffer_data[] = {
@@ -332,7 +331,7 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			entity.model_id = components.model.add(engine, *components.arena, position, &model_cc);
-			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id]);
 		} break;
 		case EntityType_Plane: {
 			static v3 vertex_buffer_data[] = {
@@ -344,7 +343,7 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 
 			// Model
 			// entity.model_id = components.model.add(position, (GLindex*)quad_vertex_indices, ARRAY_COUNT(quad_vertex_indices), vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
-			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id].renderable);
+			add_to_program(components.renderer, ProgramType_default, &components.model.instances[entity.model_id]);
 
 			// Material
 			entity.material_id = components.material.add(context.material); // V3(0.5f, 0.5f, 0.5f), V3(0, 0, 0), 1);
@@ -369,8 +368,8 @@ namespace component_glue {
 			Entity &entity = entites[i];
 			switch (entity.type) {
 				case EntityType_Avatar: {
-					v3 *vertices = animation__get_skeleton_vertices(components, entity);
-					model__update_vertices(components, entity, vertices);
+					// v3 *vertices = animation__get_skeleton_vertices(components, entity);
+					// model__update_vertices(components, entity, vertices);
 				} break;
 				case EntityType_BlockAvatar: {
 					v3 move = input__get_move(components, entity) * 10;

@@ -1,6 +1,6 @@
 #include "includes.h"
 
-struct Game {
+struct Application {
 	MemoryArena persistent_arena;
 	MemoryArena transient_arena;
 
@@ -25,7 +25,7 @@ struct Game {
 };
 
 EXPORT PLUGIN_RELOAD(reload) {
-	Game &game = *(Game*) memory;
+	Application &application = *(Application*) memory;
 
 	#ifdef OS_WINDOWS
 		setup_gl();
@@ -33,30 +33,30 @@ EXPORT PLUGIN_RELOAD(reload) {
 	#endif
 
 	MemoryArena empty = {};
-	game.transient_arena = empty;
-	reset_arena(game.transient_arena, MB);
-	globals::transient_arena = &game.transient_arena;
+	application.transient_arena = empty;
+	reset_arena(application.transient_arena, MB);
+	globals::transient_arena = &application.transient_arena;
 
-	reload_programs(game.components);
-	setup_render_pipe(game.engine, game.persistent_arena, game.render_pipe, game.components, screen_width, screen_height);
-	game.components.input.set_input_data(&input);
+	reload_programs(application.components);
+	setup_render_pipe(application.engine, application.persistent_arena, application.render_pipe, application.components, screen_width, screen_height);
+	application.components.input.set_input_data(&input);
 
 	Level level = make_level();
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
 
 		Entity *entity = 0;
-		if (i < game.entity_count) {
-			entity = game.entities + i;
+		if (i < application.entity_count) {
+			entity = application.entities + i;
 		} else {
-			entity = game.entities + game.entity_count++;
+			entity = application.entities + application.entity_count++;
 		}
 
-		model__set_position(game.components, *entity, data.offset);
-		model__set_rotation(game.components, *entity, data.rotation);
-		model__set_scale(game.components, *entity, data.size);
+		model__set_position(application.components, *entity, data.offset);
+		model__set_rotation(application.components, *entity, data.rotation);
+		model__set_scale(application.components, *entity, data.size);
 	}
-	game.entity_count = level.count;
+	application.entity_count = level.count;
 }
 
 ALIGNED_TYPE_(struct, 16) {
@@ -93,53 +93,55 @@ ALIGNED_TYPE_(struct, 16) {
 } CLRaytracerSettings;
 
 EXPORT PLUGIN_UPDATE(update) {
-	Game &game = *(Game*) memory;
+	Application &application = *(Application*) memory;
 
-	if (!game.initialized) {
-		game.initialized = true;
+	if (!application.initialized) {
+		application.initialized = true;
 
 		#ifdef OS_WINDOWS
 			setup_gl();
 			setup_cl();
 		#endif
 		MemoryArena empty = {};
-		game.persistent_arena = empty;
-		game.transient_arena = empty;
-		setup_arena(game.transient_arena, MB);
-		globals::transient_arena = &game.transient_arena;
+		application.persistent_arena = empty;
+		application.transient_arena = empty;
+		setup_arena(application.transient_arena, MB);
+		globals::transient_arena = &application.transient_arena;
 
-		game.engine = &engine;
-		game.random = {};
-		random_init(game.random, rdtsc(), 54u);
+		application.components.arena = &application.persistent_arena;
+
+		application.engine = &engine;
+		application.random = {};
+		random_init(application.random, rdtsc(), 54u);
 
 		Level level = make_level();
 		for (i32 i = 0; i < level.count; ++i) {
 			EntityData &data = level.entity_data[i];
-			Entity &entity = game.entities[game.entity_count++];
+			Entity &entity = application.entities[application.entity_count++];
 
-			spawn_entity(game.components, entity, data.type, data.context, data.offset);
+			spawn_entity(application.engine, application.components, entity, data.type, data.context, data.offset);
 
-			model__set_position(game.components, entity, data.offset);
-			model__set_rotation(game.components, entity, data.rotation);
-			model__set_scale(game.components, entity, data.size);
+			model__set_position(application.components, entity, data.offset);
+			model__set_rotation(application.components, entity, data.rotation);
+			model__set_scale(application.components, entity, data.size);
 		}
 
 		glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 		// glEnable(GL_DEPTH_TEST);
 
-		ClInfo cl_info = init_opencl(game.transient_arena);
+		ClInfo cl_info = init_opencl(application.transient_arena);
 		// -cl-mad-enable -cl-no-signed-zeros -cl-unsafe-math-optimizations -cl-finite-math-only -cl-single-precision-constant -cl-denorms-are-zero -cl-strict-aliasing
 		char *build_options = "-cl-fast-relaxed-math";
-		cl_program program = cl_program_builder::create_from_strings(game.transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, build_options);
+		cl_program program = cl_program_builder::create_from_strings(application.transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, build_options);
 
 		cl_int errcode_ret;
 
 		cl_kernel kernel = clCreateKernel(program, "cast_rays", &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateKernel, errcode_ret);
 
-		setup_programs(game.components);
-		setup_render_pipe(game.engine, game.persistent_arena, game.render_pipe, game.components, screen_width, screen_height);
+		setup_programs(application.components);
+		setup_render_pipe(application.engine, application.persistent_arena, application.render_pipe, application.components, screen_width, screen_height);
 
 		cl_uint input_entity_count = 0;
 
@@ -248,14 +250,14 @@ EXPORT PLUGIN_UPDATE(update) {
 				sphere->roughness = 1.0f;
 			}
 
-			CLEntityGeometry *geometry = PUSH_STRUCTS(game.transient_arena, input_entity_count, CLEntityGeometry);
+			CLEntityGeometry *geometry = PUSH_STRUCTS(application.transient_arena, input_entity_count, CLEntityGeometry);
 			for (u32 gi = 0; gi < input_entity_count; ++gi) {
 				geometry[gi].position = entities[gi].position;
 				geometry[gi].data = entities[gi].data;
 				geometry[gi].type = entities[gi].type;
 			}
 
-			CLEntityMaterial *material = PUSH_STRUCTS(game.transient_arena, input_entity_count, CLEntityMaterial);
+			CLEntityMaterial *material = PUSH_STRUCTS(application.transient_arena, input_entity_count, CLEntityMaterial);
 			for (u32 gi = 0; gi < input_entity_count; ++gi) {
 				material[gi].emittance_color = entities[gi].emittance_color;
 				material[gi].reflection_color = entities[gi].reflection_color;
@@ -268,8 +270,8 @@ EXPORT PLUGIN_UPDATE(update) {
 			input_entity_material_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntityMaterial) * input_entity_count, material, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 		}
-		game.input_entity_geometry_mem = input_entity_geometry_mem;
-		game.input_entity_material_mem = input_entity_material_mem;
+		application.input_entity_geometry_mem = input_entity_geometry_mem;
+		application.input_entity_material_mem = input_entity_material_mem;
 
 		cl_mem input_settings_mem;
 		{
@@ -291,14 +293,14 @@ EXPORT PLUGIN_UPDATE(update) {
 
 		cl_mem accumulation_mem;
 		{
-			void *mem = PUSH_SIZE(game.persistent_arena, sizeof(cl_float3) * 1024 * 768, true);
+			void *mem = PUSH_SIZE(application.persistent_arena, sizeof(cl_float3) * 1024 * 768, true);
 			accumulation_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float3) * 1024 * 768, mem, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateFromGLTexture, errcode_ret);
 		}
 
 		cl_mem output_mem;
 		{
-			output_mem = clCreateFromGLTexture(cl_info.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, game.render_pipe.ray_texture, &errcode_ret);
+			output_mem = clCreateFromGLTexture(cl_info.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, application.render_pipe.ray_texture, &errcode_ret);
 			CL_CHECK_ERRORCODE(clCreateFromGLTexture, errcode_ret);
 		}
 
@@ -321,24 +323,70 @@ EXPORT PLUGIN_UPDATE(update) {
 		errcode_ret = clSetKernelArg(kernel, 8, sizeof(cl_mem), (void *) &output_mem);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		game.cl_info = cl_info;
-		game.output_mem = output_mem;
-		game.kernel = kernel;
+		application.cl_info = cl_info;
+		application.output_mem = output_mem;
+		application.kernel = kernel;
 
-		game.components.input.set_input_data(&input);
+		application.components.input.set_input_data(&input);
 
 		//	// Audio
-		//	game.audio_manager.play(game.engine, "../../game/assets/test.wav");
-		setup_camera(game.camera, V3(0, 0, 500), ASPECT_RATIO);
+		//	application.audio_manager.play(application.engine, "../../application/assets/test.wav");
+		setup_camera(application.camera, V3(0, 0, 500), ASPECT_RATIO);
 	}
 
-	{ // Update the game
+	{ // Update the application
 		// Update all the components
-		update_components(game.components, dt);
+		update_components(application.components, dt);
 		// Handle component/component communication.
-		component_glue::update(game.components, game.entities, game.entity_count, dt);
+		component_glue::update(application.components, application.entities, application.entity_count, dt);
 		// Update sound
-		game.audio_manager.update(*globals::transient_arena, game.engine, dt);
+		application.audio_manager.update(*globals::transient_arena, application.engine, dt);
+	}
+
+	{
+		v2 m = {};
+		if (IS_HELD(input, InputKey_A)) {
+			m.x = -1;
+		}
+		if (IS_HELD(input, InputKey_S)) {
+			m.y = -1;
+		}
+		if (IS_HELD(input, InputKey_D)) {
+			m.x = 1;
+		}
+		if (IS_HELD(input, InputKey_W)) {
+			m.y = 1;
+		}
+
+		float camera_speed = 128.0f;
+		float camera_rotation_speed = 0.5f;
+
+		if (IS_HELD(input, InputKey_MouseRight)) {
+			camera_speed *= 8;
+		}
+
+		m4 &pose = application.camera.pose;
+
+		v3 &x = *(v3*)(pose.m + 0);
+		v3 &y = *(v3*)(pose.m + 4);
+		v3 &z = *(v3*)(pose.m + 8);
+		v3 &position = translation(pose);
+
+		position += x * (m.x * dt * camera_speed);
+		position += z * (m.y * dt * camera_speed);
+
+		if (IS_HELD(input, InputKey_MouseLeft)) {
+			v3 world_up = V3(0, 1, 0);
+			q4 qx = Quaternion(world_up, -input.mouse_xrel * dt * camera_rotation_speed);
+			q4 qy = Quaternion(x, -input.mouse_yrel * dt * camera_rotation_speed);
+			q4 q = qx * qy;
+
+			x = ::rotate_around(q, x);
+			y = ::rotate_around(q, y);
+			z = ::rotate_around(q, z);
+		}
+
+		update_view(application.camera);
 	}
 
 	{ // Setup opencl
@@ -359,38 +407,38 @@ EXPORT PLUGIN_UPDATE(update) {
 		// 	sphere.roughness = 1.0f;
 
 		// 	size_t offset = 2 * sizeof(CLEntity);
-		// 	errcode_ret = clEnqueueWriteBuffer(game.cl_info.command_queue, game.input_entities_mem, true, offset, sizeof(CLEntity), (void*)(&sphere), 0, 0, 0);
+		// 	errcode_ret = clEnqueueWriteBuffer(application.cl_info.command_queue, application.input_entities_mem, true, offset, sizeof(CLEntity), (void*)(&sphere), 0, 0, 0);
 		// 	CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 		// }
 
 		u64 time = rdtsc();
-		errcode_ret = clSetKernelArg(game.kernel, 4, sizeof(u64), (void *) &time);
+		errcode_ret = clSetKernelArg(application.kernel, 4, sizeof(u64), (void *) &time);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		static cl_ulong framecounter = 0;
 		framecounter++;
 
-		errcode_ret = clSetKernelArg(game.kernel, 5, sizeof(u64), (void *) &framecounter);
+		errcode_ret = clSetKernelArg(application.kernel, 5, sizeof(u64), (void *) &framecounter);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		v3 camera_position = translation(game.camera.pose);
-		errcode_ret = clSetKernelArg(game.kernel, 6, sizeof(cl_float3), (void *) &camera_position);
+		v3 camera_position = translation(application.camera.pose);
+		errcode_ret = clSetKernelArg(application.kernel, 6, sizeof(cl_float3), (void *) &camera_position);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		glFinish();
-		clEnqueueAcquireGLObjects(game.cl_info.command_queue, 1, &game.output_mem, 0, 0, 0);
+		clEnqueueAcquireGLObjects(application.cl_info.command_queue, 1, &application.output_mem, 0, 0, 0);
 
-		errcode_ret = clEnqueueNDRangeKernel(game.cl_info.command_queue, game.kernel, ARRAY_COUNT(work_group_size), 0, work_group_size, local_group_size, 0, 0, &event);
+		errcode_ret = clEnqueueNDRangeKernel(application.cl_info.command_queue, application.kernel, ARRAY_COUNT(work_group_size), 0, work_group_size, local_group_size, 0, 0, &event);
 		CL_CHECK_ERRORCODE(clEnqueueNDRangeKernel, errcode_ret);
 
 		// clWaitForEvents(1, &event);
 
-		clFinish(game.cl_info.command_queue);
-		clEnqueueReleaseGLObjects(game.cl_info.command_queue, 1, &game.output_mem, 0, 0, 0);
+		clFinish(application.cl_info.command_queue);
+		clEnqueueReleaseGLObjects(application.cl_info.command_queue, 1, &application.output_mem, 0, 0, 0);
 	}
 
 	{ // Render
-		render(game.render_pipe, game.components, game.camera);
+		render(application.render_pipe, application.components, application.camera);
 	}
 
 	reset_transient_memory(*globals::transient_arena);
