@@ -280,20 +280,43 @@ static const char *trace_ray = CL(
 		return color;
 	}
 
-	__kernel void cast_rays(__constant EntityGeometry *genometries, __constant EntityMaterial *materials, uint entity_count, __constant Settings *settings, ulong time, ulong frame_counter, float3 camera_position, __global float3 *buffer, __write_only image2d_t image) {
+	typedef struct {
+		float4 x;
+		float4 y;
+		float4 z;
+		float4 w;
+	} m4;
+
+	// float3 &right_axis(m4 &m) {
+	// 	return *(float3*)(m.m + 0);
+	// }
+	// float3 &forward_axis(m4 &m) {
+	// 	return *(float3*)(m.m + 8);
+	// }
+	// float3 &up_axis(m4 &m) {
+	// 	return *(float3*)(m.m + 4);
+	// }
+
+	__kernel void cast_rays(__constant EntityGeometry *genometries, __constant EntityMaterial *materials, uint entity_count, __constant Settings *settings, ulong time, ulong frame_counter, m4 camera_pose, __global float3 *buffer, __write_only image2d_t image) {
 		uint x = get_global_id(0);
 		uint y = get_global_id(1);
 
-		// Setup random
 		Random random = {};
 		random_init(&random, x*y*time, 54u);
 
-		float3 ray_position = (float3)(camera_position);
+		float3 ray_position = camera_pose.w.xyz;
+		float3 right = camera_pose.x.xyz;
+		float3 up = camera_pose.y.xyz;
+		float3 forward = camera_pose.z.xyz;
 		float3 color = (float3)(0, 0, 0);
 		for (int ray_index = 0; ray_index < settings->rays_per_pixel; ++ray_index) {
-			float3 ray_goal = (float3)(x - settings->half_width, y - settings->half_height, 0);
-			ray_goal.x += random_bilateral_f32(&random) * settings->half_pix_w;
-			ray_goal.y += random_bilateral_f32(&random) * settings->half_pix_h;
+			float x_offset = random_bilateral_f32(&random) * settings->half_pix_w;
+			float y_offset = random_bilateral_f32(&random) * settings->half_pix_h;
+
+			float3 new_right = right * (x - settings->half_width + x_offset);
+			float3 new_up    = up * (y - settings->half_height + y_offset);
+			float3 ray_goal  = ray_position + new_right + new_up + forward * 1000;
+
 			float3 ray_direction = normalize(ray_goal - ray_position);
 			color += cast_ray(genometries, materials, entity_count, &random, ray_position, ray_direction);
 		}

@@ -71,7 +71,7 @@ ClInfo init_opencl(MemoryArena &arena) {
 
 	// NOTE(kalle): I only care about the first GPU for now since I'm doing one share group with one context.
 	num_devices = 1;
-	int device_index = DEVICE_INDEX;
+	int device_index = 0;
 
 	cl_context context = clCreateContext(properties, num_devices, devices + device_index, 0, 0, &errcode_ret);
 	CL_CHECK_ERRORCODE(clCreateContext, errcode_ret);

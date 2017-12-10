@@ -1,0 +1,12 @@
+
+EntityRef : RPC_PARAM_INT_TYPE
+	components::manager->get_go_id_ptr
+	components::manager->try_get_entity(*(GameObjectId*)
+
+FlowEvent : RPC_PARAM_INT_TYPE
+	flow_lookup::event_to_index
+	flow_lookup::index_to_event(*(unsigned*)
+
+AnimationEvent : RPC_PARAM_INT_TYPE
+	animation_lookup::event_to_index
+	animation_lookup::index_to_event(*(unsigned*)

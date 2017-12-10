@@ -1,15 +1,13 @@
 #include "engine/utils/platform.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <limits.h>
-#include <float.h>
-
 #ifdef OS_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
+#endif
+
+#define SYSTEM_OPENGL 1
+#define SYSTEM_AUDIO 1
+
 #include <gl/gl.h>
 #include "engine/utils/win32_setup_gl.h"
 #include "engine/utils/win32_setup_cl.h"

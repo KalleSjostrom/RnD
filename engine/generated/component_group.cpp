@@ -19,6 +19,20 @@ typedef u32 GLindex;
 #include "shaders/model.shader.cpp"
 #include "shaders/fullscreen_effects.shader.cpp"
 
+struct Entity {
+	u32 type;
+
+	cid input_id;
+
+	cid animation_id;
+	cid mover_id;
+
+	cid model_id;
+	cid actor_id;
+	cid fluid_id;
+	cid material_id;
+};
+
 struct ComponentGroup {
 	InputComponent input;
 
@@ -32,6 +46,9 @@ struct ComponentGroup {
 
 	Renderer renderer;
 	MemoryArena *arena;
+
+	i32 entity_count;
+	Entity entities[512];
 };
 
 struct Context {
@@ -49,20 +66,6 @@ void update_components(ComponentGroup &component_group, float dt) {
 	component_group.mover.update(dt);
 	component_group.fluid.update(dt);
 }
-
-struct Entity {
-	u32 type;
-
-	cid input_id;
-
-	cid animation_id;
-	cid mover_id;
-
-	cid model_id;
-	cid actor_id;
-	cid fluid_id;
-	cid material_id;
-};
 
 enum EntityType : u32 {
 	EntityType_Avatar = 0,
@@ -170,7 +173,8 @@ b32 input__get_jump(ComponentGroup &components, Entity &entity) {
 	return components.input.inputs[entity.input_id].jump;
 }
 
-void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity, EntityType type, Context &context, v3 position = V3(0,0,0)) {
+Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType type, Context &context, v3 position = V3(0,0,0)) {
+	Entity &entity = components.entities[components.entity_count++];
 	entity.type = type;
 
 	switch (type) {
@@ -360,12 +364,13 @@ void spawn_entity(EngineApi *engine, ComponentGroup &components, Entity &entity,
 			ASSERT(false, "Unknown entity type! (type=%u)", type);
 		} break;
 	}
+	return &entity;
 }
 namespace component_glue {
-	void update(ComponentGroup &components, Entity *entites, i32 count, float dt) {
+	void update(ComponentGroup &components, float dt) {
 		(void)dt;
-		for (i32 i = 0; i < count; ++i) {
-			Entity &entity = entites[i];
+		for (i32 i = 0; i < components.entity_count; ++i) {
+			Entity &entity = components.entities[i];
 			switch (entity.type) {
 				case EntityType_Avatar: {
 					// v3 *vertices = animation__get_skeleton_vertices(components, entity);

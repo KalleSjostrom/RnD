@@ -1,5 +1,11 @@
 #pragma once
 
+#define MSPACES_ONLY 1
+#define MSPACES 1
+#define PROCEED_ON_ERROR 1
+#define USE_DL_PREFIX 1
+#include "dlmalloc.c"
+
 #include "common.h"
 
 #define RES_WIDTH 1024
@@ -29,6 +35,8 @@ struct EngineApi {
 	void (*audio_set_playing)(b32 playing);
 
 	b32 (*image_load)(const char *filename, ImageData &image_data);
+
+	void (*screen_dimensions)(i32 &screen_width, i32 &screen_height);
 
 	void (*quit)();
 };
@@ -97,8 +105,11 @@ struct InputData {
 #define IS_HELD(input, key) ((input).times[(key)].pressed > (input).times[(key)].released)
 #define IS_PRESSED(input, key) (input).pressed[(key)]
 
-#define PLUGIN_UPDATE(name) i32 name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, InputData &input, float dt)
+#define PLUGIN_SETUP(name) void name(mspace _mspace, EngineApi *engine, InputData *input)
+typedef PLUGIN_SETUP(plugin_setup_t);
+
+#define PLUGIN_UPDATE(name) i32 name(mspace _mspace, float dt)
 typedef PLUGIN_UPDATE(plugin_update_t);
 
-#define PLUGIN_RELOAD(name) void name(void *memory, EngineApi &engine, i32 screen_width, i32 screen_height, InputData &input)
+#define PLUGIN_RELOAD(name) void name(mspace _mspace, EngineApi *engine, InputData *input)
 typedef PLUGIN_RELOAD(plugin_reload_t);

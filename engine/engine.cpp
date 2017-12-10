@@ -13,20 +13,77 @@
 #include "include/SDL_image.h"
 #pragma clang diagnostic pop
 
-#include "mygl/mygl.h"
-
 #include "plugin.h"
-
-#define MYGL 0
 
 #include <stdio.h>
 #include "utils/memory/memory_arena.cpp"
 #include "utils/string.h"
+
+#if DEVELOPMENT
+	#include <dbghelp.h>
+	#include <psapi.h>
+
+	struct SymbolInfoPackage : public SYMBOL_INFO_PACKAGEW {
+		SymbolInfoPackage() {
+			si.SizeOfStruct = sizeof(SYMBOL_INFOW);
+			si.MaxNameLen = sizeof(name);
+		}
+	};
+
+	// TODO(kalle): This is supposed to be shared between the boot.cpp and this!
+	struct ReloadHeader {
+		void *old_mspace;
+		void *new_mspace;
+		size_t old_memory_size;
+	};
+
+	enum SymTagEnum {
+		SymTagNull,
+		SymTagExe,
+		SymTagCompiland,
+		SymTagCompilandDetails,
+		SymTagCompilandEnv,
+		SymTagFunction,
+		SymTagBlock,
+		SymTagData,
+		SymTagAnnotation,
+		SymTagLabel,
+		SymTagPublicSymbol, // 10
+		SymTagUDT,
+		SymTagEnum,
+		SymTagFunctionType,
+		SymTagPointerType,
+		SymTagArrayType, // 15
+		SymTagBaseType,
+		SymTagTypedef,
+		SymTagBaseClass,
+		SymTagFriend,
+		SymTagFunctionArgType, // 20
+		SymTagFuncDebugStart,
+		SymTagFuncDebugEnd,
+		SymTagUsingNamespace,
+		SymTagVTableShape,
+		SymTagVTable,
+		SymTagCustom,
+		SymTagThunk,
+		SymTagCustomType,
+		SymTagManagedType,
+		SymTagDimension,
+		SymTagMax
+	};
+
+	#include "reloader.cpp"
+#endif //DEVELOPMENT
+
 struct ReloadInfo {
 	String reload_marker_path;
 	String directory_path;
 	String plugin_path;
 	String plugin_pattern;
+
+#ifdef DEVELOPMENT
+	ReloadHeader reload_header;
+#endif // DEVELOPMENT
 };
 
 #ifdef OS_WINDOWS
@@ -34,11 +91,25 @@ struct ReloadInfo {
 	#include "windows.h"
 
 	#define LIB_HANDLE HMODULE
-	#define load_library(lib_path) LoadLibrary(lib_path)
-	#define get_symbol_address(lib_handle, symbol) GetProcAddress(lib_handle, symbol)
-	#define unload_library(lib_handle) FreeLibrary(lib_handle)
+#else
+	#define LIB_HANDLE void*
+#endif
 
-	void update_plugin_path(ReloadInfo &reload) {
+struct Plugin {
+	LIB_HANDLE module;
+	plugin_setup_t *setup;
+	plugin_update_t *update;
+	plugin_reload_t *reload;
+	time_t timestamp;
+	b32 valid;
+};
+
+#ifdef OS_WINDOWS
+	#define load_library(lib_path) LoadLibrary(lib_path)
+	#define get_symbol_address(module, symbol) GetProcAddress(module, symbol)
+	#define unload_library(module) FreeLibrary(module)
+
+	void find_newest_plugin(ReloadInfo &reload) {
 		WIN32_FIND_DATA best_data = {};
 		WIN32_FIND_DATA find_data;
 		HANDLE handle = FindFirstFile(*reload.plugin_pattern, &find_data);
@@ -61,6 +132,57 @@ struct ReloadInfo {
 		reload.plugin_path.text = (char*) malloc((size_t)(reload.directory_path.length + 1 + plugin_name_string.length + 1));
 		reload.plugin_path.length = 0;
 		append_path(reload.plugin_path, 2, &reload.directory_path, &plugin_name_string);
+	}
+
+	void init_symbols(Plugin &plugin, ReloadInfo &reload_info) {
+		HANDLE process = GetCurrentProcess();
+		BOOL success = SymInitialize(process, *reload_info.directory_path, FALSE);
+		if (!success) {
+			DWORD last_error = GetLastError();
+			LOG_ERROR("Reload", "Could not init symbols for plugin dll! (error=%ld).", last_error);
+			return;
+		}
+
+		MODULEINFO module_info = {};
+		if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
+			DWORD64 image_base = SymLoadModuleEx(process, 0, *reload_info.plugin_path, 0, (DWORD64)module_info.lpBaseOfDll, module_info.SizeOfImage, 0, 0);
+			if (image_base == 0) {
+				DWORD last_error = GetLastError();
+				LOG_ERROR("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, *reload_info.plugin_path);
+			}
+		}
+	}
+
+	void unload_symbols(Plugin &plugin) { // Unload symbols
+		MODULEINFO module_info = {};
+		HANDLE process = GetCurrentProcess();
+		if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
+			BOOL success = SymUnloadModule64(process, (DWORD64)module_info.lpBaseOfDll);
+			if (!success) {
+				DWORD last_error = GetLastError();
+				LOG_ERROR("Reload", "Could not unload symbols for plugin dll! (error=%ld).", last_error);
+			}
+		}
+	}
+
+	void load_symbols(Plugin &plugin, ReloadInfo &reload_info) { // Load symbols
+		MODULEINFO module_info = {};
+		HANDLE process = GetCurrentProcess();
+		if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
+			DWORD64 image_base = SymLoadModuleEx(process, 0, *reload_info.plugin_path, 0, (DWORD64)module_info.lpBaseOfDll, module_info.SizeOfImage, 0, 0);
+			if (image_base == 0) {
+				DWORD last_error = GetLastError();
+				LOG_ERROR("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, *reload_info.plugin_path);
+			} else {
+				SymbolInfoPackage symbol_info_package;
+				BOOL result = SymGetTypeFromNameW(process, (DWORD64)module_info.lpBaseOfDll, L"Application", &symbol_info_package.si);
+
+				if (result) {
+					SYMBOL_INFOW *symbol_info = &symbol_info_package.si;
+					symbased_memory_patching(process, symbol_info->ModBase, symbol_info, reload_info.reload_header);
+				}
+			}
+		}
 	}
 
 	FORCE_INLINE u64 absolute_time(void) {
@@ -86,10 +208,9 @@ struct ReloadInfo {
 	#include <unistd.h>
 	#include <dlfcn.h>
 
-	#define LIB_HANDLE void*
 	#define load_library(lib_path) dlopen(lib_path, RTLD_NOW | RTLD_NODELETE)
-	#define get_symbol_address(lib_handle, symbol) dlsym(lib_handle, symbol)
-	#define unload_library(lib_handle) dlclose(lib_handle)
+	#define get_symbol_address(module, symbol) dlsym(module, symbol)
+	#define unload_library(module) dlclose(module)
 
 	FORCE_INLINE u64 absolute_time(void) {
 		return mach_absolute_time();
@@ -110,7 +231,7 @@ struct ReloadInfo {
 	double time_in_seconds(TimeInfo &t, u64 ticks) {
 		return ticks * t.resolution;
 	}
-	void update_plugin_path(ReloadInfo &reload) {
+	void find_newest_plugin(ReloadInfo &reload) {
 		(void) reload;
 	}
 #endif
@@ -122,14 +243,7 @@ static u64 ENGINE_TIME;
 #include "engine/input.cpp"
 #include "engine/audio.cpp"
 
-struct Plugin {
-	LIB_HANDLE lib_handle;
-	plugin_update_t* update;
-	plugin_reload_t* reload;
-	time_t timestamp;
-	b32 valid;
-	i32 __padding;
-};
+
 static bool running = false;
 
 static void quit() {
@@ -145,38 +259,41 @@ static time_t get_timestamp(const char *path) {
 }
 
 PLUGIN_UPDATE(plugin_update_stub) {
-	(void)memory;
-	(void)engine;
-	(void)screen_width;
-	(void)screen_height;
-	(void)input;
+	(void)_mspace;
 	(void)dt;
 	return 0;
+}
+PLUGIN_SETUP(plugin_setup_stub) {
+	(void)_mspace;
+	(void)engine;
+	(void)input;
 }
 
 static Plugin load_plugin_code(const char *lib_path, time_t timestamp) {
 	Plugin plugin = {};
 
-	LIB_HANDLE lib_handle = load_library(lib_path);
-	if (lib_handle) {
-		void *update = get_symbol_address(lib_handle, "update");
+	LIB_HANDLE module = load_library(lib_path);
+	if (module) {
+		void *update = get_symbol_address(module, "update");
 		if (update) {
-			plugin.lib_handle = lib_handle;
+			plugin.module = module;
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpedantic"
+			plugin.setup = (plugin_setup_t*) get_symbol_address(module, "setup");
 			plugin.update = (plugin_update_t*) update;
-			plugin.reload = (plugin_reload_t*) get_symbol_address(lib_handle, "reload");
+			plugin.reload = (plugin_reload_t*) get_symbol_address(module, "reload");
 #pragma clang diagnostic pop
 
 			plugin.valid = true;
 			plugin.timestamp = timestamp;
 		} else {
-			unload_library(lib_handle);
+			unload_library(module);
 		}
 	}
 
 	if (plugin.update == 0) {
+		plugin.setup = (plugin_setup_t*) plugin_setup_stub;
 		plugin.update = (plugin_update_t*) plugin_update_stub;
 		plugin.valid = false;
 		LOG_INFO("Engine", "Loading code failed!\n");
@@ -188,9 +305,9 @@ static Plugin load_plugin_code(const char *lib_path, time_t timestamp) {
 }
 
 static void unload_plugin_code(Plugin &plugin) {
-	int ret = unload_library(plugin.lib_handle);
+	int ret = unload_library(plugin.module);
 	(void)ret;
-	plugin.lib_handle = 0;
+	plugin.module = 0;
 	plugin.valid = false;
 	LOG_INFO("Engine", "code unloaded!\n");
 	plugin.update = (plugin_update_t*) plugin_update_stub;
@@ -256,15 +373,18 @@ static b32 image_load(const char *filepath, ImageData &data) {
 	return true;
 }
 
+static i32 _screen_width;
+static i32 _screen_height;
+
+static void screen_dimensions(i32 &screen_width, i32 &screen_height) {
+	screen_width = _screen_width;
+	screen_height = _screen_height;
+}
+
 static void run(const char *plugin_directory, const char *plugin_name) {
 	running = true;
 
-	void *memory_chunks[2] = {
-		malloc(PLUGIN_MEMORY_SIZE),
-		malloc(PLUGIN_MEMORY_SIZE),
-	};
-	i32 memory_index = 0;
-	void *memory = memory_chunks[memory_index];
+	mspace plugin_mspace = create_mspace(PLUGIN_MEMORY_SIZE, 0);
 
 	String plugin_directory_string = make_string((char *)plugin_directory);
 	String plugin_name_string = make_string((char *)plugin_name);
@@ -284,6 +404,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	append_path(reload.plugin_path, 2, &reload.directory_path, &plugin_name_string);
 
 	Plugin plugin = load_plugin_code(*reload.plugin_path, get_timestamp(*reload.reload_marker_path));
+	init_symbols(plugin, reload);
 
 	TimeInfo time = {};
 	setup_time(time);
@@ -294,16 +415,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	i32 fps_frame_count = 0;
 
 	u32 sdl_subsystems = SDL_INIT_AUDIO;
-
-	int width, height;
-
-#if MYGL
-	GLWindowHandle *window = mygl_setup(RES_WIDTH, RES_HEIGHT, "Engine");
-	mygl_get_framebuffer_size(window, &width, &height);
-	LOG_INFO("Engine", "%d %d\n", width, height);
-#else
 	sdl_subsystems = SDL_INIT_AUDIO | SDL_INIT_VIDEO;
-#endif
 
 	if (SDL_Init(sdl_subsystems)) {
 		ASSERT(0, "SDL_Init failed: %s", IMG_GetError());
@@ -313,7 +425,6 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	}
 	audio::open();
 
-#if !MYGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -328,8 +439,8 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	SDL_GLContext glContext = SDL_GL_CreateContext(window);
 	(void)glContext;
 
-	SDL_GL_GetDrawableSize(window, &width, &height);
-#endif
+	SDL_GL_GetDrawableSize(window, &_screen_width, &_screen_height);
+	SDL_GL_SetSwapInterval(0);
 
 	EngineApi engine;
 
@@ -340,9 +451,12 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	engine.audio_set_playing = audio::set_playing;
 
 	engine.image_load = image_load;
+	engine.screen_dimensions = screen_dimensions;
 
 	engine.quit = quit;
 	engine.audio_set_playing(true);
+
+	plugin.setup(plugin_mspace, &engine, &_input);
 
 	while (running) {
 #if !MYGL
@@ -378,19 +492,39 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 		if (plugin.valid) {
 			time_t timestamp = get_timestamp(*reload.reload_marker_path);
 			if (timestamp > plugin.timestamp) {
+				#if DEVELOPMENT
+					unload_symbols(plugin);
+				#endif // DEVELOPMENT
+
+				// Free plugin
 				unload_plugin_code(plugin);
 
-				update_plugin_path(reload);
+				// Find most recently built dll
+				find_newest_plugin(reload);
+
+				// Load dll
 				plugin = load_plugin_code(*reload.plugin_path, timestamp);
 
-				// void *old_memory = memory_chunks[memory_index];
-				// memory_index = (memory_index + 1) % ARRAY_COUNT(memory_chunks);
-				// void *new_memory = memory_chunks[memory_index];
-				// plugin.reload(old_memory, new_memory);
-				// memory = memory_chunks[memory_index];
+				#if DEVELOPMENT
+					mspace new_plugin_mspace = create_mspace(PLUGIN_MEMORY_SIZE, 0);
 
-				plugin.reload(memory, engine, width, height, _input);
+					reload.reload_header.new_mspace = new_plugin_mspace;
+					reload.reload_header.old_mspace = plugin_mspace;
+					reload.reload_header.old_memory_size = PLUGIN_MEMORY_SIZE;
+
+					load_symbols(plugin, reload);
+				#endif // DEVELOPMENT
+
+				if (plugin.reload) {
+					plugin.reload(new_plugin_mspace, &engine, &_input);
+				}
 				LOG_INFO("Engine", "Plugin reloaded\n");
+
+				#if DEVELOPMENT
+					// Swap the memory
+					destroy_mspace(plugin_mspace);
+					plugin_mspace = new_plugin_mspace;
+				#endif // DEVELOPMENT
 			}
 		}
 
@@ -412,7 +546,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 			}
 		}
 
-		if (plugin.update(memory, engine, width, height, _input, (float)dt) < 0) {
+		if (plugin.update(plugin_mspace, (float)dt) < 0) {
 			unload_plugin_code(plugin);
 		}
 		for (i32 i = 0; i < InputKey_Count; ++i) {
@@ -421,20 +555,13 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 		}
 		ENGINE_TIME += delta;
 
-#if MYGL
-		mygl_swap_buffers(window);
-		mygl_poll_events();
-#else
 		SDL_GL_SwapWindow(window);
-#endif
 	}
 
 	IMG_Quit();
 	SDL_Quit();
 
-	for (u32 i = 0; i < ARRAY_COUNT(memory_chunks); ++i) {
-		free(memory_chunks[i]);
-	}
+	destroy_mspace(plugin_mspace);
 }
 
 #ifdef OS_WINDOWS

@@ -6,14 +6,14 @@ static const char *vertex = GLSL(
 
 	layout(location = 0) in vec3 positions;
 
-	void main(){
+	void main() {
 		gl_Position = projection * view * model * vec4(positions, 1.0f);
 	}
 );
 
 static const char *fragment = GLSL(
 	out vec4 color;
-	void main(){
+	void main() {
 		color = vec4(0.8f, 0.1f, 0.1f, 1.0f);
 	}
 );
@@ -25,7 +25,7 @@ static const char *vertex = GLSL(
 
 	layout(location = 0) in vec3 positions;
 
-	void main(){
+	void main() {
 		gl_Position = model * vec4(positions, 1.0f);
 	}
 );
@@ -85,7 +85,7 @@ static const char *vertex = GLSL(
 
 	layout(location = 0) in vec3 positions;
 
-	void main(){
+	void main() {
 		gl_Position = model * vec4(positions, 1.0f);
 	}
 );

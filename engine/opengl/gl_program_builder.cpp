@@ -1,4 +1,5 @@
 #include "engine/utils/file_utils.h"
+#include "engine/utils/memory/memory_arena.cpp"
 #include "engine/utils/logger.h"
 #include "gl_errors.cpp"
 

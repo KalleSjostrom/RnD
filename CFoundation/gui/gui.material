@@ -1,0 +1,41 @@
+
+debug_huge = {
+	material_contexts = {
+	}
+	shader = "gui:DIFFUSE_MAP"
+	textures = {
+		diffuse_map = "foundation/gui/debug_huge"
+	}
+	variables = {
+	}
+}
+debug_large = {
+	material_contexts = {
+	}
+	shader = "gui:DIFFUSE_MAP"
+	textures = {
+		diffuse_map = "foundation/gui/debug_large"
+	}
+	variables = {
+	}
+}
+debug_medium = {
+	material_contexts = {
+	}
+	shader = "gui:DIFFUSE_MAP"
+	textures = {
+		diffuse_map = "foundation/gui/debug_medium"
+	}
+	variables = {
+	}
+}
+debug_small = {
+	material_contexts = {
+	}
+	shader = "gui:DIFFUSE_MAP"
+	textures = {
+		diffuse_map = "foundation/gui/debug_small"
+	}
+	variables = {
+	}
+}

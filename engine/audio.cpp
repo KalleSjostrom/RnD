@@ -11,32 +11,32 @@ namespace audio {
 		wav_spec.size = 0;
 
 		if (SDL_OpenAudio(&wav_spec, &wav_spec) < 0) { // TODO(kalle): SDL_CloseAudio();
-			fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
+			LOG_ERROR("Audio", "Couldn't open audio: %s\n", SDL_GetError());
 		}
 
-		printf("audio spec.freq: %u\n", wav_spec.freq);
-		printf("audio spec.format: %u\n", wav_spec.format);
-		printf("audio spec.format BITSIZE: %u\n", (int) SDL_AUDIO_BITSIZE(wav_spec.format));
-		printf("audio spec.format ISFLOAT: %u\n", (int) SDL_AUDIO_ISFLOAT(wav_spec.format));
-		printf("audio spec.format ISBIGENDIAN: %u\n", (int) SDL_AUDIO_ISBIGENDIAN(wav_spec.format));
-		printf("audio spec.format ISSIGNED: %u\n", (int) SDL_AUDIO_ISSIGNED(wav_spec.format));
-		printf("audio spec.format ISINT: %u\n", (int) SDL_AUDIO_ISINT(wav_spec.format));
-		printf("audio spec.format ISLITTLEENDIAN: %u\n", (int) SDL_AUDIO_ISLITTLEENDIAN(wav_spec.format));
-		printf("audio spec.format ISUNSIGNED: %u\n", (int) SDL_AUDIO_ISUNSIGNED(wav_spec.format));
-		printf("audio spec.channels: %u\n", wav_spec.channels);
-		printf("audio spec.silence: %u\n", wav_spec.silence);
-		printf("audio spec.samples: %u\n", wav_spec.samples);
-		printf("audio spec.size: %u\n", wav_spec.size);
+		LOG_INFO("Audio", "audio spec.freq: %u\n", wav_spec.freq);
+		LOG_INFO("Audio", "audio spec.format: %u\n", wav_spec.format);
+		LOG_INFO("Audio", "audio spec.format BITSIZE: %u\n", (int) SDL_AUDIO_BITSIZE(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISFLOAT: %u\n", (int) SDL_AUDIO_ISFLOAT(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISBIGENDIAN: %u\n", (int) SDL_AUDIO_ISBIGENDIAN(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISSIGNED: %u\n", (int) SDL_AUDIO_ISSIGNED(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISINT: %u\n", (int) SDL_AUDIO_ISINT(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISLITTLEENDIAN: %u\n", (int) SDL_AUDIO_ISLITTLEENDIAN(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.format ISUNSIGNED: %u\n", (int) SDL_AUDIO_ISUNSIGNED(wav_spec.format));
+		LOG_INFO("Audio", "audio spec.channels: %u\n", wav_spec.channels);
+		LOG_INFO("Audio", "audio spec.silence: %u\n", wav_spec.silence);
+		LOG_INFO("Audio", "audio spec.samples: %u\n", wav_spec.samples);
+		LOG_INFO("Audio", "audio spec.size: %u\n", wav_spec.size);
 	}
 
 	void load(const char *filename, u8 **buffer, u32 *length) {
 		SDL_AudioSpec loaded_wav_spec = {};
 		if (SDL_LoadWAV_RW(SDL_RWFromFile(filename, "rb"), 1, &loaded_wav_spec, (Uint8**)buffer, length) == 0) {
-			fprintf(stderr, "Couldn't load audio! (filename=%s, error=%s)\n", filename, SDL_GetError());
+			LOG_ERROR("Audio", "Couldn't load audio! (filename=%s, error=%s)\n", filename, SDL_GetError());
 		}
 
-		ASSERT(wav_spec.freq == loaded_wav_spec.freq, "Mismatch audio! freq (%u %u)", wav_spec.freq, loaded_wav_spec.freq);
 #if 0
+		ASSERT(wav_spec.freq == loaded_wav_spec.freq, "Mismatch audio! freq (%u %u)", wav_spec.freq, loaded_wav_spec.freq);
 		ASSERT(wav_spec.format == loaded_wav_spec.format, "Mismatch audio! format");
 		ASSERT(SDL_AUDIO_BITSIZE(wav_spec.format) == SDL_AUDIO_BITSIZE(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_BITSIZE");
 		ASSERT(SDL_AUDIO_ISFLOAT(wav_spec.format) == SDL_AUDIO_ISFLOAT(loaded_wav_spec.format), "Mismatch audio! SDL_AUDIO_ISFLOAT");
@@ -53,7 +53,7 @@ namespace audio {
 
 	void queue(u8 *buffer, u32 length) {
 		if (SDL_QueueAudio(device_id, buffer, length) < 0) {
-			fprintf(stderr, "Couldn't queue audio! (error=%s)\n", SDL_GetError());
+			LOG_ERROR("Audio", "Couldn't queue audio! (error=%s)\n", SDL_GetError());
 		}
 	}
 

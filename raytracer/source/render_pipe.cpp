@@ -6,7 +6,7 @@ struct RenderPipe {
 	i32 screen_width;
 	i32 screen_height;
 
-	Entity fullscreen_quad;
+	Entity *fullscreen_quad;
 
 	GLuint passthrough_program;
 	GLint passthrough_render_texture_location;
@@ -59,10 +59,10 @@ void alloc_image(MemoryArena &arena, RenderPipe &r) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex, 0);
 }
 
-void setup_render_pipe(EngineApi *engine, MemoryArena &arena, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
-	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
+void setup_render_pipe(MemoryArena &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+	if (!r.fullscreen_quad) {
 		Context c = {};
-		spawn_entity(engine, components, r.fullscreen_quad, EntityType_Fullscreen, c);
+		r.fullscreen_quad = spawn_entity(engine, components, EntityType_Fullscreen, c);
 	}
 
 	r.screen_width = screen_width;
@@ -98,7 +98,7 @@ void render(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 
 		glUniform1i(r.passthrough_render_texture_location, 0);
 
-		i32 model_id = r.fullscreen_quad.model_id;
+		i32 model_id = r.fullscreen_quad->model_id;
 		Renderable &re = components.model.instances[model_id];
 		glBindVertexArray(re.mesh.vertex_array_object);
 

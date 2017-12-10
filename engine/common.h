@@ -19,8 +19,8 @@
 	#define FORCE_INLINE _forceinline
 	#define ALIGN(x) __declspec(align(x))
 	#define ALIGNED_(x) __declspec(align(x))
-	#define fminf(x, y) ((x) < (y) ? (x) : (y))
-	#define fmaxf(x, y) ((x) < (y) ? (y) : (x))
+	// #define fminf(x, y) ((x) < (y) ? (x) : (y))
+	// #define fmaxf(x, y) ((x) < (y) ? (y) : (x))
 	#define EXPORT extern "C" __declspec(dllexport)
 #else
 	#define FORCE_INLINE __attribute__((always_inline))

@@ -17,7 +17,7 @@ set NAME=engine
 rem Setup the compiler parameters and general variables
 set DEFINES=-D DEVELOPMENT
 set INCLUDES=-I ../
-SET LIBS=bin/SDL2.lib bin/SDL2_Image.lib
+SET LIBS=bin/SDL2.lib bin/SDL2_Image.lib dbghelp.lib
 set ENTRY_POINT=engine
 set OUT_PATH=bin
 

@@ -1,0 +1,2569 @@
+size = 64
+line_height = 64
+base_line = 50
+width = 1024
+height = 320
+glyphs = [
+    {
+        code = 0
+        x = 1007
+        y = 42
+        width = 5
+        height = 3
+        xoffset = -2
+        yoffset = 62
+        xadvance = 30
+    }
+    {
+        code = 13
+        x = 1022
+        y = 0
+        width = 0
+        height = 1
+        xoffset = 0
+        yoffset = 63
+        xadvance = 0
+    }
+    {
+        code = 32
+        x = 1001
+        y = 42
+        width = 5
+        height = 3
+        xoffset = -2
+        yoffset = 62
+        xadvance = 30
+    }
+    {
+        code = 33
+        x = 620
+        y = 92
+        width = 10
+        height = 41
+        xoffset = 10
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 34
+        x = 610
+        y = 238
+        width = 20
+        height = 15
+        xoffset = 5
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 35
+        x = 804
+        y = 132
+        width = 32
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 36
+        x = 596
+        y = 0
+        width = 28
+        height = 48
+        xoffset = 1
+        yoffset = 9
+        xadvance = 30
+    }
+    {
+        code = 37
+        x = 559
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 38
+        x = 799
+        y = 48
+        width = 32
+        height = 41
+        xoffset = 0
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 39
+        x = 631
+        y = 238
+        width = 10
+        height = 15
+        xoffset = 10
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 40
+        x = 18
+        y = 0
+        width = 19
+        height = 54
+        xoffset = 6
+        yoffset = 9
+        xadvance = 30
+    }
+    {
+        code = 41
+        x = 38
+        y = 0
+        width = 19
+        height = 54
+        xoffset = 5
+        yoffset = 9
+        xadvance = 30
+    }
+    {
+        code = 42
+        x = 29
+        y = 261
+        width = 24
+        height = 25
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 43
+        x = 923
+        y = 203
+        width = 30
+        height = 28
+        xoffset = 0
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 44
+        x = 430
+        y = 245
+        width = 17
+        height = 20
+        xoffset = 4
+        yoffset = 40
+        xadvance = 30
+    }
+    {
+        code = 45
+        x = 869
+        y = 233
+        width = 20
+        height = 6
+        xoffset = 5
+        yoffset = 33
+        xadvance = 30
+    }
+    {
+        code = 46
+        x = 727
+        y = 236
+        width = 12
+        height = 11
+        xoffset = 9
+        yoffset = 41
+        xadvance = 30
+    }
+    {
+        code = 47
+        x = 341
+        y = 50
+        width = 26
+        height = 46
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 48
+        x = 277
+        y = 142
+        width = 28
+        height = 39
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 49
+        x = 348
+        y = 182
+        width = 26
+        height = 37
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 50
+        x = 446
+        y = 134
+        width = 27
+        height = 38
+        xoffset = 2
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 51
+        x = 391
+        y = 139
+        width = 25
+        height = 39
+        xoffset = 3
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 52
+        x = 771
+        y = 133
+        width = 32
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 53
+        x = 558
+        y = 134
+        width = 25
+        height = 38
+        xoffset = 3
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 54
+        x = 474
+        y = 134
+        width = 27
+        height = 38
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 55
+        x = 207
+        y = 183
+        width = 28
+        height = 37
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 56
+        x = 248
+        y = 142
+        width = 28
+        height = 39
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 57
+        x = 530
+        y = 134
+        width = 27
+        height = 38
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 58
+        x = 560
+        y = 208
+        width = 12
+        height = 31
+        xoffset = 9
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 59
+        x = 1007
+        y = 90
+        width = 16
+        height = 39
+        xoffset = 5
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 60
+        x = 315
+        y = 220
+        width = 24
+        height = 32
+        xoffset = 2
+        yoffset = 20
+        xadvance = 30
+    }
+    {
+        code = 61
+        x = 583
+        y = 238
+        width = 26
+        height = 15
+        xoffset = 2
+        yoffset = 28
+        xadvance = 30
+    }
+    {
+        code = 62
+        x = 340
+        y = 220
+        width = 24
+        height = 32
+        xoffset = 4
+        yoffset = 20
+        xadvance = 30
+    }
+    {
+        code = 63
+        x = 599
+        y = 92
+        width = 20
+        height = 41
+        xoffset = 6
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 64
+        x = 58
+        y = 0
+        width = 33
+        height = 53
+        xoffset = -2
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 65
+        x = 703
+        y = 133
+        width = 33
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 66
+        x = 320
+        y = 182
+        width = 27
+        height = 37
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 67
+        x = 363
+        y = 141
+        width = 27
+        height = 39
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 68
+        x = 61
+        y = 186
+        width = 29
+        height = 37
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 69
+        x = 425
+        y = 175
+        width = 23
+        height = 37
+        xoffset = 4
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 70
+        x = 1000
+        y = 131
+        width = 23
+        height = 37
+        xoffset = 4
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 71
+        x = 218
+        y = 143
+        width = 29
+        height = 39
+        xoffset = 0
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 72
+        x = 178
+        y = 183
+        width = 28
+        height = 37
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 73
+        x = 400
+        y = 179
+        width = 24
+        height = 37
+        xoffset = 3
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 74
+        x = 610
+        y = 134
+        width = 22
+        height = 38
+        xoffset = 3
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 75
+        x = 149
+        y = 185
+        width = 28
+        height = 37
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 76
+        x = 375
+        y = 181
+        width = 24
+        height = 37
+        xoffset = 4
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 77
+        x = 870
+        y = 131
+        width = 32
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 78
+        x = 120
+        y = 185
+        width = 28
+        height = 37
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 79
+        x = 187
+        y = 143
+        width = 30
+        height = 39
+        xoffset = 0
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 80
+        x = 264
+        y = 182
+        width = 27
+        height = 37
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 81
+        x = 408
+        y = 0
+        width = 32
+        height = 48
+        xoffset = 0
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 82
+        x = 236
+        y = 183
+        width = 27
+        height = 37
+        xoffset = 3
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 83
+        x = 335
+        y = 142
+        width = 27
+        height = 39
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 84
+        x = 31
+        y = 189
+        width = 29
+        height = 37
+        xoffset = 0
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 85
+        x = 417
+        y = 136
+        width = 28
+        height = 38
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 86
+        x = 668
+        y = 133
+        width = 34
+        height = 37
+        xoffset = -2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 87
+        x = 936
+        y = 131
+        width = 32
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 88
+        x = 903
+        y = 131
+        width = 32
+        height = 37
+        xoffset = -1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 89
+        x = 737
+        y = 133
+        width = 33
+        height = 37
+        xoffset = -2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 90
+        x = 91
+        y = 186
+        width = 28
+        height = 37
+        xoffset = 1
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 91
+        x = 274
+        y = 0
+        width = 16
+        height = 52
+        xoffset = 8
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 92
+        x = 314
+        y = 52
+        width = 26
+        height = 46
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 93
+        x = 256
+        y = 0
+        width = 17
+        height = 52
+        xoffset = 6
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 94
+        x = 481
+        y = 241
+        width = 27
+        height = 19
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 95
+        x = 807
+        y = 234
+        width = 34
+        height = 6
+        xoffset = -2
+        yoffset = 56
+        xadvance = 30
+    }
+    {
+        code = 96
+        x = 751
+        y = 235
+        width = 16
+        height = 9
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 97
+        x = 509
+        y = 209
+        width = 25
+        height = 31
+        xoffset = 2
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 98
+        x = 286
+        y = 100
+        width = 26
+        height = 41
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 99
+        x = 483
+        y = 209
+        width = 25
+        height = 31
+        xoffset = 2
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 100
+        x = 313
+        y = 100
+        width = 26
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 101
+        x = 427
+        y = 213
+        width = 28
+        height = 31
+        xoffset = 1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 102
+        x = 962
+        y = 48
+        width = 30
+        height = 41
+        xoffset = 0
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 103
+        x = 625
+        y = 49
+        width = 29
+        height = 42
+        xoffset = 1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 104
+        x = 78
+        y = 145
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 105
+        x = 955
+        y = 90
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 106
+        x = 232
+        y = 0
+        width = 23
+        height = 52
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 107
+        x = 901
+        y = 90
+        width = 27
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 108
+        x = 929
+        y = 90
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 109
+        x = 635
+        y = 207
+        width = 28
+        height = 30
+        xoffset = 1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 110
+        x = 716
+        y = 205
+        width = 25
+        height = 30
+        xoffset = 3
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 111
+        x = 398
+        y = 219
+        width = 28
+        height = 31
+        xoffset = 1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 112
+        x = 259
+        y = 100
+        width = 26
+        height = 41
+        xoffset = 3
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 113
+        x = 232
+        y = 100
+        width = 26
+        height = 41
+        xoffset = 1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 114
+        x = 690
+        y = 206
+        width = 25
+        height = 30
+        xoffset = 4
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 115
+        x = 535
+        y = 208
+        width = 24
+        height = 31
+        xoffset = 3
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 116
+        x = 306
+        y = 142
+        width = 28
+        height = 39
+        xoffset = 0
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 117
+        x = 664
+        y = 207
+        width = 25
+        height = 30
+        xoffset = 3
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 118
+        x = 775
+        y = 205
+        width = 30
+        height = 29
+        xoffset = 0
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 119
+        x = 742
+        y = 205
+        width = 32
+        height = 29
+        xoffset = -1
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 120
+        x = 837
+        y = 204
+        width = 30
+        height = 29
+        xoffset = 0
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 121
+        x = 931
+        y = 48
+        width = 30
+        height = 41
+        xoffset = 0
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 122
+        x = 897
+        y = 203
+        width = 25
+        height = 29
+        xoffset = 3
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 123
+        x = 208
+        y = 0
+        width = 23
+        height = 52
+        xoffset = 3
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 124
+        x = 9
+        y = 0
+        width = 8
+        height = 57
+        xoffset = 11
+        yoffset = 5
+        xadvance = 30
+    }
+    {
+        code = 125
+        x = 183
+        y = 0
+        width = 24
+        height = 52
+        xoffset = 4
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 126
+        x = 670
+        y = 238
+        width = 30
+        height = 13
+        xoffset = 0
+        yoffset = 29
+        xadvance = 30
+    }
+    {
+        code = 160
+        x = 1013
+        y = 42
+        width = 5
+        height = 3
+        xoffset = -2
+        yoffset = 62
+        xadvance = 30
+    }
+    {
+        code = 161
+        x = 631
+        y = 92
+        width = 10
+        height = 41
+        xoffset = 10
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 162
+        x = 383
+        y = 0
+        width = 24
+        height = 49
+        xoffset = 2
+        yoffset = 9
+        xadvance = 30
+    }
+    {
+        code = 163
+        x = 502
+        y = 134
+        width = 27
+        height = 38
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 164
+        x = 532
+        y = 173
+        width = 28
+        height = 34
+        xoffset = 1
+        yoffset = 15
+        xadvance = 30
+    }
+    {
+        code = 165
+        x = 969
+        y = 131
+        width = 30
+        height = 37
+        xoffset = 0
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 166
+        x = 0
+        y = 0
+        width = 8
+        height = 57
+        xoffset = 11
+        yoffset = 5
+        xadvance = 30
+    }
+    {
+        code = 167
+        x = 741
+        y = 0
+        width = 26
+        height = 48
+        xoffset = 2
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 168
+        x = 785
+        y = 235
+        width = 21
+        height = 8
+        xoffset = 5
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 169
+        x = 154
+        y = 143
+        width = 32
+        height = 39
+        xoffset = -1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 170
+        x = 977
+        y = 203
+        width = 22
+        height = 28
+        xoffset = 4
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 171
+        x = 180
+        y = 257
+        width = 26
+        height = 24
+        xoffset = 2
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 172
+        x = 642
+        y = 238
+        width = 27
+        height = 14
+        xoffset = 1
+        yoffset = 32
+        xadvance = 30
+    }
+    {
+        code = 173
+        x = 890
+        y = 233
+        width = 20
+        height = 6
+        xoffset = 5
+        yoffset = 33
+        xadvance = 30
+    }
+    {
+        code = 174
+        x = 0
+        y = 261
+        width = 28
+        height = 27
+        xoffset = 1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 175
+        x = 911
+        y = 233
+        width = 18
+        height = 6
+        xoffset = 6
+        yoffset = 12
+        xadvance = 30
+    }
+    {
+        code = 176
+        x = 407
+        y = 251
+        width = 22
+        height = 20
+        xoffset = 4
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 177
+        x = 449
+        y = 173
+        width = 28
+        height = 35
+        xoffset = 1
+        yoffset = 16
+        xadvance = 30
+    }
+    {
+        code = 178
+        x = 234
+        y = 255
+        width = 20
+        height = 24
+        xoffset = 5
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 179
+        x = 1000
+        y = 203
+        width = 19
+        height = 25
+        xoffset = 6
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 180
+        x = 768
+        y = 235
+        width = 16
+        height = 9
+        xoffset = 11
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 181
+        x = 872
+        y = 90
+        width = 28
+        height = 40
+        xoffset = 3
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 182
+        x = 0
+        y = 58
+        width = 27
+        height = 47
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 183
+        x = 714
+        y = 237
+        width = 12
+        height = 11
+        xoffset = 9
+        yoffset = 29
+        xadvance = 30
+    }
+    {
+        code = 184
+        x = 740
+        y = 236
+        width = 10
+        height = 10
+        xoffset = 10
+        yoffset = 49
+        xadvance = 30
+    }
+    {
+        code = 185
+        x = 281
+        y = 253
+        width = 21
+        height = 23
+        xoffset = 4
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 186
+        x = 954
+        y = 203
+        width = 22
+        height = 28
+        xoffset = 4
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 187
+        x = 255
+        y = 254
+        width = 25
+        height = 23
+        xoffset = 3
+        yoffset = 24
+        xadvance = 30
+    }
+    {
+        code = 188
+        x = 898
+        y = 48
+        width = 32
+        height = 41
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 189
+        x = 708
+        y = 92
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 190
+        x = 766
+        y = 49
+        width = 32
+        height = 41
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 191
+        x = 1001
+        y = 0
+        width = 20
+        height = 41
+        xoffset = 4
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 192
+        x = 938
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 193
+        x = 836
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 194
+        x = 802
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 195
+        x = 870
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 196
+        x = 768
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 197
+        x = 318
+        y = 0
+        width = 33
+        height = 49
+        xoffset = -1
+        yoffset = 2
+        xadvance = 30
+    }
+    {
+        code = 198
+        x = 633
+        y = 134
+        width = 34
+        height = 37
+        xoffset = -3
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 199
+        x = 286
+        y = 53
+        width = 27
+        height = 46
+        xoffset = 1
+        yoffset = 13
+        xadvance = 30
+    }
+    {
+        code = 200
+        x = 200
+        y = 53
+        width = 23
+        height = 47
+        xoffset = 4
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 201
+        x = 176
+        y = 53
+        width = 23
+        height = 47
+        xoffset = 4
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 202
+        x = 152
+        y = 53
+        width = 23
+        height = 47
+        xoffset = 4
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 203
+        x = 128
+        y = 53
+        width = 23
+        height = 47
+        xoffset = 4
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 204
+        x = 78
+        y = 54
+        width = 24
+        height = 47
+        xoffset = 3
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 205
+        x = 103
+        y = 54
+        width = 24
+        height = 47
+        xoffset = 3
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 206
+        x = 28
+        y = 55
+        width = 24
+        height = 47
+        xoffset = 3
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 207
+        x = 53
+        y = 55
+        width = 24
+        height = 47
+        xoffset = 3
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 208
+        x = 837
+        y = 131
+        width = 32
+        height = 37
+        xoffset = -2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 209
+        x = 972
+        y = 0
+        width = 28
+        height = 47
+        xoffset = 1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 210
+        x = 534
+        y = 0
+        width = 30
+        height = 48
+        xoffset = 0
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 211
+        x = 472
+        y = 0
+        width = 30
+        height = 48
+        xoffset = 0
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 212
+        x = 503
+        y = 0
+        width = 30
+        height = 48
+        xoffset = 0
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 213
+        x = 441
+        y = 0
+        width = 30
+        height = 48
+        xoffset = 0
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 214
+        x = 565
+        y = 0
+        width = 30
+        height = 48
+        xoffset = 0
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 215
+        x = 153
+        y = 257
+        width = 26
+        height = 24
+        xoffset = 2
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 216
+        x = 352
+        y = 0
+        width = 30
+        height = 49
+        xoffset = 0
+        yoffset = 8
+        xadvance = 30
+    }
+    {
+        code = 217
+        x = 654
+        y = 0
+        width = 28
+        height = 48
+        xoffset = 1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 218
+        x = 625
+        y = 0
+        width = 28
+        height = 48
+        xoffset = 1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 219
+        x = 683
+        y = 0
+        width = 28
+        height = 48
+        xoffset = 1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 220
+        x = 712
+        y = 0
+        width = 28
+        height = 48
+        xoffset = 1
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 221
+        x = 904
+        y = 0
+        width = 33
+        height = 47
+        xoffset = -2
+        yoffset = 4
+        xadvance = 30
+    }
+    {
+        code = 222
+        x = 292
+        y = 182
+        width = 27
+        height = 37
+        xoffset = 2
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 223
+        x = 684
+        y = 49
+        width = 27
+        height = 42
+        xoffset = 2
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 224
+        x = 522
+        y = 92
+        width = 25
+        height = 41
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 225
+        x = 418
+        y = 93
+        width = 25
+        height = 41
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 226
+        x = 340
+        y = 99
+        width = 25
+        height = 41
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 227
+        x = 740
+        y = 49
+        width = 25
+        height = 42
+        xoffset = 2
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 228
+        x = 496
+        y = 92
+        width = 25
+        height = 41
+        xoffset = 2
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 229
+        x = 368
+        y = 50
+        width = 25
+        height = 43
+        xoffset = 2
+        yoffset = 9
+        xadvance = 30
+    }
+    {
+        code = 230
+        x = 365
+        y = 220
+        width = 32
+        height = 31
+        xoffset = -1
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 231
+        x = 584
+        y = 134
+        width = 25
+        height = 38
+        xoffset = 2
+        yoffset = 21
+        xadvance = 30
+    }
+    {
+        code = 232
+        x = 87
+        y = 102
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 233
+        x = 58
+        y = 103
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 234
+        x = 0
+        y = 106
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 235
+        x = 993
+        y = 48
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 236
+        x = 52
+        y = 145
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 237
+        x = 26
+        y = 148
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 238
+        x = 0
+        y = 148
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 239
+        x = 981
+        y = 90
+        width = 25
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 241
+        x = 366
+        y = 97
+        width = 25
+        height = 41
+        xoffset = 3
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 242
+        x = 145
+        y = 101
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 243
+        x = 174
+        y = 101
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 244
+        x = 203
+        y = 101
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 245
+        x = 655
+        y = 49
+        width = 28
+        height = 42
+        xoffset = 1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 246
+        x = 116
+        y = 102
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 247
+        x = 573
+        y = 207
+        width = 30
+        height = 30
+        xoffset = 0
+        yoffset = 20
+        xadvance = 30
+    }
+    {
+        code = 248
+        x = 29
+        y = 103
+        width = 28
+        height = 41
+        xoffset = 1
+        yoffset = 16
+        xadvance = 30
+    }
+    {
+        code = 249
+        x = 444
+        y = 92
+        width = 25
+        height = 41
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 250
+        x = 470
+        y = 92
+        width = 25
+        height = 41
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 251
+        x = 392
+        y = 94
+        width = 25
+        height = 41
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 252
+        x = 548
+        y = 92
+        width = 25
+        height = 41
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 253
+        x = 121
+        y = 0
+        width = 30
+        height = 52
+        xoffset = 0
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 254
+        x = 291
+        y = 0
+        width = 26
+        height = 51
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 255
+        x = 152
+        y = 0
+        width = 30
+        height = 52
+        xoffset = 0
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8531
+        x = 592
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8532
+        x = 526
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8533
+        x = 493
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8534
+        x = 460
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8535
+        x = 427
+        y = 49
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8536
+        x = 865
+        y = 48
+        width = 32
+        height = 41
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8537
+        x = 394
+        y = 50
+        width = 32
+        height = 42
+        xoffset = -1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8538
+        x = 832
+        y = 48
+        width = 32
+        height = 41
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8539
+        x = 642
+        y = 92
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8540
+        x = 675
+        y = 92
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8541
+        x = 741
+        y = 92
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8542
+        x = 774
+        y = 91
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8592
+        x = 54
+        y = 261
+        width = 32
+        height = 24
+        xoffset = -1
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 8593
+        x = 129
+        y = 144
+        width = 24
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8594
+        x = 87
+        y = 258
+        width = 32
+        height = 24
+        xoffset = -1
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 8595
+        x = 104
+        y = 144
+        width = 24
+        height = 40
+        xoffset = 3
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8596
+        x = 120
+        y = 258
+        width = 32
+        height = 24
+        xoffset = -1
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 8597
+        x = 574
+        y = 92
+        width = 24
+        height = 41
+        xoffset = 3
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8706
+        x = 712
+        y = 49
+        width = 27
+        height = 42
+        xoffset = 1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8710
+        x = 0
+        y = 189
+        width = 30
+        height = 37
+        xoffset = 0
+        yoffset = 14
+        xadvance = 30
+    }
+    {
+        code = 8719
+        x = 224
+        y = 53
+        width = 32
+        height = 46
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8721
+        x = 257
+        y = 53
+        width = 28
+        height = 46
+        xoffset = 1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8722
+        x = 842
+        y = 234
+        width = 26
+        height = 6
+        xoffset = 2
+        yoffset = 32
+        xadvance = 30
+    }
+    {
+        code = 8725
+        x = 807
+        y = 90
+        width = 32
+        height = 40
+        xoffset = -1
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8729
+        x = 701
+        y = 237
+        width = 12
+        height = 11
+        xoffset = 9
+        yoffset = 29
+        xadvance = 30
+    }
+    {
+        code = 8730
+        x = 840
+        y = 90
+        width = 31
+        height = 40
+        xoffset = 0
+        yoffset = 11
+        xadvance = 30
+    }
+    {
+        code = 8734
+        x = 448
+        y = 245
+        width = 32
+        height = 19
+        xoffset = -1
+        yoffset = 26
+        xadvance = 30
+    }
+    {
+        code = 8735
+        x = 806
+        y = 204
+        width = 30
+        height = 29
+        xoffset = 0
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 8745
+        x = 868
+        y = 203
+        width = 28
+        height = 29
+        xoffset = 1
+        yoffset = 22
+        xadvance = 30
+    }
+    {
+        code = 8747
+        x = 92
+        y = 0
+        width = 28
+        height = 53
+        xoffset = 1
+        yoffset = 10
+        xadvance = 30
+    }
+    {
+        code = 8776
+        x = 509
+        y = 241
+        width = 27
+        height = 19
+        xoffset = 2
+        yoffset = 26
+        xadvance = 30
+    }
+    {
+        code = 8800
+        x = 456
+        y = 209
+        width = 26
+        height = 31
+        xoffset = 2
+        yoffset = 20
+        xadvance = 30
+    }
+    {
+        code = 8801
+        x = 207
+        y = 257
+        width = 26
+        height = 24
+        xoffset = 2
+        yoffset = 23
+        xadvance = 30
+    }
+    {
+        code = 8804
+        x = 478
+        y = 173
+        width = 26
+        height = 35
+        xoffset = 2
+        yoffset = 16
+        xadvance = 30
+    }
+    {
+        code = 8805
+        x = 505
+        y = 173
+        width = 26
+        height = 35
+        xoffset = 2
+        yoffset = 16
+        xadvance = 30
+    }
+    {
+        code = 9312
+        x = 736
+        y = 171
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9313
+        x = 771
+        y = 171
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9314
+        x = 806
+        y = 170
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9315
+        x = 841
+        y = 169
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9316
+        x = 561
+        y = 173
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9317
+        x = 701
+        y = 171
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9318
+        x = 666
+        y = 172
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9319
+        x = 631
+        y = 173
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9320
+        x = 596
+        y = 173
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9321
+        x = 876
+        y = 169
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9322
+        x = 911
+        y = 169
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9323
+        x = 946
+        y = 169
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9324
+        x = 981
+        y = 169
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9325
+        x = 0
+        y = 227
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9326
+        x = 35
+        y = 227
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9327
+        x = 70
+        y = 224
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9328
+        x = 105
+        y = 224
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9329
+        x = 140
+        y = 223
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9330
+        x = 175
+        y = 223
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9331
+        x = 210
+        y = 221
+        width = 34
+        height = 33
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9650
+        x = 280
+        y = 220
+        width = 34
+        height = 32
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9652
+        x = 537
+        y = 240
+        width = 22
+        height = 19
+        xoffset = 4
+        yoffset = 25
+        xadvance = 30
+    }
+    {
+        code = 9656
+        x = 365
+        y = 252
+        width = 20
+        height = 21
+        xoffset = 5
+        yoffset = 24
+        xadvance = 30
+    }
+    {
+        code = 9658
+        x = 303
+        y = 253
+        width = 30
+        height = 21
+        xoffset = 0
+        yoffset = 24
+        xadvance = 30
+    }
+    {
+        code = 9660
+        x = 245
+        y = 221
+        width = 34
+        height = 32
+        xoffset = -2
+        yoffset = 19
+        xadvance = 30
+    }
+    {
+        code = 9662
+        x = 560
+        y = 240
+        width = 22
+        height = 19
+        xoffset = 4
+        yoffset = 25
+        xadvance = 30
+    }
+    {
+        code = 9666
+        x = 386
+        y = 252
+        width = 20
+        height = 21
+        xoffset = 5
+        yoffset = 24
+        xadvance = 30
+    }
+    {
+        code = 9668
+        x = 334
+        y = 253
+        width = 30
+        height = 21
+        xoffset = 0
+        yoffset = 24
+        xadvance = 30
+    }
+    {
+        code = 9788
+        x = 604
+        y = 207
+        width = 30
+        height = 30
+        xoffset = 0
+        yoffset = 21
+        xadvance = 30
+    }
+]
+kernings = [
+]

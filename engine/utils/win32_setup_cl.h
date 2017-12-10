@@ -629,6 +629,7 @@ typedef cl_program CLCREATEPROGRAMWITHSOURCE(cl_context context, cl_uint count, 
 typedef cl_program CLCREATEPROGRAMWITHBINARY(cl_context context, cl_uint num_devices, const cl_device_id * device_list, const size_t * lengths, const unsigned char ** binaries, cl_int * binary_status, cl_int *errcode_ret);
 typedef cl_int CLGETPROGRAMINFO(cl_program program, cl_program_info param_name, size_t param_value_size, void * param_value, size_t * param_value_size_ret);
 typedef cl_mem CLCREATEBUFFER(cl_context context, cl_mem_flags flags, size_t size, void *host_ptr, cl_int *errcode_ret);
+typedef cl_int CLENQUEUEWRITEBUFFER(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_write, size_t offset, size_t size, const void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
 typedef cl_mem CLCREATEFROMGLBUFFER(cl_context context, cl_mem_flags flags, cl_GLuint bufobj, cl_int *errcode_ret);
 typedef cl_mem CLCREATEFROMGLTEXTURE(cl_context context, cl_mem_flags flags, cl_GLenum target, cl_GLint miplevel, cl_GLuint texture, cl_int *errcode_ret);
 typedef cl_int CLENQUEUEREADBUFFER(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read, size_t offset, size_t size, void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
@@ -651,6 +652,7 @@ DECLARE_CL_FUNCTION(CLCREATEPROGRAMWITHSOURCE, clCreateProgramWithSource);
 DECLARE_CL_FUNCTION(CLCREATEPROGRAMWITHBINARY, clCreateProgramWithBinary);
 DECLARE_CL_FUNCTION(CLGETPROGRAMINFO, clGetProgramInfo);
 DECLARE_CL_FUNCTION(CLCREATEBUFFER, clCreateBuffer);
+DECLARE_CL_FUNCTION(CLENQUEUEWRITEBUFFER, clEnqueueWriteBuffer);
 DECLARE_CL_FUNCTION(CLCREATEFROMGLBUFFER, clCreateFromGLBuffer);
 DECLARE_CL_FUNCTION(CLCREATEFROMGLTEXTURE, clCreateFromGLTexture);
 DECLARE_CL_FUNCTION(CLENQUEUEREADBUFFER, clEnqueueReadBuffer);
@@ -678,6 +680,7 @@ void setup_cl() {
 	GET_CL_FUNCTION(lib, CLCREATEPROGRAMWITHBINARY, clCreateProgramWithBinary);
 	GET_CL_FUNCTION(lib, CLGETPROGRAMINFO, clGetProgramInfo);
 	GET_CL_FUNCTION(lib, CLCREATEBUFFER, clCreateBuffer);
+	GET_CL_FUNCTION(lib, CLENQUEUEWRITEBUFFER, clEnqueueWriteBuffer);
 	GET_CL_FUNCTION(lib, CLCREATEFROMGLBUFFER, clCreateFromGLBuffer);
 	GET_CL_FUNCTION(lib, CLCREATEFROMGLTEXTURE, clCreateFromGLTexture);
 	GET_CL_FUNCTION(lib, CLENQUEUEREADBUFFER, clEnqueueReadBuffer);

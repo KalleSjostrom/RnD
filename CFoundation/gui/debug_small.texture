@@ -1,0 +1,70 @@
+android = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+common = {
+	input = {
+		filename = "foundation/gui/debug_small"
+	}
+	output = {
+		apply_processing = true
+		category = ""
+		correct_gamma = true
+		cut_alpha_threshold = 0.5
+		enable_cut_alpha_threshold = false
+		mipmap_filter = "kaiser"
+		mipmap_filter_wrap_mode = "mirror"
+		mipmap_keep_original = false
+		mipmap_num_largest_steps_to_discard = 0
+	}
+}
+ios = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+macosx = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+ps3 = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+ps4 = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+psvita = {
+	output = {
+		format = "A8R8G8B8"
+		mipmap_num_smallest_steps_to_discard = 8
+	}
+}
+win32 = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+x360 = {
+	output = {
+		format = "DXT5"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
+xb1 = {
+	output = {
+		format = "A8R8G8B8"
+		mipmap_num_smallest_steps_to_discard = 0
+	}
+}
