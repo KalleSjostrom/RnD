@@ -207,108 +207,107 @@ struct Fluid {
 };
 
 struct FluidComponent {
-	Fluid instances[8];
+	Fluid fluids[8];
 	cid count;
-
-	cid add(MemoryArena &arena) {
-		ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
-		cid id = count++;
-		Fluid &instance = instances[id];
-		Renderable &renderable = instance.renderable;
-
-		renderable.pose = identity();
-		renderable.mesh.groups = PUSH_STRUCTS(arena, 1, Group);
-
-		Group &group = renderable.mesh.groups[0];
-
-		group.index_count = PARTICLE_COUNT;
-		renderable.datatype = RenderableDataType_Arrays;
-		renderable.draw_mode = GL_POINTS;
-
-		glGenVertexArrays(1, &renderable.mesh.vertex_array_object);
-		glBindVertexArray(renderable.mesh.vertex_array_object);
-
-		instance.positions = gen_buffer(gen_random_pos);
-		instance.velocities = gen_buffer(zero);
-		instance.density_pressure = gen_buffer(zero);
-
-		glBindBuffer(GL_ARRAY_BUFFER, instance.positions.vbo);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, instance.density_pressure.vbo);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(1);
-
-		return id;
-	}
-
-	inline void rotate(i32 id, float angle) {
-		Fluid &instance = instances[id];
-
-		float ca = cosf(angle);
-		float sa = sinf(angle);
-
-		m4 rotation = identity();
-
-		rotation.m[INDEX(0, 0)] = ca;
-		rotation.m[INDEX(0, 1)] = -sa;
-		rotation.m[INDEX(1, 0)] = sa;
-		rotation.m[INDEX(1, 1)] = ca;
-
-		instance.renderable.pose *= rotation;
-	}
-
-	void update(f32 dt) {
-		for (i32 i = 0; i < count; ++i) {
-			Fluid &instance = instances[i];
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.density_pressure.vbo);
-			v2 *gpu_density_pressure = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.velocities.vbo);
-			v2 *gpu_velocities = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.positions.vbo);
-			v2 *gpu_positions = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-
-			v2 density_pressure[PARTICLE_COUNT] = {};
-			ALIGNED_(32) v2 velocities[PARTICLE_COUNT];
-			ALIGNED_(32) v2 positions[PARTICLE_COUNT];
-
-			// memcpy(density_pressure, gpu_density_pressure, PARTICLE_COUNT* sizeof(v2));
-			memcpy(velocities, gpu_velocities, PARTICLE_COUNT* sizeof(v2));
-			memcpy(positions, gpu_positions, PARTICLE_COUNT* sizeof(v2));
-
-			float cos_angle = instance.renderable.pose.m[INDEX(0, 0)];
-			float sin_angle = instance.renderable.pose.m[INDEX(1, 0)];
-
-			v2 gravity = V2_f32(0, -9.82f);
-			float gx = cos_angle * gravity.x - sin_angle * gravity.y;
-			float gy = sin_angle * gravity.x + cos_angle * gravity.y;
-			gravity.x = -gx;
-			gravity.y = gy;
-
-			// fluid::simulate(positions, velocities, density_pressure, gravity);
-			// memset(density_pressure, 0, sizeof(density_pressure));
-			// fluid::simulate(positions, velocities, density_pressure, gravity);
-			// memset(density_pressure, 0, sizeof(density_pressure));
-			// fluid::simulate(positions, velocities, density_pressure, gravity);
-			// memset(density_pressure, 0, sizeof(density_pressure));
-			// fluid::simulate(positions, velocities, density_pressure, gravity);
-
-			memcpy(gpu_density_pressure, density_pressure, PARTICLE_COUNT* sizeof(v2));
-			memcpy(gpu_velocities, velocities, PARTICLE_COUNT* sizeof(v2));
-			memcpy(gpu_positions, positions, PARTICLE_COUNT* sizeof(v2));
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.density_pressure.vbo);
-			glUnmapBuffer(GL_ARRAY_BUFFER);
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.velocities.vbo);
-			glUnmapBuffer(GL_ARRAY_BUFFER);
-
-			glBindBuffer(GL_ARRAY_BUFFER, instance.positions.vbo);
-			glUnmapBuffer(GL_ARRAY_BUFFER);
-		}
-	}
 };
+
+void add(FluidComponent &fc, Entity &entity, MemoryArena &arena) {
+	ASSERT((u32)fc.count < ARRAY_COUNT(fc.fluids), "Component full!");
+	entity.fluid_id = fc.count++;
+	Fluid &fluid = fc.fluids[entity.fluid_id];
+	Renderable &renderable = fluid.renderable;
+
+	renderable.pose = identity();
+	renderable.mesh.groups = PUSH_STRUCTS(arena, 1, Group);
+
+	Group &group = renderable.mesh.groups[0];
+
+	group.index_count = PARTICLE_COUNT;
+	renderable.datatype = RenderableDataType_Arrays;
+	renderable.draw_mode = GL_POINTS;
+
+	glGenVertexArrays(1, &renderable.mesh.vertex_array_object);
+	glBindVertexArray(renderable.mesh.vertex_array_object);
+
+	fluid.positions = gen_buffer(gen_random_pos);
+	fluid.velocities = gen_buffer(zero);
+	fluid.density_pressure = gen_buffer(zero);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fluid.positions.vbo);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fluid.density_pressure.vbo);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+}
+
+inline void rotate(FluidComponent &fc, Entity &entity, float angle) {
+	Fluid &fluid = fc.fluids[entity.fluid_id];
+
+	float ca;
+	float sa;
+	sincosf(angle, &sa, &ca);
+
+	m4 rotation = identity();
+
+	rotation.m[INDEX(0, 0)] = ca;
+	rotation.m[INDEX(0, 1)] = -sa;
+	rotation.m[INDEX(1, 0)] = sa;
+	rotation.m[INDEX(1, 1)] = ca;
+
+	fluid.renderable.pose *= rotation;
+}
+
+void update(FluidComponent &fc, f32 dt) {
+	for (i32 i = 0; i < fc.count; ++i) {
+		Fluid &fluid = fc.fluids[i];
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.density_pressure.vbo);
+		v2 *gpu_density_pressure = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.velocities.vbo);
+		v2 *gpu_velocities = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.positions.vbo);
+		v2 *gpu_positions = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+
+		v2 density_pressure[PARTICLE_COUNT] = {};
+		ALIGNED_(32) v2 velocities[PARTICLE_COUNT];
+		ALIGNED_(32) v2 positions[PARTICLE_COUNT];
+
+		// memcpy(density_pressure, gpu_density_pressure, PARTICLE_COUNT* sizeof(v2));
+		memcpy(velocities, gpu_velocities, PARTICLE_COUNT* sizeof(v2));
+		memcpy(positions, gpu_positions, PARTICLE_COUNT* sizeof(v2));
+
+		float cos_angle = fluid.renderable.pose.m[INDEX(0, 0)];
+		float sin_angle = fluid.renderable.pose.m[INDEX(1, 0)];
+
+		v2 gravity = V2_f32(0, -9.82f);
+		float gx = cos_angle * gravity.x - sin_angle * gravity.y;
+		float gy = sin_angle * gravity.x + cos_angle * gravity.y;
+		gravity.x = -gx;
+		gravity.y = gy;
+
+		// fluid::simulate(positions, velocities, density_pressure, gravity);
+		// memset(density_pressure, 0, sizeof(density_pressure));
+		// fluid::simulate(positions, velocities, density_pressure, gravity);
+		// memset(density_pressure, 0, sizeof(density_pressure));
+		// fluid::simulate(positions, velocities, density_pressure, gravity);
+		// memset(density_pressure, 0, sizeof(density_pressure));
+		// fluid::simulate(positions, velocities, density_pressure, gravity);
+
+		memcpy(gpu_density_pressure, density_pressure, PARTICLE_COUNT* sizeof(v2));
+		memcpy(gpu_velocities, velocities, PARTICLE_COUNT* sizeof(v2));
+		memcpy(gpu_positions, positions, PARTICLE_COUNT* sizeof(v2));
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.density_pressure.vbo);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.velocities.vbo);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+
+		glBindBuffer(GL_ARRAY_BUFFER, fluid.positions.vbo);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	}
+}

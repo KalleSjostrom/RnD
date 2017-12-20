@@ -99,7 +99,7 @@ void render(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 		glUniform1i(r.passthrough_render_texture_location, 0);
 
 		i32 model_id = r.fullscreen_quad->model_id;
-		Renderable &re = components.model.instances[model_id];
+		Renderable &re = components.model.models[model_id];
 		glBindVertexArray(re.mesh.vertex_array_object);
 
 		for (i32 i = 0; i < re.mesh.group_count; ++i) {

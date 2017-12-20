@@ -1,7 +1,5 @@
 #pragma once
 
-#include "dlmalloc.c"
-
 struct Allocator {
 	void *mspace;
 };

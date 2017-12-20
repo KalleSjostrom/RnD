@@ -7,16 +7,14 @@ struct RayMaterial {
 typedef RayMaterial MaterialCC;
 
 struct MaterialComponent {
-	RayMaterial instances[8];
+	RayMaterial materials[8];
 	cid count;
-
-	cid add(RayMaterial *material) {
-		ASSERT((u32)count < ARRAY_COUNT(instances), "Component full!");
-		cid id = count++;
-		if (material) {
-			instances[id] = *material;
-		}
-
-		return id;
-	}
 };
+
+void add(MaterialComponent &mc, Entity &entity, RayMaterial *material) {
+	ASSERT((u32)mc.count < ARRAY_COUNT(mc.materials), "Component full!");
+	entity.material_id = mc.count++;
+	if (material) {
+		mc.materials[entity.material_id] = *material;
+	}
+}

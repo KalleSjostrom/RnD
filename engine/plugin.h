@@ -1,6 +1,6 @@
 #pragma once
 
-#define MSPACES_ONLY 1
+#define ONLY_MSPACES 1
 #define MSPACES 1
 #define PROCEED_ON_ERROR 1
 #define USE_DL_PREFIX 1

@@ -26,9 +26,10 @@ void plugin_setup(Application &application) {
 		EntityData &data = level.entity_data[i];
 		Entity *entity = spawn_entity(application.engine, application.components, data.type, data.context, data.offset);
 
-		model__set_position(application.components, *entity, data.offset);
-		model__set_rotation(application.components, *entity, data.rotation);
-		model__set_scale(application.components, *entity, data.size);
+		m4 &pose = get_pose(application.components.model, *entity);
+		translation(pose) = data.offset;
+		set_rotation(pose, data.rotation);
+		set_scale(pose, data.size);
 	}
 
 	i32 screen_width, screen_height;

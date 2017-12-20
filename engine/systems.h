@@ -129,7 +129,7 @@ void plugin_render(Application &application);
 			globals::transient_arena = &application.transient_arena;
 
 			application.components.arena = &application.persistent_arena;
-			application.components.input.set_input_data(input);
+			application.components.input.input_data = input;
 
 			reload_programs(application.components);
 		#endif // SYSTEM_COMPONENTS
@@ -168,7 +168,7 @@ EXPORT PLUGIN_SETUP(setup) {
 		setup_arena(application.transient_arena, MB);
 		globals::transient_arena = &application.transient_arena;
 
-		application.components.input.set_input_data(input);
+		application.components.input.input_data = input;
 		application.components.arena = &application.persistent_arena;
 
 		setup_programs(application.components);
@@ -210,7 +210,7 @@ EXPORT PLUGIN_UPDATE(update) {
 	}
 
 	plugin_render(application);
-	
+
 	reset_transient_memory(*globals::transient_arena);
 	return 0;
 }
