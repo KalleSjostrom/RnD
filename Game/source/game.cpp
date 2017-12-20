@@ -1,3 +1,6 @@
+struct Game;
+#define RELOAD_ENTRY_POINT Game
+
 #define SYSTEM_OPENGL
 #define SYSTEM_AUDIO
 #define SYSTEM_GRAPHICS

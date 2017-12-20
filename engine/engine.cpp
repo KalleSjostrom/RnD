@@ -1,3 +1,5 @@
+#define _NO_CVCONST_H_
+
 #include "engine/utils/platform.h"
 #include "engine/utils/logger.h"
 
@@ -20,59 +22,7 @@
 #include "utils/string.h"
 
 #if DEVELOPMENT
-	#include <dbghelp.h>
-	#include <psapi.h>
-
-	struct SymbolInfoPackage : public SYMBOL_INFO_PACKAGEW {
-		SymbolInfoPackage() {
-			si.SizeOfStruct = sizeof(SYMBOL_INFOW);
-			si.MaxNameLen = sizeof(name);
-		}
-	};
-
-	// TODO(kalle): This is supposed to be shared between the boot.cpp and this!
-	struct ReloadHeader {
-		void *old_mspace;
-		void *new_mspace;
-		size_t old_memory_size;
-	};
-
-	enum SymTagEnum {
-		SymTagNull,
-		SymTagExe,
-		SymTagCompiland,
-		SymTagCompilandDetails,
-		SymTagCompilandEnv,
-		SymTagFunction,
-		SymTagBlock,
-		SymTagData,
-		SymTagAnnotation,
-		SymTagLabel,
-		SymTagPublicSymbol, // 10
-		SymTagUDT,
-		SymTagEnum,
-		SymTagFunctionType,
-		SymTagPointerType,
-		SymTagArrayType, // 15
-		SymTagBaseType,
-		SymTagTypedef,
-		SymTagBaseClass,
-		SymTagFriend,
-		SymTagFunctionArgType, // 20
-		SymTagFuncDebugStart,
-		SymTagFuncDebugEnd,
-		SymTagUsingNamespace,
-		SymTagVTableShape,
-		SymTagVTable,
-		SymTagCustom,
-		SymTagThunk,
-		SymTagCustomType,
-		SymTagManagedType,
-		SymTagDimension,
-		SymTagMax
-	};
-
-	#include "reloader.cpp"
+	#include "reloader/reloader.cpp"
 #endif //DEVELOPMENT
 
 struct ReloadInfo {
@@ -83,6 +33,7 @@ struct ReloadInfo {
 
 #ifdef DEVELOPMENT
 	ReloadHeader reload_header;
+	SymbolContext symbol_context;
 #endif // DEVELOPMENT
 };
 
@@ -153,10 +104,11 @@ struct Plugin {
 		}
 	}
 
-	void unload_symbols(Plugin &plugin) { // Unload symbols
+	void unload_symbols(Plugin &plugin, ReloadInfo &reload_info) { // Unload symbols
 		MODULEINFO module_info = {};
 		HANDLE process = GetCurrentProcess();
 		if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
+			reloader_unload_symbols(L"Application", module_info, reload_info.symbol_context);
 			BOOL success = SymUnloadModule64(process, (DWORD64)module_info.lpBaseOfDll);
 			if (!success) {
 				DWORD last_error = GetLastError();
@@ -174,13 +126,7 @@ struct Plugin {
 				DWORD last_error = GetLastError();
 				LOG_ERROR("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, *reload_info.plugin_path);
 			} else {
-				SymbolInfoPackage symbol_info_package;
-				BOOL result = SymGetTypeFromNameW(process, (DWORD64)module_info.lpBaseOfDll, L"Application", &symbol_info_package.si);
-
-				if (result) {
-					SYMBOL_INFOW *symbol_info = &symbol_info_package.si;
-					symbased_memory_patching(process, symbol_info->ModBase, symbol_info, reload_info.reload_header);
-				}
+				reloader_load_symbols(L"Application", module_info, reload_info.symbol_context, reload_info.reload_header);
 			}
 		}
 	}
@@ -493,7 +439,10 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 			time_t timestamp = get_timestamp(*reload.reload_marker_path);
 			if (timestamp > plugin.timestamp) {
 				#if DEVELOPMENT
-					unload_symbols(plugin);
+					reload.reload_header.old_mspace = plugin_mspace;
+					reload.reload_header.old_memory_size = PLUGIN_MEMORY_SIZE;
+
+					unload_symbols(plugin, reload);
 				#endif // DEVELOPMENT
 
 				// Free plugin
@@ -507,10 +456,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 
 				#if DEVELOPMENT
 					mspace new_plugin_mspace = create_mspace(PLUGIN_MEMORY_SIZE, 0);
-
 					reload.reload_header.new_mspace = new_plugin_mspace;
-					reload.reload_header.old_mspace = plugin_mspace;
-					reload.reload_header.old_memory_size = PLUGIN_MEMORY_SIZE;
 
 					load_symbols(plugin, reload);
 				#endif // DEVELOPMENT

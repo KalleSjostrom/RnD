@@ -51,6 +51,13 @@
 	#include "utils/audio_manager.cpp"
 #endif // SYSTEM_AUDIO
 
+#if defined(FEATURE_RELOAD) || defined(SYSTEM_OPENGL) || defined(SYSTEM_OPENCL) || defined(TEST_RELOAD)
+	#define SYSTEM_RELOAD
+	#if defined(TEST_RELOAD)
+		#include "reloader/reloader_tests.h"
+	#endif
+#endif
+
 struct Allocator {
 	void *allocate(size_t size, unsigned align) { (void)align; return mspace_malloc(_mspace, size); }
 	void deallocate(void * p) { mspace_free(_mspace, p); }
@@ -84,13 +91,21 @@ struct Application {
 #endif
 
 	RELOAD_ENTRY_POINT *user_data;
+
+#ifdef TEST_RELOAD
+	// Tests
+	ArrayTest array_test;
+#endif
 };
 
 void plugin_setup(Application &application);
 void plugin_update(Application &application, float dt);
 void plugin_render(Application &application);
 
-#if defined(FEATURE_RELOAD) || defined(SYSTEM_OPENGL) || defined(SYSTEM_OPENCL)
+#ifdef SYSTEM_RELOAD
+	#ifdef TEST_RELOAD
+		#include "reloader/reloader_tests.cpp"
+	#endif
 	#ifdef FEATURE_RELOAD
 		void plugin_reloaded(Application &application);
 	#endif
@@ -118,6 +133,10 @@ void plugin_render(Application &application);
 
 			reload_programs(application.components);
 		#endif // SYSTEM_COMPONENTS
+
+		#ifdef TEST_RELOAD
+			tests_reloaded(application);
+		#endif
 
 		#ifdef FEATURE_RELOAD
 			plugin_reloaded(application);
@@ -164,6 +183,10 @@ EXPORT PLUGIN_SETUP(setup) {
 	#endif
 
 	plugin_setup(application);
+
+	#ifdef TEST_RELOAD
+		tests_setup(application);
+	#endif
 }
 
 EXPORT PLUGIN_UPDATE(update) {

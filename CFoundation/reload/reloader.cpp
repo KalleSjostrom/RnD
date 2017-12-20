@@ -16,7 +16,6 @@ struct Pointer {
 	intptr_t addr_old;
 	intptr_t addr_new;
 	intptr_t pointer_type;
-	char *debug_tag;
 };
 
 // Stores information about seen and unseen memory locations.

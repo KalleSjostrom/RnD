@@ -13,6 +13,7 @@ struct Raytracer;
 #include "levels.cpp"
 
 struct Raytracer {
+	int a;
 	RenderPipe render_pipe;
 	Random random;
 
@@ -62,6 +63,14 @@ ALIGNED_TYPE_(struct, 16) {
 	cl_float4 z;
 	cl_float4 w;
 } CLM4;
+
+void plugin_reloaded(Application &application) {
+	// Raytracer &raytracer = *(Raytracer*)application.user_data;
+
+	// i32 screen_width, screen_height;
+	// application.engine->screen_dimensions(screen_width, screen_height);
+	// setup_render_pipe(application.persistent_arena, application.engine, raytracer.render_pipe, application.components, screen_width, screen_height);
+}
 
 void plugin_setup(Application &application) {
 	Allocator &allocator = application.allocator;
