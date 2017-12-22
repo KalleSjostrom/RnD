@@ -220,6 +220,27 @@ inline String make_path(MemoryArena &arena, String &directory_path, String &file
 	append_path(file_path_string, 2, &directory_path, &filename);
 	return file_path_string;
 }
+String get_filename(String &filepath, bool strip_ending = false) {
+	i32 at = filepath.length - 1;
+	i32 end_of_string = filepath.length;
+	for (; at >= 0; at--) {
+		if (filepath[at] == '/')
+			break;
+		if (strip_ending && filepath[at] == '.')
+			end_of_string = at;
+	}
+	at++;
+	return make_string(filepath.text + at, end_of_string - at);
+}
+
+String get_directory(String filepath) {
+	i32 at = filepath.length - 1;
+	for (; at >= 0; at--) {
+		if (filepath[at] == '/')
+			break;
+	}
+	return make_string(filepath.text, at);
+}
 
 //// MOVE??? ////
 #include "murmur_hash.cpp"

@@ -1,5 +1,28 @@
 #pragma once
 
+#pragma warning(disable : 4458)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4061)
+#pragma warning(disable : 4062)
+#pragma warning(disable : 4365)
+#pragma warning(disable : 4464)
+#pragma warning(disable : 4514)
+#pragma warning(disable : 4668)
+#pragma warning(disable : 4820)
+#pragma warning(disable : 4625)
+#pragma warning(disable : 4710)
+#pragma warning(disable : 4626)
+#pragma warning(disable : 4582)
+#pragma warning(disable : 4623)
+#pragma warning(disable : 4060)
+#pragma warning(disable : 4068)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4127)
+#pragma warning(disable : 4191)
+#pragma warning(disable : 4505)
+#pragma warning(disable : 4100)
+#pragma warning(disable : 4324)
+
 #define ONLY_MSPACES 1
 #define MSPACES 1
 #define PROCEED_ON_ERROR 1

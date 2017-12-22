@@ -1,0 +1,22 @@
+translation_units = {
+	"source/conetracer.cpp"
+}
+plugins = {
+	{
+		path = "../compiler_plugins/obj/plugin.dll"
+		include = {
+			"assets"
+		}
+		exclude = {
+			"assets/textures"
+		}
+	}
+	{
+		path = "../compiler_plugins/glsl/plugin.dll"
+		include = {
+			"assets/shaders"
+		}
+	}
+}
+asset_path = assets
+output_path = out

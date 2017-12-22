@@ -1,0 +1,5 @@
+translation_units = {
+	source/raytracer.cpp
+}
+asset_path = assets
+output_path = out

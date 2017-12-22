@@ -1,1 +1,0 @@
-"../generator/generator.exe" --source . --output ./out/generated/

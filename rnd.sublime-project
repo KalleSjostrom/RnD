@@ -17,69 +17,53 @@
 					"working_dir": "${project_path}/engine/"
 				},
 				{
-					"name": "Conetracer",
-					"working_dir": "${project_path}/conetracer/"
+					"name": "Compiler",
+					"working_dir": "${project_path}/compiler/"
 				},
 				{
-					"name": "ObjCompiler",
-					"working_dir": "${project_path}/external tools/obj_compiler/"
+					"name": "Conetracer",
+					"working_dir": "${project_path}/compiler/bin/",
+					"windows": {
+						"cmd": [ "compiler.exe", "--project", "../../conetracer/conetracer.project" ],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+					}
 				},
 				{
 					"name": "Raytracer",
-					"working_dir": "${project_path}/raytracer/"
-				},
-				{
-					"name": "Generator",
-					"working_dir": "${project_path}/generator/"
-				},
-				{
-					"name": "Genome",
-					"working_dir": "${project_path}/genome/"
+					"working_dir": "${project_path}/compiler/bin/",
+					"windows": {
+						"cmd": [ "compiler.exe", "--project", "../../raytracer/raytracer.project" ],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+					}
 				},
 				{
 					"name": "Game",
-					"working_dir": "${project_path}/Game/"
-				},
-				{
-					"name": "Roomba Mock Server",
-					"working_dir": "${project_path}/roomba/server/"
-				},
-				{
-					"name": "Roomba Client",
-					"working_dir": "${project_path}/roomba/client/"
+					"working_dir": "${project_path}/compiler/bin/",
+					"windows": {
+						"cmd": [ "compiler.exe", "--project", "../../game/game.project" ],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+					}
 				},
 				{
 					"name": "Fluid",
-					"working_dir": "${project_path}/fluid/"
+					"working_dir": "${project_path}/compiler/bin/",
+					"windows": {
+						"cmd": [ "compiler.exe", "--project", "../../fluid/fluid.project" ],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+					}
 				},
 				{
-					"name": "MyGL",
-					"working_dir": "${project_path}/mygl/"
+					"name": "Compiler Obj",
+					"working_dir": "${project_path}/compiler_plugins/obj"
 				},
 				{
-					"name": "Test - Mandlebrot",
-					"working_dir": "${project_path}/testing and benchmarks/mandelbrot/"
+					"name": "Compiler Entity",
+					"working_dir": "${project_path}/compiler_plugins/entity"
 				},
 				{
-					"name": "Test - Math",
-					"working_dir": "${project_path}/testing and benchmarks/math_benchmarks/"
+					"name": "Compiler Glsl",
+					"working_dir": "${project_path}/compiler_plugins/glsl"
 				},
-				{
-					"name": "Test - Matrix Multiplication",
-					"working_dir": "${project_path}/testing and benchmarks/matrix_multiplication/"
-				},
-				{
-					"name": "Test - Memory",
-					"working_dir": "${project_path}/testing and benchmarks/memory/"
-				},
-				{
-					"name": "Test - Perlin",
-					"working_dir": "${project_path}/testing and benchmarks/perlin/"
-				},
-				{
-					"name": "Test - Sorting",
-					"working_dir": "${project_path}/testing and benchmarks/sorting/"
-				}
 			],
 			"windows":
 			{
@@ -103,7 +87,10 @@
 		},
 		{
 			"name": "DrSym",
-			"path": "../dynamorio-master"
+			"path": "C:\\Users\\Kalle\\Programming\\dynamorio-master"
+		},
+		{
+			"path": "external tools\\entity_compiler"
 		}
 	]
 }

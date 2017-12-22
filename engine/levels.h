@@ -20,4 +20,4 @@ struct Level {
 	EntityData entity_data[512];
 };
 
-Level make_level();
+Level make_level(Application &application);

@@ -169,3 +169,4 @@ namespace gl_program_builder {
 		free(binary);
 	}
 }
+// Have you tried adding [code]glProgramParameteri(program, PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);[/code] before linking the program? [/size]

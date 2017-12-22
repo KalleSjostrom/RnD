@@ -1,3 +1,5 @@
+#pragma once
+
 struct q4 {
 	union {
 		struct {

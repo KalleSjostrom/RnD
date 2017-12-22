@@ -21,7 +21,7 @@ void plugin_setup(Application &application) {
 	// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 	// glEnable(GL_DEPTH_TEST);
 
-	Level level = make_level();
+	Level level = make_level(application);
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
 		Entity *entity = spawn_entity(application.engine, application.components, data.type, data.context, data.offset);
@@ -40,6 +40,19 @@ void plugin_setup(Application &application) {
 }
 
 void plugin_update(Application &application, float dt) {
+	// if (IS_PRESSED(*application.components.input.input_data, InputKey_MouseLeft)) {
+		// m4 &pose = get_pose(application.components.model, application.components.entities[0]);
+
+		// v3 &x = *(v3*)(pose.m + 0);
+		// v3 &y = *(v3*)(pose.m + 4);
+		// v3 &z = *(v3*)(pose.m + 8);
+
+		// q4 q = Quaternion(V3(0, 1, 0), dt);
+
+		// x = ::rotate_around(q, x);
+		// y = ::rotate_around(q, y);
+		// z = ::rotate_around(q, z);
+	// }
 }
 
 void plugin_render(Application &application) {

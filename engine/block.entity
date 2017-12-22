@@ -1,0 +1,8 @@
+
+model {
+	program = ProgramType_default
+	obj_path = "assets/quad.obj"
+}
+actor {
+	shape = ShapeType_Box
+}

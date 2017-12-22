@@ -1,3 +1,6 @@
+#pragma once
+#include "quaternion.h"
+
 ALIGNED_TYPE_(struct, 16) {
 	float m[16];
 	FORCE_INLINE float operator[](int index) { return m[index]; }
