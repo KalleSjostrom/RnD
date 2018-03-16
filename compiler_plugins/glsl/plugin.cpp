@@ -43,6 +43,19 @@ namespace glsl {
 	}
 
 	EXPORT PLUGIN_GET_FILE_ENDINGS(get_file_endings) {
+		HWND hwnd = CreateWindow(STATIC, 0, WS_DISABLED, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, 0, 0);
+		DWORD error = GetLastError();
+		HDC hdc = GetDC(hwnd);
+		error = GetLastError();
+		PIXELFORMATDESCRIPTOR pfd = {};
+		int format = ChoosePixelFormat(hdc, &pfd);
+		error = GetLastError();	
+		SetPixelFormat(hdc, format, &pfd);
+		HGLRC hglrc = wglCreateContext(hdc);
+		error = GetLastError();
+		// make it the calling thread's current rendering context 
+		wglMakeCurrent(hdc, hglrc);
+
 		// TODO(kalle): Make this a setup call instead
 		setup_gl();
 

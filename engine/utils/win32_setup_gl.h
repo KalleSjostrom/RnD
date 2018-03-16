@@ -53,7 +53,7 @@ DECLARE_GL_FUNCTION_SDL(GLBLENDFUNCSEPARATE, glBlendFuncSeparate);
 
 void setup_gl() {
 	GET_GL_FUNCTION_SDL(GLCREATESHADER, glCreateShader);
-	DWORD error = GetLastError();
+	// DWORD error = GetLastError();
 	GET_GL_FUNCTION_SDL(GLSHADERSOURCE, glShaderSource);
 	GET_GL_FUNCTION_SDL(GLCOMPILESHADER, glCompileShader);
 	GET_GL_FUNCTION_SDL(GLGETSHADERINFOLOG, glGetShaderInfoLog);

@@ -66,7 +66,7 @@ void compile_glsl(String input_directory, String input_filename, String output_d
 					vertex = parse_shader(tok);
 				} else if (parser::is_equal(token, t_fragment)) {
 					fragment = parse_shader(tok);
-				} else if (parser::is_equal(token, t_geometry)) {
+					} else if (parser::is_equal(token, t_geometry)) {
 					geometry = parse_shader(tok);
 				}
 			} break;

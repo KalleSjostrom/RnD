@@ -9,6 +9,12 @@ b32 build(Project &project, FileSystem &file_system) {
 	at += bytes_written;
 	count -= bytes_written;
 
+	if (project.user_commands.length) {
+		bytes_written = sprintf_s(at, count, " %s", *project.user_commands);
+		at += bytes_written;
+		count -= bytes_written;
+	}
+
 	for (i32 i = 0; i < array_count(project.translation_units); ++i) {
 		bytes_written = sprintf_s(at, count, " %s", *project.translation_units[i]);
 		at += bytes_written;

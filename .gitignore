@@ -40,3 +40,4 @@ __reload_marker
 *.sln
 *.db
 *.opendb
+*.cobj

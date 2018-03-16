@@ -13,6 +13,8 @@ enum EntityType : u32 {
 	EntityType_Model,
 	EntityType_Fluid,
 	EntityType_Ruler,
+	EntityType_Roomba,
+	EntityType_Line,
 
 	EntityType_Count,
 };
@@ -46,6 +48,7 @@ struct Entity {
 #include "shaders/fluid.shader.cpp"
 #include "shaders/model.shader.cpp"
 #include "shaders/fullscreen_effects.shader.cpp"
+#include "shaders/roomba.shader.cpp"
 
 struct ComponentGroup {
 	InputComponent input;
@@ -98,6 +101,8 @@ enum ProgramType {
 	ProgramType_model,
 	ProgramType_ray,
 	ProgramType_fluid,
+	ProgramType_roomba,
+	ProgramType_line,
 };
 void setup_programs(ComponentGroup &components) {
 	GLuint default_program = gl_program_builder::create_from_strings(shader_default::vertex, shader_default::fragment, 0);
@@ -106,6 +111,8 @@ void setup_programs(ComponentGroup &components) {
 	GLuint model_program = gl_program_builder::create_from_strings(shader_model::vertex, shader_model::fragment, 0);
 	GLuint ray_program = gl_program_builder::create_from_strings(shader_ray::vertex, shader_ray::fragment, shader_ray::geometry);
 	GLuint fluid_program = gl_program_builder::create_from_strings(fluid::vertex, fluid::fragment, 0);
+	GLuint roomba_program = gl_program_builder::create_from_strings(shader_roomba::vertex, shader_roomba::fragment, shader_roomba::geometry);
+	GLuint line_program = gl_program_builder::create_from_strings(shader_line::vertex, shader_line::fragment, shader_line::geometry);
 
 	components.renderer.program_count = 0;
 
@@ -115,6 +122,8 @@ void setup_programs(ComponentGroup &components) {
 	add_program(components.renderer, model_program, RenderMask_ShadowCasters);
 	add_program(components.renderer, ray_program, RenderMask_Rest);
 	add_program(components.renderer, fluid_program, RenderMask_Fluid);
+	add_program(components.renderer, roomba_program, RenderMask_Rest);
+	add_program(components.renderer, line_program, RenderMask_Rest);
 }
 
 void reload_programs(ComponentGroup &components) {
@@ -286,7 +295,43 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 
 			// Model
 			add(components.model, entity, engine, *components.arena, position, &model_cc);
-			add_to_program(components.renderer, ProgramType_default, get_model(components.model, entity));
+			add_to_program(components.renderer, ProgramType_line, get_model(components.model, entity));
+		} break;
+		case EntityType_Roomba: {
+			static v3 vertex_buffer_data[] = {
+				{ 0.0f, 0.0f, 0.0f },
+			};
+
+			ModelCC model_cc = {};
+
+			MeshData &md = model_cc.mesh_data;
+			md.vertices = vertex_buffer_data;
+			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
+
+			md.group_count = 1;
+			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups[0].indices = (GLindex*) quad_vertex_indices;
+			md.groups[0].index_count = 1;
+
+			model_cc.buffer_type = GL_STATIC_DRAW;
+			model_cc.draw_mode = GL_POINTS;
+
+			// Model
+			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add_to_program(components.renderer, ProgramType_roomba, get_model(components.model, entity));
+
+			// Material
+			// add(components.material, entity, context.material);
+
+			// Actor
+			static v3 bounding_box[] = {
+				{ -50.0f, -50.0f, 0.0f },
+				{  50.0f, -50.0f, 0.0f },
+				{  50.0f,  50.0f, 0.0f },
+				{ -50.0f,  50.0f, 0.0f },
+			};
+			m4 &pose = get_pose(components.model, entity);
+			add(components.actor, entity, ShapeType_Sphere, pose, bounding_box, ARRAY_COUNT(bounding_box));
 		} break;
 		case EntityType_Plane: {
 			static v3 vertex_buffer_data[] = {

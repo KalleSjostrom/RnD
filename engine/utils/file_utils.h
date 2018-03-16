@@ -15,17 +15,17 @@
 	}
 #endif
 
-inline FILE *open_file(const char *filename, size_t *filesize) {
+inline FILE *open_file(const char *filename, size_t *filesize, char *mode = "rb") {
 	FILE *file;
-	fopen_s(&file, filename, "rb");
+	fopen_s(&file, filename, mode);
 	ASSERT(file, "Could not find file %s!", filename);
 	*filesize = get_filesize(file);
 	return file;
 }
 
-inline FILE *try_open_file(const char *filename, size_t *filesize) {
+inline FILE *try_open_file(const char *filename, size_t *filesize, char *mode = "rb") {
 	FILE *file;
-	fopen_s(&file, filename, "rb");
+	fopen_s(&file, filename, mode);
 	if (!file)
 		return 0;
 

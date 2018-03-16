@@ -58,6 +58,10 @@
 	#endif
 #endif
 
+#ifdef SYSTEM_GUI
+	#include "engine/utils/gui.cpp"
+#endif
+
 struct Allocator {
 	void *allocate(size_t size, unsigned align) { (void)align; return mspace_malloc(_mspace, size); }
 	void deallocate(void * p) { mspace_free(_mspace, p); }
@@ -88,6 +92,10 @@ struct Application {
 
 #ifdef SYSTEM_OPENCL
 	ClInfo cl_info;
+#endif
+
+#ifdef SYSTEM_GUI
+	GUI gui;
 #endif
 
 	RELOAD_ENTRY_POINT *user_data;

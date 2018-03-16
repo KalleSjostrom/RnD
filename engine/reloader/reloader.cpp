@@ -172,7 +172,7 @@ u32 expand_type(HANDLE process, u64 mod_base, SymbolContext &symbol_context, u32
 	return type_info->mask;
 }
 void expand_pointer(HANDLE process, u64 mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, u32 _type, intptr_t addr_old, intptr_t addr_new) {
-	// In the array case (which is probably the moste common?), there is probably a lot of stuff here that is redundant..
+	// In the array case (which is probably the most common?), there is probably a lot of stuff here that is redundant..
 	NameEntry *name_entry = get_name_hash(new_symbol_context, _type);
 	ASSERT(name_entry->type == _type, "Found unknown struct!");
 

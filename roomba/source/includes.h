@@ -34,15 +34,3 @@ typedef uint16_t GLindex;
 
 #include "engine/common.h"
 
-#include <errno.h>
-#include <unistd.h>
-#include <mach/mach_time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "../sci.h"
-#include "../tcp_socket.cpp"
-
-#include "../roomba_common.cpp"
-#include "roomba.cpp"

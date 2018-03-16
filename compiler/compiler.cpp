@@ -238,11 +238,13 @@ void run(void *arg) {
 	// }
 }
 
-int main(int argc, char *argv[]) {
+// #include "SDL.h"
+
+int run(int argc, char *argv[]) {
 PROFILER_START(parse_project);
 	char *project_path = 0;
 
-	for (int i = 1; i < argc; ++i) {
+	for (int i = 0; i < argc; ++i) {
 		char *option = argv[i];
 		if (strcmp(option, "--project") == 0) {
 			project_path = argv[++i];
@@ -250,7 +252,7 @@ PROFILER_START(parse_project);
 	}
 
 	ASSERT(project_path, "Need to specify a project file to compile! Use --project path/to/some_project");
-	// printf("Running compiler for project '%s'\n", project_path);
+	printf("Running compiler for project '%s'\n", project_path);
 	fflush(stdout); // We want to se the status update when running from sublime..
 
 	Compiler compiler = {};
@@ -260,6 +262,27 @@ PROFILER_START(parse_project);
 
 	parse_project(compiler.arena, compiler.project, project_path);
 PROFILER_STOP(parse_project);
+
+	// u32 sdl_subsystems = SDL_INIT_AUDIO;
+	// sdl_subsystems = SDL_INIT_AUDIO | SDL_INIT_VIDEO;
+
+	// if (SDL_Init(sdl_subsystems)) {
+	// 	// ASSERT(0, "SDL_Init failed: %s", IMG_GetError());
+	// }
+
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+	// SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	// SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	// SDL_Window *window = SDL_CreateWindow("Compiler", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1, 1, SDL_WINDOW_OPENGL);
+	// SDL_GLContext glContext = SDL_GL_CreateContext(window);
+	// (void)glContext;
 
 PROFILER_START(setup);
 	init_filesystem(compiler.file_system, compiler.project.root, compiler.project.output_path, compiler.arena);
@@ -296,3 +319,39 @@ PROFILER_STOP(write_cache);
 
 	return !success;
 }
+
+#ifdef OS_WINDOWS
+#include <shellapi.h>
+int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowCode) {
+	(void) Instance;
+	(void) PrevInstance;
+	(void) ShowCode;
+
+	char *argv[8] = {};
+	int argc = 0;
+	argv[0] = CommandLine;
+
+	int cursor = 0;
+	while(1) {
+		if (CommandLine[cursor] == ' ') {
+			argv[argc][cursor] = '\0';
+			argc++;
+			cursor++;
+			argv[argc] = CommandLine + cursor;
+			continue;
+		} else if (CommandLine[cursor] == '\0') {
+			if (cursor > 0) {
+				argc++;
+			}
+			break;
+		}
+
+		cursor++;
+	}
+	return run(argc, argv);
+}
+#else
+int main(int argc, char *argv[]) {
+	return run(argc, argv);
+}
+#endif

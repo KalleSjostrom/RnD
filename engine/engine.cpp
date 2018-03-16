@@ -386,7 +386,7 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	(void)glContext;
 
 	SDL_GL_GetDrawableSize(window, &_screen_width, &_screen_height);
-	SDL_GL_SetSwapInterval(0);
+	// SDL_GL_SetSwapInterval(0);
 
 	EngineApi engine;
 

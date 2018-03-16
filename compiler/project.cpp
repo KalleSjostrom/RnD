@@ -36,6 +36,7 @@ struct Project {
 	String asset_path;
 	String output_path;
 	String root;
+	String user_commands;
 };
 
 void parse_project(MemoryArena &arena, Project &project, char *project_path) {
@@ -63,6 +64,7 @@ void parse_project(MemoryArena &arena, Project &project, char *project_path) {
 	parser::Token t_exclude = TOKENIZE("exclude");
 	parser::Token t_asset_path = TOKENIZE("asset_path");
 	parser::Token t_output_path = TOKENIZE("output_path");
+	parser::Token t_user_commands = TOKENIZE("user_commands");
 
 	array_init(project.translation_units, 8);
 	array_init(project.plugin_infos, 8);
@@ -134,6 +136,10 @@ void parse_project(MemoryArena &arena, Project &project, char *project_path) {
 					ASSERT_NEXT_TOKEN_TYPE(tok, '=');
 					token = parser::next_token(&tok);
 					project.output_path = clone_string(arena, token.string);
+				} else if (parser::is_equal(token, t_user_commands)) {
+					ASSERT_NEXT_TOKEN_TYPE(tok, '=');
+					token = parser::next_token(&tok);
+					project.user_commands = clone_string(arena, token.string);
 				}
 			} break;
 			case '\0': {

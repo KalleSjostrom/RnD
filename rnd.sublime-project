@@ -21,6 +21,10 @@
 					"working_dir": "${project_path}/compiler/"
 				},
 				{
+					"name": "Jpeg",
+					"working_dir": "${project_path}/jpeg/"
+				},
+				{
 					"name": "Conetracer",
 					"working_dir": "${project_path}/compiler/bin/",
 					"windows": {
@@ -41,6 +45,14 @@
 					"working_dir": "${project_path}/compiler/bin/",
 					"windows": {
 						"cmd": [ "compiler.exe", "--project", "../../game/game.project" ],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
+					}
+				},
+				{
+					"name": "Roomba",
+					"working_dir": "${project_path}/compiler/bin/",
+					"windows": {
+						"cmd": [ "compiler.exe", "--project", "../../roomba/roomba.project" ],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
 					}
 				},

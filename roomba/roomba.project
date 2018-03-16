@@ -1,5 +1,6 @@
 translation_units = {
-	"source/game.cpp"
+	"source/main.cpp"
 }
 asset_path = assets
 output_path = out
+user_commands = "Ws2_32.lib"
