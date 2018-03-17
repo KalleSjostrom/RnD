@@ -29,11 +29,24 @@ int run(int argc, char *argv[]) {
 
 
 	HashEntry *hash = 0;
-	hash_init(hash, 5, 4);
-	int v1 = 3;
-	int v2 = 6;
-	hash_add(hash, 5, &v1);
-	hash_add(hash, 10, &v2);
+ 	hash_init(hash, 5, 4);
+
+	int v[4] = { 3, 6, 2, 7 };
+	hash_add(hash, 5, v[0]);
+	hash_add(hash, 10, v[1]);
+	hash_add(hash, 8, v[2]);
+	hash_add(hash, 3, v[3]);
+
+	HashEntry r[4];
+	r[0] = *(HashEntry*)hash_lookup(hash, 5);
+	r[1] = *(HashEntry*)hash_lookup(hash, 10);
+	r[2] = *(HashEntry*)hash_lookup(hash, 8);
+	r[3] = *(HashEntry*)hash_lookup(hash, 3);
+
+	assert(r[0].value == v[0]);
+	assert(r[1].value == v[1]);
+	assert(r[2].value == v[2]);
+	assert(r[3].value == v[3]);
 
 	return 0;
 }

@@ -85,11 +85,9 @@ void *_hash_remove(void *hashmap, uint64_t key, size_t key_size, void *value, si
 	return 0;
 }
 
-void *_hash_lookup(void *hashmap, uint64_t key, size_t key_size, void *value, size_t value_size) {
+void *_hash_lookup(void *hashmap, uint64_t key, size_t key_size, size_t element_size) {
 	unsigned bucket_size = _hash_bucket_size(hashmap);
 	unsigned capacity = _hash_capacity(hashmap);
-
-	size_t element_size = key_size + value_size;
 
 	uint64_t lookup_key = key * bucket_size;
 	uint64_t hash_mask = capacity-1;
@@ -107,34 +105,45 @@ void *_hash_lookup(void *hashmap, uint64_t key, size_t key_size, void *value, si
 	return 0;
 }
 
-void _hash_add(void *hashmap, uint64_t key, size_t key_size, void *value, size_t value_size) {
-	void *entry = _hash_lookup(hashmap, key, key_size, value, value_size);
+void _hash_add(void *h, uint64_t key, size_t key_size, void *value, size_t value_size) {
+	void *entry = _hash_lookup(h, key, key_size, key_size + value_size);
 	assert(entry && "Critical! Hash map shouldn't every be completly full!");
+	_hash_count(h)++;
 	memmove(entry, &key, key_size);
 	memmove((char*)entry + key_size, value, value_size);
 }
 
-
-#define _hash_need_to_grow(h, n)    ((h)==0 || _hash_count(h)+(n) > _hash_capacity(h))
+// TODO(kalle): round the load factor? Make it settable
+#define _hash_need_to_grow(h, n)    ((h)==0 || _hash_count(h)+(n) > (unsigned)(_hash_capacity(h) * 0.7f))
 #define _hash_ensure_space(h, k, n) (_hash_need_to_grow((h), (n)) ? (h) = _hash_grow((h), (n), sizeof(k), sizeof(*(h))) : 0)
 
-#define hash_init(h, k, n) (_hash_ensure_space((h), k, 1))
-#define hash_add(h, k, v) (_hash_ensure_space((h), k, 1), _hash_add((h), (k), sizeof(k), &(v), sizeof(*(v))))
+#define hash_init(h, k, n) (_hash_ensure_space((h), k, n))
+#define hash_add(h, k, v) (_hash_ensure_space((h), k, 1), _hash_add((h), (k), sizeof(k), &(v), sizeof(v)))
+#define hash_lookup(h, k) ((h) == 0 ? 0 : _hash_lookup((h), (k), sizeof(k), sizeof(*(h))))
 
 static void *_hash_grow(void *h, unsigned increment, size_t key_size, size_t itemsize) {
-	unsigned next_capacity = next_power_of_2(hash_capacity(h));
-	unsigned needed = hash_capacity(h) + increment;
+	unsigned previous_capacity = hash_capacity(h);
+	unsigned next_capacity = next_power_of_2(previous_capacity);
+	unsigned needed = previous_capacity + increment;
 	unsigned capacity = next_capacity > needed ? next_capacity : next_power_of_2(needed + 1);
-	unsigned *p = (unsigned*) realloc(h ? _hash_raw_pointer(h) : 0, capacity * itemsize + sizeof(unsigned)*2);
+	// unsigned *p = (unsigned*) realloc(h ? _hash_raw_pointer(h) : 0, capacity * itemsize + sizeof(unsigned)*2);
+	unsigned *p = (unsigned*) malloc(capacity * itemsize + sizeof(unsigned)*2);
 	if (p) {
-		if (!h)
-			p[1] = 0;
+		p[1] = 0;
 		p[0] = capacity;
+		
+		uint64_t _invalid_key = invalid_key;
 		char *base = (char*)(p+2);
 		for (uint64_t i = 0; i < capacity; ++i) {
 			char *entry = base + i * itemsize;
-			uint64_t _invalid_key = invalid_key;
 			memmove(entry, &_invalid_key, key_size);
+		}
+
+		for (uint64_t i = 0; i < previous_capacity; ++i) {
+			char *entry = (char*)h + i * itemsize;
+			if (memcmp(entry, &_invalid_key, key_size) != 0) {
+				_hash_add(base, *(uint64_t*)entry, key_size, entry + key_size, itemsize - key_size);
+			}
 		}
 	}
 	return p + 2;
