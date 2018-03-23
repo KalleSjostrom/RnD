@@ -21,6 +21,10 @@
 					"working_dir": "${project_path}/compiler/"
 				},
 				{
+					"name": "Fibers",
+					"working_dir": "${project_path}/fibers/"
+				},
+				{
 					"name": "Jpeg",
 					"working_dir": "${project_path}/jpeg/"
 				},

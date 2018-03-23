@@ -346,7 +346,7 @@ namespace {
 		ASSERT(false, "Error: _main_fiber_start should never return");
 	}
 
-	// Pops the next task off the queue into nextTask. If there are no tasks in the the queue, it will return false.
+	// Pops the next task off the queue into nextTask. If there are no tasks in the queue, it will return false.
 	static bool _scheduler_get_next_task(ThreadLocalStorage *tls_array, i32 thread_count, TaskBundle *next_task) {
 		ThreadLocalStorage &tls = tls_array[get_thread_index()];
 
