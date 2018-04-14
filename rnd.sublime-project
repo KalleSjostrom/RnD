@@ -21,6 +21,10 @@
 					"working_dir": "${project_path}/compiler/"
 				},
 				{
+					"name": "Roomba Server",
+					"working_dir": "${project_path}/roomba/server/"
+				},
+				{
 					"name": "Fibers",
 					"working_dir": "${project_path}/fibers/"
 				},
@@ -30,43 +34,73 @@
 				},
 				{
 					"name": "Conetracer",
-					"working_dir": "${project_path}/compiler/bin/",
-					"windows": {
-						"cmd": [ "compiler.exe", "--project", "../../conetracer/conetracer.project" ],
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../conetracer/conetracer.project"
+						],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
-					}
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Raytracer",
-					"working_dir": "${project_path}/compiler/bin/",
-					"windows": {
-						"cmd": [ "compiler.exe", "--project", "../../raytracer/raytracer.project" ],
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../raytracer/raytracer.project"
+						],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
-					}
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Game",
-					"working_dir": "${project_path}/compiler/bin/",
-					"windows": {
-						"cmd": [ "compiler.exe", "--project", "../../game/game.project" ],
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../game/game.project"
+						],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
-					}
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Roomba",
-					"working_dir": "${project_path}/compiler/bin/",
-					"windows": {
-						"cmd": [ "compiler.exe", "--project", "../../roomba/roomba.project" ],
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../roomba/roomba.project"
+						],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
-					}
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Fluid",
-					"working_dir": "${project_path}/compiler/bin/",
-					"windows": {
-						"cmd": [ "compiler.exe", "--project", "../../fluid/fluid.project" ],
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../fluid/fluid.project"
+						],
 						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)"
-					}
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Compiler Obj",
@@ -79,7 +113,7 @@
 				{
 					"name": "Compiler Glsl",
 					"working_dir": "${project_path}/compiler_plugins/glsl"
-				},
+				}
 			],
 			"windows":
 			{
@@ -107,6 +141,9 @@
 		},
 		{
 			"path": "external tools\\entity_compiler"
+		},
+		{
+			"path": "roomba\\server\\out"
 		}
 	]
 }

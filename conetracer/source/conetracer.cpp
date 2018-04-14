@@ -20,19 +20,8 @@ struct Conetracer {
 void plugin_reloaded(Application &application) {
 }
 
-#define DATA_FOLDER "../../conetracer/out/data/"
-ModelCC load_model(MemoryArena &arena, const char *path) {
-	MeshData mesh_data = read_obj(arena, path);
-	ModelCC model_cc = {};
-	model_cc.mesh_data = mesh_data;
-
-	model_cc.buffer_type = GL_STATIC_DRAW;
-	model_cc.draw_mode = GL_TRIANGLES;
-
-	model_cc.program_type = ProgramType_model;
-
-	return model_cc;
-}
+#define DATA_FOLDER "../../conetracer/out/data"
+#define ASSET_FOLDER "../../conetracer/assets"
 
 void plugin_setup(Application &application) {
 	Conetracer &conetracer = *PUSH_STRUCT(application.persistent_arena, Conetracer);
@@ -56,7 +45,7 @@ void plugin_setup(Application &application) {
 	}
 	{
 		Context c = {};
-		ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"sponza.cobj");
+		ModelCC model_cc = load_model(application.persistent_arena, DATA_FOLDER"/sponza.cobj");
 		c.model = &model_cc;
 		Entity *entity = spawn_entity(application.engine, application.components, EntityType_Model, c, V3(0, 0, 0));
 		(void)entity;

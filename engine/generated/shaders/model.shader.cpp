@@ -47,10 +47,10 @@ static const char *fragment = GLSL(
 		vec3 normal = fnormal.xyz;
 
 		color = texture(diffuse, fuv);
-		color.a = texture(translucency, fuv).x;
+		// color.a = texture(translucency, fuv).x;
 
-		float d = dot(-flight.xyz, normal);
-		color.xyz *= clamp(d, 0.3f, 1.0f);
+		// float d = dot(-flight.xyz, normal);
+		// color.xyz *= clamp(d, 0.3f, 1.0f);
 	}
 );
 }

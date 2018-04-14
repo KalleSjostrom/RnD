@@ -2,37 +2,6 @@
 
 #define DEFAULT_PORT 9001
 
-enum Sensor {
-	Sensor_Bumpwheeldrops = 0,
-	Sensor_Wall,
-	Sensor_CliffLeft,
-	Sensor_CliffFrontLeft,
-	Sensor_CliffFrontRight,
-	Sensor_CliffRight,
-	Sensor_VirtualWall,
-	Sensor_MotorOvercurrents,
-	Sensor_DirtDetectorLeft,
-	Sensor_DirtDetectorRight,
-	Sensor_RemoteOpcode,
-	Sensor_Buttons,
-	Sensor_DistanceMSB,
-	Sensor_DistanceLSB,
-	Sensor_AngleMSB,
-	Sensor_AngleLSB,
-	Sensor_ChargingState,
-	Sensor_VoltageMSB,
-	Sensor_VoltageLSB,
-	Sensor_CurrentMSB,
-	Sensor_CurrentLSB,
-	Sensor_Temperature,
-	Sensor_ChargeMSB,
-	Sensor_ChargeLSB,
-	Sensor_CapacityMSB,
-	Sensor_CapacityLSB,
-
-	Sensor_Count
-};
-
 //Battery Charging States
 #define CHARGING_STATE_NO_CHARGING          0
 #define CHARGING_STATE_CHARGING_RECOVERY    1
@@ -42,6 +11,7 @@ enum Sensor {
 #define CHARGING_STATE_CHARGING_ERROR       5
 
 //Commands
+#define COMMAND_START   128
 #define COMMAND_SAFE    131
 #define COMMAND_FULL    132
 #define COMMAND_POWER   133
@@ -55,6 +25,7 @@ enum Sensor {
 #define COMMAND_PLAY    141
 #define COMMAND_SENSORS 142
 #define COMMAND_DOCK    143
+#define COMMAND_STOP    173
 
 //Number of parameters of Led commands
 #define LEDS_NUM_PARAMETERS         3

@@ -1,0 +1,3 @@
+newmtl roomba
+	map_Kd textures\roomba.png
+	map_d textures\roomba.png

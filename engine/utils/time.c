@@ -1,24 +1,25 @@
 #pragma once
 
 #ifdef OS_WINDOWS
-	struct Stopwatch {
+	typedef struct {
 		LARGE_INTEGER frequency;
 		LARGE_INTEGER start_counter;
-		float time;
-		Stopwatch() {
-			QueryPerformanceFrequency(&frequency);
-			start();
-		}
-		void start() {
-			QueryPerformanceCounter(&start_counter);
-		}
-		float stop() {
-			LARGE_INTEGER stop_counter;
-			QueryPerformanceCounter(&stop_counter);
-			time = (float)(stop_counter.QuadPart - start_counter.QuadPart) / frequency.QuadPart;
-			return time;
-		}
-	};
+	} Stopwatch;
+
+	void stopwatch_init(Stopwatch *sw) {
+		QueryPerformanceFrequency(&sw->frequency);
+	}
+
+	void stopwatch_start(Stopwatch *sw) {
+		QueryPerformanceCounter(&sw->start_counter);
+	}
+
+	double stopwatch_stop(Stopwatch *sw) {
+		LARGE_INTEGER stop_counter;
+		QueryPerformanceCounter(&stop_counter);
+		double time = (double)(stop_counter.QuadPart - sw->start_counter.QuadPart) / sw->frequency.QuadPart;
+		return time;
+	}
 
 	#define rdtsc __rdtsc
 #else
