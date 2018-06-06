@@ -112,7 +112,7 @@ struct ModelCC {
 	i32 program_type;
 };
 
-static String directory = MAKE_STRING("../../conetracer/assets");
+static String directory = MAKE_STRING(ASSET_FOLDER);
 
 struct ModelComponent {
 	Renderable models[32];
@@ -163,7 +163,7 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, MemoryArena &are
 		material.Ke    = material_data.Ke;
 
 		material.map_Ka   = load_texture(engine, directory, material_data.map_Ka);
-		material.map_Kd   = load_texture(engine, directory, material_data.map_Kd);
+		material.map_Kd   = load_texture(engine, directory, material_data.map_Kd, false);
 		material.map_Ks   = load_texture(engine, directory, material_data.map_Ks);
 		material.map_Ke   = load_texture(engine, directory, material_data.map_Ke);
 		material.map_d    = load_texture(engine, directory, material_data.map_d, white);
@@ -202,9 +202,9 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, MemoryArena &are
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(channel);
-			channel++;
 		}
 	}
+			channel++;
 
 	{ // Normal channel
 		if (mesh_data.normal_count) {
@@ -215,9 +215,9 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, MemoryArena &are
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(channel);
-			channel++;
 		}
 	}
+			channel++;
 
 	{ // Tex coord channel
 		if (mesh_data.coord_count) {
@@ -228,9 +228,9 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, MemoryArena &are
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 2, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(channel);
-			channel++;
 		}
 	}
+			channel++;
 }
 
 void render(ModelComponent &mc, Entity &entity, GLint model_location) {

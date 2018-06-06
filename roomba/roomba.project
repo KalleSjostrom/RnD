@@ -1,5 +1,16 @@
 translation_units = {
-	"source/main.cpp"
+	"visualizer/visualizer.cpp"
+}
+plugins = {
+	{
+		path = "../compiler_plugins/obj/plugin.dll"
+		include = {
+			"assets"
+		}
+		exclude = {
+			"assets/textures"
+		}
+	}
 }
 asset_path = assets
 output_path = out

@@ -36,7 +36,7 @@ GLuint load_white() {
 	return texture;
 }
 
-GLuint load_texture(EngineApi *engine, String directory, String path, GLuint default_texture = 0) {
+GLuint load_texture(EngineApi *engine, String directory, String path, bool use_mipmap = true, GLuint default_texture = 0) {
 	if (path.length == 0) {
 		return default_texture;
 	}
@@ -63,12 +63,19 @@ GLuint load_texture(EngineApi *engine, String directory, String path, GLuint def
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (use_mipmap) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	update_texture(image_data, texture);
 
-	glGenerateMipmap(GL_TEXTURE_2D); // This has to happen after we've sent the pixel-data to the card, i.e. after glTexImage2D
+	if (use_mipmap) {
+		glGenerateMipmap(GL_TEXTURE_2D); // This has to happen after we've sent the pixel-data to the card, i.e. after glTexImage2D
+	}
 
 	return texture;
 }

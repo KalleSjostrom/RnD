@@ -1,3 +1,5 @@
+#include "engine/utils/obj_reader.cpp"
+
 struct EntityData {
 	EntityType type;
 	v3 offset;
@@ -21,3 +23,16 @@ struct Level {
 };
 
 Level make_level(Application &application);
+
+ModelCC load_model(MemoryArena &arena, const char *path) {
+	MeshData mesh_data = read_obj(arena, path);
+	ModelCC model_cc = {};
+	model_cc.mesh_data = mesh_data;
+
+	model_cc.buffer_type = GL_STATIC_DRAW;
+	model_cc.draw_mode = GL_TRIANGLES;
+
+	model_cc.program_type = ProgramType_model;
+
+	return model_cc;
+}
