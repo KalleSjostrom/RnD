@@ -25,3 +25,13 @@ static void *_array_grow(void *a, int increment, size_t itemsize) {
 	}
 	return p + 2;
 }
+
+void array_test() {
+	int *list = 0;
+	_array_ensure_space(list, 16);
+	array_push(list, 5);
+	array_push(list, 3);
+	array_push(list, 8);
+	array_push(list, 1);
+	array_push(list, 9);
+}

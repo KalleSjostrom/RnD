@@ -1,5 +1,8 @@
 #pragma once
 
+// TODO(kalle): Remove this
+#define invalid_key 0
+
 #define b2(x)   (   (x) | (   (x) >> 1))
 #define b4(x)   ( b2(x) | ( b2(x) >> 2))
 #define b8(x)   ( b4(x) | ( b4(x) >> 4))
@@ -127,11 +130,11 @@ static void *_hash_grow(void *h, unsigned increment, size_t key_size, size_t ite
 	unsigned needed = previous_capacity + increment;
 	unsigned capacity = next_capacity > needed ? next_capacity : next_power_of_2(needed + 1);
 	// unsigned *p = (unsigned*) realloc(h ? _hash_raw_pointer(h) : 0, capacity * itemsize + sizeof(unsigned)*2);
-	unsigned *p = (unsigned*) malloc(capacity * itemsize + sizeof(unsigned)*2);
+	unsigned *p = malloc(capacity * itemsize + sizeof(unsigned)*2);
 	if (p) {
 		p[1] = 0;
 		p[0] = capacity;
-		
+
 		uint64_t _invalid_key = invalid_key;
 		char *base = (char*)(p+2);
 		for (uint64_t i = 0; i < capacity; ++i) {
@@ -147,4 +150,32 @@ static void *_hash_grow(void *h, unsigned increment, size_t key_size, size_t ite
 		}
 	}
 	return p + 2;
+}
+
+
+void hash_test() {
+	typedef struct {
+		int key;
+		int value;
+	} _HashEntry;
+
+	_HashEntry *hash = 0;
+ 	hash_init(hash, 5, 4);
+
+	int v[4] = { 3, 6, 2, 7 };
+	hash_add(hash, 5, v[0]);
+	hash_add(hash, 10, v[1]);
+	hash_add(hash, 8, v[2]);
+	hash_add(hash, 3, v[3]);
+
+	_HashEntry r[4];
+	r[0] = *(_HashEntry*)hash_lookup(hash, 5);
+	r[1] = *(_HashEntry*)hash_lookup(hash, 10);
+	r[2] = *(_HashEntry*)hash_lookup(hash, 8);
+	r[3] = *(_HashEntry*)hash_lookup(hash, 3);
+
+	assert(r[0].value == v[0]);
+	assert(r[1].value == v[1]);
+	assert(r[2].value == v[2]);
+	assert(r[3].value == v[3]);
 }

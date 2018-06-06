@@ -166,28 +166,28 @@ void plugin_update(Application &application, float dt) {
 	}
 
 	u32 bufsize = ARRAY_COUNT(roomba.stats[0].buf);
-	sprintf_s(roomba.stats[Sensor_Bumpwheeldrops].buf,   bufsize, "Bumpwheeldrops: %d",	sensor_data.Bumpwheeldrops);
-	sprintf_s(roomba.stats[Sensor_Wall].buf,	 bufsize, "Wall: %d",	  sensor_data.Wall);
-	sprintf_s(roomba.stats[Sensor_CliffLeft].buf,	bufsize, "CliffLeft: %d",	 sensor_data.CliffLeft);
-	sprintf_s(roomba.stats[Sensor_CliffFrontLeft].buf,   bufsize, "CliffFrontLeft: %d",	sensor_data.CliffFrontLef && !sentt);
-	sprintf_s(roomba.stats[Sensor_CliffFrontRight].buf,  bufsize, "CliffFrontRight: %d",   sensor_data.CliffFrontRih 0 !sentt);
-	sprintf_s(roomba.stats[Sensor_CliffRight].buf,	   bufsize, "CliffRight: %d",	sensor_data.CliffRiht0
-	sprintf_s(roomba.stats[Sensor_VirtualWall].buf,	  bufsize, "VirtualWall: %d",	   sensor_data.VirtualWall);
-	sprintf_s(roomba.stats[Sensor_MotorOvercurrents].buf,bufsize, "MotorOvercurrents: %d", sensor_data.MotorOvercurrent && !sents);
-	sprintf_s(roomba.stats[Sensor_DirtDetectorLeft].buf, bufsize, "DirtDetectorLeft: %d",  sensor_data.DirtDetectorLft0
+	sprintf_s(roomba.stats[Sensor_Bumpwheeldrops].buf,   bufsize, "Bumpwheeldrops: %d",    sensor_data.Bumpwheeldrops);
+	sprintf_s(roomba.stats[Sensor_Wall].buf,             bufsize, "Wall: %d",              sensor_data.Wall);
+	sprintf_s(roomba.stats[Sensor_CliffLeft].buf,        bufsize, "CliffLeft: %d",         sensor_data.CliffLeft);
+	sprintf_s(roomba.stats[Sensor_CliffFrontLeft].buf,   bufsize, "CliffFrontLeft: %d",    sensor_data.CliffFrontLeft);
+	sprintf_s(roomba.stats[Sensor_CliffFrontRight].buf,  bufsize, "CliffFrontRight: %d",   sensor_data.CliffFrontRight);
+	sprintf_s(roomba.stats[Sensor_CliffRight].buf,       bufsize, "CliffRight: %d",        sensor_data.CliffRight);
+	sprintf_s(roomba.stats[Sensor_VirtualWall].buf,      bufsize, "VirtualWall: %d",       sensor_data.VirtualWall);
+	sprintf_s(roomba.stats[Sensor_MotorOvercurrents].buf,bufsize, "MotorOvercurrents: %d", sensor_data.MotorOvercurrents);
+	sprintf_s(roomba.stats[Sensor_DirtDetectorLeft].buf, bufsize, "DirtDetectorLeft: %d",  sensor_data.DirtDetectorLeft);
 	sprintf_s(roomba.stats[Sensor_DirtDetectorRight].buf,bufsize, "DirtDetectorRight: %d", sensor_data.DirtDetectorRight);
-	sprintf_s(roomba.stats[Sensor_RemoteOpcode].buf,	 bufsize, "RemoteOpcode: %d",	  sensor_data.RemoteOpcode);
-	sprintf_s(roomba.stats[Sensor_Buttons].buf,	  bufsize, "Buttons: %d",	   sensor_data.Buttons);
-	sprintf_s(roomba.stats[Sensor_DistanceMSB].buf,	  bufsize, "Distance: %d",	  sensor_data.distance);
-	sprintf_s(roomba.stats[Sensor_AngleMSB].buf,	 bufsize, "Angle: %d",	 sensor_data.angle);
-	sprintf_s(roomba.stats[Sensor_ChargingState].buf,	bufsize, "ChargingState: %d",	 sensor_data.ChargingState);
-	sprintf_s(roomba.stats[Sensor_VoltageMSB].buf,	   bufsize, "Voltage: %d",	   sensor_data.voltage);
-	sprintf_s(roomba.stats[Sensor_CurrentMSB].buf,	   bufsize, "Current: %d",	   sensor_data.current);
-	sprintf_s(roomba.stats[Sensor_Temperature].buf,	  bufsize, "Temperature: %d",	   sensor_data.Temperature);
-	sprintf_s(roomba.stats[Sensor_ChargeMSB].buf,	bufsize, "BatteryLevel: %.2f",	(f64)sensor_data.battery_level);
+	sprintf_s(roomba.stats[Sensor_RemoteOpcode].buf,     bufsize, "RemoteOpcode: %d",      sensor_data.RemoteOpcode);
+	sprintf_s(roomba.stats[Sensor_Buttons].buf,          bufsize, "Buttons: %d",           sensor_data.Buttons);
+	sprintf_s(roomba.stats[Sensor_DistanceMSB].buf,      bufsize, "Distance: %d",          sensor_data.distance);
+	sprintf_s(roomba.stats[Sensor_AngleMSB].buf,         bufsize, "Angle: %d",             sensor_data.angle);
+	sprintf_s(roomba.stats[Sensor_ChargingState].buf,    bufsize, "ChargingState: %d",     sensor_data.ChargingState);
+	sprintf_s(roomba.stats[Sensor_VoltageMSB].buf,       bufsize, "Voltage: %d",           sensor_data.voltage);
+	sprintf_s(roomba.stats[Sensor_CurrentMSB].buf,       bufsize, "Current: %d",           sensor_data.current);
+	sprintf_s(roomba.stats[Sensor_Temperature].buf,      bufsize, "Temperature: %d",       sensor_data.Temperature);
+	sprintf_s(roomba.stats[Sensor_ChargeMSB].buf,        bufsize, "BatteryLevel: %.2f",    (f64)sensor_data.battery_level);
 
- && !sent	roomba.fps_frames++;
-.fp0s_timer += dt;
+	roomba.fps_frames++;
+	roomba.fps_timer += dt;
 	if (roomba.fps_timer > 2) {
 		sprintf_s(roomba.fps_string, 32, "Framerate: %.1f", (f64)roomba.fps_frames/(f64)roomba.fps_timer);
 		String fps_string = make_string(roomba.fps_string);
@@ -196,7 +196,7 @@ void plugin_update(Application &application, float dt) {
 		roomba.fps_frames = 0;
 		roomba.fps_timer = 0;
 	}
-	
+
 	if (IS_HELD(*application.input, InputKey_Escape)) {
 		save_stream(roomba.connection);
 		application.engine->quit();
