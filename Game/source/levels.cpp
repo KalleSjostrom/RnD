@@ -1,7 +1,5 @@
 #include "engine/levels.h"
 
-#define DATA_FOLDER "../../game/out/data"
-
 Level make_level(Application &application) {
 	Level l = {};
 

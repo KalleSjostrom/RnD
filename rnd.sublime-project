@@ -13,6 +13,26 @@
 			"variants":
 			[
 				{
+					"name": "PDB",
+					"working_dir": "${project_path}/pdb/"
+				},
+				{
+					"name": "Ballista",
+					"working_dir": "${project_path}/ballista/"
+				},
+				{
+					"name": "Ballista/FileSystem",
+					"working_dir": "${project_path}/ballista/file_system"
+				},
+				{
+					"name": "Ballista/Undo",
+					"working_dir": "${project_path}/ballista/undo"
+				},
+				{
+					"name": "Ballista/Test",
+					"working_dir": "${project_path}/ballista/test"
+				},
+				{
 					"name": "Engine",
 					"working_dir": "${project_path}/engine/"
 				},
@@ -131,19 +151,5 @@
 		{
 			"path": "."
 		},
-		{
-			"name": "Handmade Hero",
-			"path": "C:\\Users\\Kalle\\Programming\\Handmade Hero"
-		},
-		{
-			"name": "DrSym",
-			"path": "C:\\Users\\Kalle\\Programming\\dynamorio-master"
-		},
-		{
-			"path": "external tools\\entity_compiler"
-		},
-		{
-			"path": "roomba\\server\\out"
-		}
 	]
 }

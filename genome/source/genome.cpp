@@ -61,8 +61,8 @@ Fitness calculate_fitness(Genome genome) {
 #include "neural_net.cpp"
 
 struct Application {
-	MemoryArena persistent_arena;
-	MemoryArena transient_arena;
+	ArenaAllocator persistent_arena;
+	ArenaAllocator transient_arena;
 
 	ComponentGroup components;
 	AudioManager audio_manager;
@@ -71,7 +71,7 @@ struct Application {
 
 	EngineApi *engine;
 
-	b32 initialized;
+	bool initialized;
 
 	i32 entity_count;
 	Entity entities[512];
@@ -84,7 +84,7 @@ EXPORT PLUGIN_RELOAD(reload) {
 		setup_gl();
 	#endif
 
-	MemoryArena empty = {};
+	ArenaAllocator empty = {};
 	application.transient_arena = empty;
 	reset_arena(application.transient_arena, MB);
 	globals::transient_arena = &application.transient_arena;
@@ -120,7 +120,7 @@ EXPORT PLUGIN_UPDATE(update) {
 		#ifdef OS_WINDOWS
 			setup_gl();
 		#endif
-		MemoryArena empty = {};
+		ArenaAllocator empty = {};
 		application.persistent_arena = empty;
 		application.transient_arena = empty;
 		setup_arena(application.transient_arena, MB);

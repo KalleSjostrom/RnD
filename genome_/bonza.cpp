@@ -88,7 +88,7 @@ bool fits_at_vertical(char *grid, i32 row, i32 col, String *string) {
 struct WordPosition {
 	i32 row;
 	i32 col;
-	b32 horizontal;
+	bool horizontal;
 };
 struct Choice {
 	i32 selected;
@@ -146,7 +146,7 @@ struct Genome {
 struct Dunno {
 	Genome *genome;
 	Choice choice;
-	b32 premade;
+	bool premade;
 	i32 __padding;
 };
 

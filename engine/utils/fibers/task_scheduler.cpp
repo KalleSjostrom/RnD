@@ -90,7 +90,7 @@ namespace queue {
 
 	// These are crazy expensive operations! ~2000 cycles
 	// See if we can't optimize this!
-	b32 take(Queue *q, i32 &value) {
+	bool take(Queue *q, i32 &value) {
 		i32 b = atomic_load_n(&q->bottom, ATOMIC_RELAXED) - 1;
 		// i32 *a = atomic_load_n(&q->array, ATOMIC_RELAXED); // Would need to load the array if using some realloc scheme.
 		atomic_store_n(&q->bottom, b, ATOMIC_RELAXED);
@@ -98,7 +98,7 @@ namespace queue {
 		atomic_thread_fence(ATOMIC_SEQ_CST);
 
 		i32 t = atomic_load_n(&q->top, ATOMIC_RELAXED);
-		b32 result = 1;
+		bool result = 1;
 		if (t <= b) {
 			// Non-empty queue.
 			value = atomic_load_n(&q->array[b & ARRAY_MASK], ATOMIC_RELAXED);
@@ -129,7 +129,7 @@ namespace queue {
 		atomic_store_n(&q->bottom, b + 1, ATOMIC_RELAXED);
 	}
 
-	b32 steal(Queue *q, i32 &value) {
+	bool steal(Queue *q, i32 &value) {
 		i32 t = atomic_load_n(&q->top, ATOMIC_ACQUIRE);
 		atomic_thread_fence(ATOMIC_SEQ_CST);
 		i32 b = atomic_load_n(&q->bottom, ATOMIC_ACQUIRE);
@@ -170,7 +170,7 @@ enum FiberDestination {
 struct TaskBundle {
 	Task task;
 	i32 job_handle;
-	b32 occupied;
+	bool occupied;
 };
 
 struct ThreadLocalStorage {
@@ -453,7 +453,7 @@ namespace {
 	static void _update_last_free_bundle(ThreadLocalStorage &tls) {
 		i32 count = (i32) ARRAY_COUNT(tls.bundle_storage);
 		for (i32 i = 0; i < count; ++i) {
-			b32 available = !tls.bundle_storage[tls.last_free_bundle].occupied;
+			bool available = !tls.bundle_storage[tls.last_free_bundle].occupied;
 			if (available)
 				return;
 
@@ -481,7 +481,7 @@ namespace {
 // NOTE: scheduler_start will "block" until 'main_task' returns. However, it doesn't block in the traditional sense; 'main_task' is created as a Fiber.
 // Therefore, the current thread will save it's current state, and then switch execution to the the 'main_task' fiber. When 'main_task'
 // finishes, the thread will switch back to the saved state, and scheduler_start() will return.
-void scheduler_start(TaskScheduler &scheduler, MemoryArena &arena, TaskFunction main_task, void *main_task_arg = 0, i32 thread_pool_size = 0) {
+void scheduler_start(TaskScheduler &scheduler, ArenaAllocator &arena, TaskFunction main_task, void *main_task_arg = 0, i32 thread_pool_size = 0) {
 	for (i32 i = 0; i < FIBER_POOL_SIZE; ++i) {
 		setup_fiber(scheduler.fibers[i], FIBER_STACK_SIZE, _fiber_start, &scheduler);
 		scheduler.free_fibers[i] = true;

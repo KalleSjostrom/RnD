@@ -128,7 +128,7 @@ inline m4 &get_pose(ModelComponent &mc, Entity &entity) {
 	return model.pose;
 }
 
-void add(ModelComponent &mc, Entity &entity, EngineApi *engine, MemoryArena &arena, v3 position, ModelCC *cc) {
+void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &arena, v3 position, ModelCC *cc) {
 	ASSERT((u32)mc.count < ARRAY_COUNT(mc.models), "Component full!");
 	entity.model_id = mc.count++;
 	Renderable &model = mc.models[entity.model_id];

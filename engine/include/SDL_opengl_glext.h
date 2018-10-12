@@ -3806,9 +3806,9 @@ GLAPI void APIENTRY glTexBufferARB (GLenum target, GLenum internalformat, GLuint
 #endif
 #endif /* GL_ARB_texture_buffer_object */
 
-#ifndef GL_ARB_texture_buffer_object_rgb32
-#define GL_ARB_texture_buffer_object_rgb32 1
-#endif /* GL_ARB_texture_buffer_object_rgb32 */
+#ifndef GL_ARB_texture_buffer_object_rgbool
+#define GL_ARB_texture_buffer_object_rgbool 1
+#endif /* GL_ARB_texture_buffer_object_rgbool */
 
 #ifndef GL_ARB_texture_buffer_range
 #define GL_ARB_texture_buffer_range 1

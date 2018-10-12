@@ -1,19 +1,19 @@
 struct Camera {
-	m4 pose;
-	m4 view;
-	m4 projection;
+	Matrix4x4 pose;
+	Matrix4x4 view;
+	Matrix4x4 projection;
 };
 
 void update_view(Camera &camera) {
 	camera.view = view_from_pose(camera.pose);
 }
 
-void set_position(Camera &camera, v3 position) {
+void set_position(Camera &camera, Vector3 position) {
 	translation(camera.pose) = position;
 	update_view(camera);
 }
 
-void setup_camera(Camera &camera, v3 position, float fov, float aspect_ratio) {
+void setup_camera(Camera &camera, Vector3 position, float fov, float aspect_ratio) {
 	camera.pose = identity();
 	forward_axis(camera.pose) = V3(0.0f, 0.0f, -1.0f);
 	set_position(camera, position);
@@ -26,7 +26,7 @@ void begin_frame(Camera &camera, GLint projection_location, GLint view_location,
 	glUniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)(camera.view.m));
 
 	// TODO(kalle): Better to extract the position from the view matrix inside the shader??
-	v3 camera_position = translation(camera.pose);
+	Vector3 camera_position = translation(camera.pose);
 	glUniform3fv(view_location, 1, (GLfloat*)(&camera_position));
 }
 
@@ -55,18 +55,18 @@ bool move(Camera &camera, InputData &input, float translation_speed, float rotat
 		translation_speed *= 8;
 	}
 
-	m4 &pose = camera.pose;
+	Matrix4x4 &pose = camera.pose;
 
-	v3 &x = *(v3*)(pose.m + 0);
-	v3 &y = *(v3*)(pose.m + 4);
-	v3 &z = *(v3*)(pose.m + 8);
-	v3 &position = translation(pose);
+	Vector3 &x = *(Vector3*)(pose.m + 0);
+	Vector3 &y = *(Vector3*)(pose.m + 4);
+	Vector3 &z = *(Vector3*)(pose.m + 8);
+	Vector3 &position = translation(pose);
 
 	position += x * (m.x * dt * translation_speed);
 	position += z * (m.y * dt * translation_speed);
 
 	if (IS_HELD(input, InputKey_MouseLeft)) {
-		v3 world_up = V3(0, 1, 0);
+		Vector3 world_up = V3(0, 1, 0);
 		q4 qx = Quaternion(world_up, -input.mouse_xrel * dt * rotation_speed);
 		q4 qy = Quaternion(x, -input.mouse_yrel * dt * rotation_speed);
 		q4 q = qx * qy;

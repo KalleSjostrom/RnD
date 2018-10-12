@@ -1,22 +1,15 @@
-#include "utils/platform.h"
+#include "common.h"
 #include "plugin.h"
 
-#ifdef OS_WINDOWS
-	#define WIN32_LEAN_AND_MEAN
-	#include "windows.h"
-#endif
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #define USE_INTRINSICS 1
-#include "engine/utils/math/math.h"
+#include "core/math/math.h"
 
 #ifdef SYSTEM_OPENGL
-	#ifdef OS_WINDOWS
-		#include <gl/gl.h>
-		#include "utils/win32_setup_gl.h"
-	#else
-		#include <OpenGL/gl3.h>
-		#include <OpenGL/opengl.h>
-	#endif
+	#include <gl/gl.h>
+	#include "utils/win32_setup_gl.h"
 
 	#include "opengl/gl_program_builder.cpp"
 #endif // SYSTEM_OPENGL
@@ -26,11 +19,7 @@
 #endif // SYSTEM_CAMERA
 
 #ifdef SYSTEM_OPENCL
-	#ifdef OS_WINDOWS
-		#include "utils/win32_setup_cl.h"
-	#else
-		#include <OpenCL/opencl.h>
-	#endif
+	#include "utils/win32_setup_cl.h"
 
 	#define CL(src) "" #src
 
@@ -40,7 +29,7 @@
 
 #ifdef SYSTEM_COMPONENTS
 	namespace globals {
-		static MemoryArena *transient_arena;
+		static ArenaAllocator *transient_arena;
 	};
 	#define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
 
@@ -62,19 +51,13 @@
 	#include "engine/utils/gui.cpp"
 #endif
 
-struct Allocator {
-	void *allocate(size_t size, unsigned align) { (void)align; return mspace_malloc(_mspace, size); }
-	void deallocate(void * p) { mspace_free(_mspace, p); }
-	mspace _mspace;
-};
-
 struct Application {
 	EngineApi *engine;
 	InputData *input;
 
 	Allocator allocator;
-	MemoryArena persistent_arena;
-	MemoryArena transient_arena;
+	ArenaAllocator persistent_arena;
+	ArenaAllocator transient_arena;
 
 #ifdef SYSTEM_COMPONENTS
 	ComponentGroup components;
@@ -159,7 +142,7 @@ EXPORT PLUGIN_SETUP(setup) {
 	application.engine = engine;
 	application.input = input;
 
-	MemoryArena empty = {};
+	ArenaAllocator empty = {};
 	application.persistent_arena = empty;
 
 	#ifdef OS_WINDOWS

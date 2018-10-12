@@ -16,7 +16,7 @@ struct ClInfo {
 	u64 nr_particles;
 };
 
-void reload_buffer(MemoryArena &arena, ClInfo &info, BufferIndex index, v2 (*f)(u64 i)) {
+void reload_buffer(ArenaAllocator &arena, ClInfo &info, BufferIndex index, v2 (*f)(u64 i)) {
 	cl_context context = info.context;
 	cl_int errcode_ret;
 
@@ -41,7 +41,7 @@ void reload_buffer(MemoryArena &arena, ClInfo &info, BufferIndex index, v2 (*f)(
 	buffer.mem = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, buffer.vbo, &errcode_ret);
 	CL_CHECK_ERRORCODE(clCreateFromGLBuffer, errcode_ret);
 }
-void reload_buffers(MemoryArena &arena, ClInfo &info) {
+void reload_buffers(ArenaAllocator &arena, ClInfo &info) {
 	reload_buffer(arena, info, BufferIndex__density_pressure, zero);
 	reload_buffer(arena, info, BufferIndex__accelerations, zero);
 	reload_buffer(arena, info, BufferIndex__velocities, zero);
@@ -98,7 +98,7 @@ void run_kernels(ClInfo &info) {
 
 	clFinish(info.command_queue);
 }
-void create_program_and_kernels(MemoryArena &arena, ClInfo &info) {
+void create_program_and_kernels(ArenaAllocator &arena, ClInfo &info) {
 	cl_int errcode_ret;
 	cl_program program = cl_program_builder::create_from_source_file(arena, info.context, COMPUTE_SHADER_SOURCE, 1, &info.device, "-I "COMPUTE_SHADER_INCLUDE);
 	SimKernels kernels = { };

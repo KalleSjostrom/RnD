@@ -23,8 +23,8 @@ inline void write_f64(f64 value, char **buffer) {
 	*buffer += sizeof(f64);
 }
 inline void write_string(String &string, char **buffer) {
-	write_i32(string.length, buffer);
-	memcpy(*buffer, string.text, (size_t)string.length);
+	write_i32((i32)string.length, buffer);
+	memcpy(*buffer, string.text, string.length);
 	(*buffer)[string.length] = '\0';
 	*buffer += (u32)(string.length + 1) * sizeof(char);
 }
@@ -45,10 +45,10 @@ inline void read_u64(u64 &value, char **buffer) {
 	value = *(u64*)(*buffer);
 	*buffer += sizeof(u64);
 }
-inline void read_string(MemoryArena &arena, String &string, char **buffer) {
-	read_i32(string.length, buffer);
-	size_t size = (size_t)(string.length + 1);
-	char *memory = PUSH_STRING(arena, size);
+inline void read_string(ArenaAllocator &arena, String &string, char **buffer) {
+	read_i32(*(i32*)&string.length, buffer);
+	size_t size = string.length + 1;
+	char *memory = PUSH(&arena, size, char);
 	memcpy(memory, *buffer, size);
 	string.text = memory;
 	*buffer += size * sizeof(char);

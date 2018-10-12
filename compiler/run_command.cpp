@@ -73,8 +73,8 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 	CloseHandle(child_write_handle);
 
 	static const size_t bufsize = 8 * MB;
-	MemoryArena arena = {};
-	char *child_output_buffer = PUSH_STRING(arena, bufsize);
+	ArenaAllocator arena = {};
+	char *child_output_buffer = PUSH(&arena, bufsize, char);
 	unsigned cursor = 0;
 	while (true) {
 		DWORD bytes_read;
@@ -111,7 +111,7 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
-	free_memory(arena);
+	free(&arena);
 	return success;
 }
 #endif

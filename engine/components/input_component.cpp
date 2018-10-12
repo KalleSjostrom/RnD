@@ -1,6 +1,6 @@
 struct Input {
 	v3 move;
-	b32 jump;
+	bool jump;
 };
 
 struct InputComponent {
@@ -34,6 +34,6 @@ void update(InputComponent &ic, float dt) {
 v3 get_move(InputComponent &ic, Entity &entity) {
 	return ic.inputs[entity.input_id].move;
 }
-b32 get_jump(InputComponent &ic, Entity &entity) {
+bool get_jump(InputComponent &ic, Entity &entity) {
 	return ic.inputs[entity.input_id].jump;
 }

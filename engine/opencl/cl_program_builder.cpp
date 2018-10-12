@@ -2,7 +2,7 @@
 #include "cl_errors.cpp"
 
 namespace cl_program_builder {
-	static void build(MemoryArena &arena, cl_program program, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
+	static void build(ArenaAllocator &arena, cl_program program, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
 		cl_int errcode_ret = clBuildProgram(program, num_devices, devices, build_options, 0, 0);
 		CL_CHECK_ERRORCODE(clBuildProgram, errcode_ret);
 
@@ -32,7 +32,7 @@ namespace cl_program_builder {
 		}
 	}
 
-	cl_program create_from_source_file(MemoryArena &arena, cl_context context, const char *filename, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
+	cl_program create_from_source_file(ArenaAllocator &arena, cl_context context, const char *filename, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
 		u64 size;
 		FILE *file = open_file(filename, &size);
 		TempAllocator ta(&arena);
@@ -52,7 +52,7 @@ namespace cl_program_builder {
 	}
 
 
-	cl_program create_from_strings(MemoryArena &arena, cl_context context, const char *source, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
+	cl_program create_from_strings(ArenaAllocator &arena, cl_context context, const char *source, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
 		cl_int errcode_ret;
 		const char *code[] = { source };
 		cl_program program = clCreateProgramWithSource(context, 1, code, 0, &errcode_ret);
@@ -63,7 +63,7 @@ namespace cl_program_builder {
 		return program;
 	}
 
-	cl_program create_from_binary_file(MemoryArena &arena, cl_context context, const char *filename, cl_device_id *devices) {
+	cl_program create_from_binary_file(ArenaAllocator &arena, cl_context context, const char *filename, cl_device_id *devices) {
 		FILE *file;
 		fopen_s(&file, filename, "rb");
 
@@ -91,7 +91,7 @@ namespace cl_program_builder {
 		return program;
 	}
 
-	void write_to_binary_file(MemoryArena &arena, cl_program program, const char *filename) {
+	void write_to_binary_file(ArenaAllocator &arena, cl_program program, const char *filename) {
 		cl_uint num_devices;
 		cl_int errcode_ret = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &num_devices, 0);
 		CL_CHECK_ERRORCODE(clGetProgramInfo, errcode_ret);

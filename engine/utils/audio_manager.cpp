@@ -3,7 +3,7 @@ struct Sound {
 	u32 length;
 	u8 *buffer;
 	f32 volume[2];
-	b32 playing;
+	bool playing;
 	i32 __padding;
 };
 
@@ -76,19 +76,19 @@ struct AudioManager {
 		set_fade(id, duration, target_volume_ch1, target_volume_ch1);
 	}
 
-	void set_playing(i32 id, b32 playing) {
+	void set_playing(i32 id, bool playing) {
 		sounds[id].playing = playing;
 	}
 
-	b32 is_playing(i32 id) {
+	bool is_playing(i32 id) {
 		return sounds[id].playing;
 	}
 
-	b32 is_alive(i32 id) {
+	bool is_alive(i32 id) {
 		return sounds[id].buffer != 0;
 	}
 
-	void update(MemoryArena &arena, EngineApi *engine, f32 dt) {
+	void update(ArenaAllocator &arena, EngineApi *engine, f32 dt) {
 		(void)dt;
 
 		static i32 frequency = 44100;

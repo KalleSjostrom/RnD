@@ -37,13 +37,13 @@
 	#include "windows.h"
 #endif
 
-u16 parse_u16(u8 *buffer, b32 byte_alignment) { // byte_alignment: false
+u16 parse_u16(u8 *buffer, bool byte_alignment) { // byte_alignment: false
 	u8 a = byte_alignment ? buffer[1] : buffer[0];
 	u8 b = byte_alignment ? buffer[0] : buffer[1];
 	return ((u16)(a) << 8) | b;
 }
 
-u32 parse_u32(u8 *buffer, b32 byte_alignment) { // byte_alignment: false
+u32 parse_u32(u8 *buffer, bool byte_alignment) { // byte_alignment: false
 	u8 a = byte_alignment ? buffer[3] : buffer[0];
 	u8 b = byte_alignment ? buffer[2] : buffer[1];
 	u8 c = byte_alignment ? buffer[1] : buffer[2];
@@ -63,7 +63,7 @@ struct IFEntry {
 	};
 };
 
-IFEntry parseIFEntry(u8 *buffer, u32 offset, u32 base, u32 length, b32 byte_alignment) {
+IFEntry parseIFEntry(u8 *buffer, u32 offset, u32 base, u32 length, bool byte_alignment) {
 	IFEntry result;
 
 	u8 *at = buffer + offset;
@@ -155,7 +155,7 @@ void parse() {
 		if (buffer[offset] == 0xFF && buffer[offset + 1] == 0xE1) break;
 	}
 
-	if (offset + 4 > length) { 
+	if (offset + 4 > length) {
 		ASSERT(false, "Found no exif metadata!");
 		return;
 	}
@@ -184,7 +184,7 @@ void parse() {
 	offset							= 0;		// current offset into buffer
 
 	char exif_marker[] = "Exif\0\0";
-	b32 valid = 1;
+	bool valid = 1;
 	for (i32 i = 0; i < sizeof(exif_marker)-1 && valid; ++i) {
 		valid = buffer[i] == exif_marker[i];
 	}
@@ -365,7 +365,7 @@ void parse() {
 					// Flash used
 					if (result.format == 3 && result.val_short.size()) {
 						uint16_t data = result.val_short.front();
-						
+
 						this->Flash = data & 1;
 						this->FlashReturnedLight = (data & 6) >> 1;
 						this->FlashMode = (data & 24) >> 3;

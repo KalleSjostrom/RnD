@@ -24,7 +24,7 @@ typedef uint16_t GLindex;
 #include "settings.h"
 
 #include "engine/plugin.h"
-#include "engine/utils/memory/memory_arena.cpp"
+#include "engine/utils/memory/arena_allocator.cpp"
 #include "engine/utils/file_utils.h"
 #include "engine/opengl/gl_program_builder.cpp"
 #include "engine/opencl/cl_program_builder.cpp"
@@ -34,7 +34,7 @@ typedef uint16_t GLindex;
 
 ///// GAME SPECIFICS
 namespace globals {
-	static MemoryArena *transient_arena;
+	static ArenaAllocator *transient_arena;
 };
 #define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
 #define SCRATCH_ALLOCATE_STRING(count) PUSH_STRING(*globals::transient_arena, count)

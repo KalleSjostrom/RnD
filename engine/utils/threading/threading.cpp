@@ -53,7 +53,7 @@
 		return sysinfo.dwNumberOfProcessors;
 	}
 
-	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
+	inline bool threads_equal(ThreadType thread_a, ThreadType thread_b) {
 		return thread_a.id == thread_b.id;
 	}
 	#define THREAD_LOCAL __declspec(thread)
@@ -101,7 +101,7 @@
 	inline int get_num_hardware_threads() {
 		return (int) sysconf(_SC_NPROCESSORS_ONLN);
 	}
-	inline b32 threads_equal(ThreadType thread_a, ThreadType thread_b) {
+	inline bool threads_equal(ThreadType thread_a, ThreadType thread_b) {
 		return pthread_equal(thread_a, thread_b);
 	}
 

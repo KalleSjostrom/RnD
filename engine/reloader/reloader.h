@@ -34,15 +34,18 @@ Performance:
 	Took 0.00303808 seconds to patch memory.
 */
 #define MAX_POINTERS (1<<17)
-#define MAX_RECORDED_TYPES (1024)
+#define MAX_RECORDED_TYPES (1<<16)
+#define MAX_RECORDED_TRIMMED_TYPES (1<<18)
 
 // DEBUG
-#define RELOAD_VERBOSE_DEBUGGING
-#define RELOAD_PROFILING
+// #define RELOAD_VERBOSE_DEBUGGING
+// #define RELOAD_PROFILING
 #define INDENTATION "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
 
 #include <dbghelp.h>
 #include <psapi.h>
+#include "core/utils/quick_sort.h"
+
 enum SymTagEnum {
 	SymTagNull,
 	SymTagExe,
@@ -84,10 +87,11 @@ struct SymbolInfoPackage : public SYMBOL_INFO_PACKAGEW {
 	}
 };
 
-#include "utils/quick_sort.cpp"
 #include "symbol_info.cpp"
 
 struct ReloadHeader {
+	void *old_base_memory;
+	void *new_base_memory;
 	void *old_mspace;
 	void *new_mspace;
 	size_t old_memory_size;
@@ -97,7 +101,7 @@ struct Pointer {
 	intptr_t addr_new;
 	intptr_t target_addr_old;
 	intptr_t target_addr_new;
-	u32 type;
+	uint32_t type;
 };
 inline Pointer make_entry_pointer(intptr_t addr_old, SYMBOL_INFOW *symbol) {
 	Pointer p = {};
@@ -111,7 +115,7 @@ inline Pointer make_entry_pointer(intptr_t addr_old, SYMBOL_INFOW *symbol) {
 
 struct PointerArray {
 	Pointer *entries;
-	u32 count;
+	unsigned count;
 };
 
 struct PointerContext {
@@ -143,27 +147,35 @@ PointerContext setup_pointer_context() {
 
 	return pointer_context;
 }
-SymbolContext setup_symbol_context(HANDLE process, u64 mod_base) {
+SymbolContext setup_symbol_context(HANDLE process, uint64_t mod_base) {
 	SymbolContext symbol_context = {};
 
 	symbol_context.process = process;
 	symbol_context.mod_base = mod_base;
 
 	// TODO(kalle): Investigate if it is fine to use 0 as invalid keys and types.
-	TypeInfo ti_stamp = {};
-	ti_stamp.key = ~0llu;
-
 	NameEntry ne_stamp = {};
 	ne_stamp.type = ~0u;
 
-	symbol_context.recorded_types = (TypeInfo*)malloc(sizeof(TypeInfo) * MAX_RECORDED_TYPES);
+	FullType ft_stamp = {};
+	ft_stamp.key = ~0llu;
+
+	TrimmedType tt_stamp = {};
+	tt_stamp.key = ~0u;
+
+	symbol_context.recorded_full_types = (FullType*)malloc(sizeof(FullType) * MAX_RECORDED_TYPES);
 	for (int i = 0; i < MAX_RECORDED_TYPES; ++i) {
-		symbol_context.recorded_types[i] = ti_stamp;
+		symbol_context.recorded_full_types[i] = ft_stamp;
 	}
 
 	symbol_context.type_to_name = (NameEntry*)malloc(sizeof(NameEntry) * MAX_RECORDED_TYPES);
 	for (int i = 0; i < MAX_RECORDED_TYPES; ++i) {
 		symbol_context.type_to_name[i] = ne_stamp;
+	}
+
+	symbol_context.recorded_trimmed_types = (TrimmedType*)malloc(sizeof(TrimmedType) * MAX_RECORDED_TRIMMED_TYPES);
+	for (int i = 0; i < MAX_RECORDED_TRIMMED_TYPES; ++i) {
+		symbol_context.recorded_trimmed_types[i] = tt_stamp;
 	}
 
 	return symbol_context;

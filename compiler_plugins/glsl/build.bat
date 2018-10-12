@@ -12,7 +12,7 @@ set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd
 set DISABLE_WARNINGS=%DISABLE_WARNINGS% /wd4060 /wd4068 /wd4201 /wd4127 /wd4191 /wd4505
 
 set CC=cl.exe
-set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -GT
-rem set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Ox -GF -WL -Wall -GT
+set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -GT -MP
+rem set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Ox -GF -WL -Wall -GT -MP
 
 %CC% %FLAGS% %DEFINES% %INCLUDES% %LIBS% %NAME%.cpp %DISABLE_WARNINGS% -LD /link -incremental:no -opt:ref -PDB:"%OUT_PATH%\%NAME%.pdb" -OUT:"%OUT_PATH%\%NAME%.dll"

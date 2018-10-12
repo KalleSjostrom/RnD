@@ -1,12 +1,12 @@
 #include "engine/utils/string.h"
 
-void read_string(MemoryArena &arena, String &string, FILE *file) {
+void read_string(ArenaAllocator &arena, String &string, FILE *file) {
 	fread(&string.length, sizeof(i32), 1, file);
 	string.text = PUSH_STRING(arena, string.length);
 	fread(string.text, sizeof(char), (size_t)string.length, file);
 }
 
-MeshData read_obj(MemoryArena &arena, const char *filepath) {
+MeshData read_obj(ArenaAllocator &arena, const char *filepath) {
 	FILE *objfile;
 	fopen_s(&objfile, filepath, "rb");
 	ASSERT(objfile, "Could not open '%s'", filepath);

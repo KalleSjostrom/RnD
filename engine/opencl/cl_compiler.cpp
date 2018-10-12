@@ -4,7 +4,7 @@
 #include "cl_settings.h"
 
 #include "../utils/file_utils.h"
-#include "../utils/memory_arena.cpp"
+#include "../utils/arena_allocator.cpp"
 #include "cl_errors.cpp"
 #include "cl_program_builder.cpp"
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
 	cl_program program = cl_program_builder::create_from_source_file(context, shader_filename, num_devices, devices + device_index, build_options);
 
-	MemoryArena arena = init_memory(1024*1024*4);
+	ArenaAllocator arena = init_memory(1024*1024*4);
 	cl_program_builder::write_to_binary_file(arena, program, binary_filename);
 
 #if VERIFY_BINARIES
