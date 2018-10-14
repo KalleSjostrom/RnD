@@ -1,6 +1,14 @@
+int _______test() {
+	return 0;
+}
+
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
+
+// Why is this needed?
+#define _VC_VER_INC
+#include "include/cvinfo.h"
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
 
@@ -11,13 +19,13 @@
 
 struct PDB {
 	uint8_t *source;
-	unsigned page_size;
+	uint32_t page_size;
 };
 
 struct PageList {
-	unsigned *list;
-	unsigned count;
-	__forceinline unsigned operator[](int index) { return list[index]; }
+	uint32_t *list;
+	uint32_t count;
+	__forceinline uint32_t operator[](int index) { return list[index]; }
 };
 
 struct StreamData {
@@ -27,14 +35,19 @@ struct StreamData {
 	size_t cursor;
 };
 
-__forceinline unsigned read_u32(uint8_t *buffer, size_t *cursor) {
-	unsigned result = *(unsigned*)(buffer + *cursor);
-	*cursor += sizeof(unsigned);
+__forceinline uint8_t read_u8(uint8_t *buffer, size_t *cursor) {
+	uint8_t result = *(uint8_t*)(buffer + *cursor);
+	*cursor += sizeof(uint8_t);
 	return result;
 }
 __forceinline uint16_t read_u16(uint8_t *buffer, size_t *cursor) {
 	uint16_t result = *(uint16_t*)(buffer + *cursor);
 	*cursor += sizeof(uint16_t);
+	return result;
+}
+__forceinline uint32_t read_u32(uint8_t *buffer, size_t *cursor) {
+	uint32_t result = *(uint32_t*)(buffer + *cursor);
+	*cursor += sizeof(uint32_t);
 	return result;
 }
 __forceinline uint8_t *read(uint8_t *buffer, size_t *cursor, size_t size) {
@@ -43,27 +56,30 @@ __forceinline uint8_t *read(uint8_t *buffer, size_t *cursor, size_t size) {
 	return result;
 }
 
-__forceinline unsigned read_u32(StreamData &stream) {
-	return read_u32(stream.data, &stream.cursor);
+__forceinline uint8_t read_u8(StreamData &stream) {
+	return read_u8(stream.data, &stream.cursor);
 }
 __forceinline uint16_t read_u16(StreamData &stream) {
 	return read_u16(stream.data, &stream.cursor);
+}
+__forceinline uint32_t read_u32(StreamData &stream) {
+	return read_u32(stream.data, &stream.cursor);
 }
 __forceinline uint8_t *read(StreamData &stream, size_t size) {
 	return read(stream.data, &stream.cursor, size);
 }
 
 
-unsigned _pages(unsigned length, unsigned page_size) {
+uint32_t _pages(uint32_t length, uint32_t page_size) {
 	PDB_ASSERT(length > 0);
-	unsigned num_pages = 1u + ((length - 1) / page_size);
+	uint32_t num_pages = 1u + ((length - 1) / page_size);
 	return num_pages;
 }
 
 
 
 // struct Stream {
-// 	unsigned *pages;
+// 	uint32_t *pages;
 // 	size_t size;
 // };
 
@@ -79,8 +95,8 @@ StreamData get_stream_data(PDB pdb, PageList list) {
 	}
 #endif
 
-	for (unsigned i = 0; i < list.count; ++i) {
-		unsigned page_index = list[i];
+	for (uint32_t i = 0; i < list.count; ++i) {
+		uint32_t page_index = list[i];
 		size_t at = page_index * pdb.page_size;
 		uint8_t *data = read(pdb.source, &at, pdb.page_size);
 		memcpy(result.data + i * pdb.page_size, data, pdb.page_size);
@@ -90,8 +106,8 @@ StreamData get_stream_data(PDB pdb, PageList list) {
 }
 #else
 StreamData get_stream_data(PDB pdb, PageList list) {
-	unsigned start = list[0];
-	for (unsigned i = 0; i < list.count; ++i) {
+	uint32_t start = list[0];
+	for (uint32_t i = 0; i < list.count; ++i) {
 		PDB_ASSERT(start + i == list[i]);
 	}
 
@@ -136,17 +152,17 @@ struct StreamDirectory {
 12	2	snGSSyms
 14	2	usVerAll
 union {
-       struct {
-           USHORT      usVerPdbDllMin : 8; // minor version and
-           USHORT      usVerPdbDllMaj : 7; // major version and
-           USHORT      fNewVerFmt     : 1; // flag telling us we have rbld stored elsewhere (high bit of original major version)
-       } vernew;                           // that built this pdb last.
-       struct {
-           USHORT      usVerPdbDllRbld: 4;
-           USHORT      usVerPdbDllMin : 7;
-           USHORT      usVerPdbDllMaj : 5;
-       } verold;
-       USHORT          usVerAll;
+	   struct {
+		   USHORT	  usVerPdbDllMin : 8; // minor version and
+		   USHORT	  usVerPdbDllMaj : 7; // major version and
+		   USHORT	  fNewVerFmt	 : 1; // flag telling us we have rbld stored elsewhere (high bit of original major version)
+	   } vernew;						   // that built this pdb last.
+	   struct {
+		   USHORT	  usVerPdbDllRbld: 4;
+		   USHORT	  usVerPdbDllMin : 7;
+		   USHORT	  usVerPdbDllMaj : 5;
+	   } verold;
+	   USHORT		  usVerAll;
    };
 16	2	snPSSyms
 18	2	usVerPdbDllBuild	build version of the pdb dll that built this pdb last
@@ -162,10 +178,10 @@ union {
 52	4	cbECInfo	number of bytes in EC substream, or 0 if no EC enabled Mods
 56	2	flags
 struct _flags {
-       USHORT  fIncLink:1;     // true if linked incrmentally (really just if ilink thunks are present)
-       USHORT  fStripped:1;    // true if PDB::CopyTo stripped the private data out
-       USHORT  fCTypes:1;      // true if this PDB is using CTypes.
-       USHORT  unused:13;      // reserved, must be 0.
+	   USHORT  fIncLink:1;	 // true if linked incrmentally (really just if ilink thunks are present)
+	   USHORT  fStripped:1;	// true if PDB::CopyTo stripped the private data out
+	   USHORT  fCTypes:1;	  // true if this PDB is using CTypes.
+	   USHORT  unused:13;	  // reserved, must be 0.
    } flags;
 58	2	wMachine	Machine identifier, same as used in COFF object format, e.g., hex 8664 for Intel x86 64-bit
 60	4	RESERVED	future expansion, pad to 64 bytes
@@ -202,23 +218,23 @@ int main(int argc, char const *argv[]) {
 * FPOv2 Stream
 */
 
-	unsigned page_size = read_u32(source, &cursor); // Page size, 4 bytes.
-	unsigned allocation_table_pointer = read_u32(source, &cursor); // Allocation table pointer, 4 bytes. The meaning of this is unknown. There appears to be an allocation table, an array of 65,536 bits (8,192 bytes), located at the end of the PDB, and a 1-bit means a page that is not being used.
-	unsigned num_file_pages = read_u32(source, &cursor); // Number of file pages, 4 bytes.
-	unsigned root_size = read_u32(source, &cursor); // Root stream size, 4 bytes.
-	unsigned reserved = read_u32(source, &cursor); // reserved, 4 bytes.
+	uint32_t page_size = read_u32(source, &cursor); // Page size, 4 bytes.
+	uint32_t allocation_table_pointer = read_u32(source, &cursor); // Allocation table pointer, 4 bytes. The meaning of this is unknown. There appears to be an allocation table, an array of 65,536 bits (8,192 bytes), located at the end of the PDB, and a 1-bit means a page that is not being used.
+	uint32_t num_file_pages = read_u32(source, &cursor); // Number of file pages, 4 bytes.
+	uint32_t root_size = read_u32(source, &cursor); // Root stream size, 4 bytes.
+	uint32_t reserved = read_u32(source, &cursor); // reserved, 4 bytes.
 
 	PDB pdb = {};
 	pdb.source = source;
 	pdb.page_size = page_size;
 
-	unsigned num_root_pages = _pages(root_size, page_size); // How many pages in the root stream?
+	uint32_t num_root_pages = _pages(root_size, page_size); // How many pages in the root stream?
 
 	// Root index page list - IDICES of the PAGES containing the Root Page List
 	PageList root_index_page_list = {};
 
 	root_index_page_list.count = _pages(num_root_pages * 4, page_size); // How many pages are needed to store the root page list?
-	root_index_page_list.list = (unsigned*) read(source, &cursor, root_index_page_list.count * sizeof(unsigned));
+	root_index_page_list.list = (uint32_t*) read(source, &cursor, root_index_page_list.count * sizeof(uint32_t));
 
 	// Read in the root page list - INDICES of the PAGES containing the Root Stream Data
 	StreamData root_page_list_stream = get_stream_data(pdb, root_index_page_list);
@@ -226,15 +242,15 @@ int main(int argc, char const *argv[]) {
 	PageList root_page_list = {};
 
 	root_page_list.count = num_root_pages;
-	root_page_list.list = (unsigned*)root_page_list_stream.data;
+	root_page_list.list = (uint32_t*)root_page_list_stream.data;
 
 	StreamData root_data = get_stream_data(pdb, root_page_list);
 
-	unsigned num_streams = read_u32(root_data);
+	uint32_t num_streams = read_u32(root_data);
 
 	PageList *page_lists_stream = (PageList *)malloc(num_streams * sizeof(PageList));
-	for (unsigned i = 0; i < num_streams; ++i) {
-		unsigned stream_size = read_u32(root_data);
+	for (uint32_t i = 0; i < num_streams; ++i) {
+		uint32_t stream_size = read_u32(root_data);
 
 		int valid = stream_size != ~0u && stream_size != 0;
 
@@ -244,12 +260,12 @@ int main(int argc, char const *argv[]) {
 	}
 
 	// Next comes a list of the pages that make up each stream
-	for (unsigned i = 0; i < num_streams; ++i) {
+	for (uint32_t i = 0; i < num_streams; ++i) {
 		PageList &pl = page_lists_stream[i];
-		pl.list = (unsigned *)read(root_data, pl.count * sizeof(unsigned));
+		pl.list = (uint32_t *)read(root_data, pl.count * sizeof(uint32_t));
 	}
 
-	for (unsigned i = 0; i < num_streams; ++i) {
+	for (uint32_t i = 0; i < num_streams; ++i) {
 		PageList &pl = page_lists_stream[i];
 		if (pl.count > 0) {
 			StreamData stream = get_stream_data(pdb, pl);
@@ -258,17 +274,17 @@ int main(int argc, char const *argv[]) {
 				case StreamType_Root: {
 				} break;
 				case StreamType_Info: {
-					unsigned version = read_u32(stream);// Version, 4 bytes.
-					unsigned time_date_stamp = read_u32(stream); // Time date stamp, 4 bytes.
-					unsigned age = read_u32(stream); // Age, 4 bytes. This is the number of times this PDB has been modified since its creation.
+					uint32_t version = read_u32(stream);// Version, 4 bytes.
+					uint32_t time_date_stamp = read_u32(stream); // Time date stamp, 4 bytes.
+					uint32_t age = read_u32(stream); // Age, 4 bytes. This is the number of times this PDB has been modified since its creation.
 
 					// GUID, 16 bytes.
-					unsigned guid1 = read_u32(stream);
-					unsigned guid2 = read_u32(stream);
-					unsigned guid3 = read_u32(stream);
-					unsigned guid4 = read_u32(stream);
+					uint32_t guid1 = read_u32(stream);
+					uint32_t guid2 = read_u32(stream);
+					uint32_t guid3 = read_u32(stream);
+					uint32_t guid4 = read_u32(stream);
 
-					unsigned name_string_length = read_u32(stream); // Total length of following names, 4 bytes. Followed by null-terminated character strings.
+					uint32_t name_string_length = read_u32(stream); // Total length of following names, 4 bytes. Followed by null-terminated character strings.
 					char *buf = (char *)read(stream, name_string_length);
 
 #if DEBUG
@@ -278,7 +294,7 @@ int main(int argc, char const *argv[]) {
 					printf("Guid %u, %u, %u, %u\n", guid1, guid2, guid3, guid4);
 
 					printf("Names\n\t");
-					for (unsigned at = 0; at < name_string_length; ++at) {
+					for (uint32_t at = 0; at < name_string_length; ++at) {
 						if (buf[at] == 0) {
 							printf("\n\t");
 						} else {
@@ -289,39 +305,98 @@ int main(int argc, char const *argv[]) {
 #endif
 				} break;
 				case StreamType_Types: {
-					unsigned version = read_u32(stream); // Version, 4 bytes.
-					unsigned header_size = read_u32(stream); // Header size, 4 bytes.
-					unsigned minimum = read_u32(stream); // Minimum index for type records, 4 bytes.
-					unsigned maximum = read_u32(stream); // Maximum (last + 1) index for type records, 4 bytes.
-					unsigned size = read_u32(stream); // Size of following data, 4 bytes, to the end of the stream.
+					uint32_t version = read_u32(stream); // Version, 4 bytes.
+					uint32_t header_size = read_u32(stream); // Header size, 4 bytes.
+					uint32_t minimum = read_u32(stream); // Minimum index for type records, 4 bytes.
+					uint32_t maximum = read_u32(stream); // Maximum (last + 1) index for type records, 4 bytes.
+					uint32_t size = read_u32(stream); // Size of following data, 4 bytes, to the end of the stream.
 
 					// Hash information:
-					unsigned stream_number = read_u32(stream) & 0x0000FFFF; // Stream number, 2 bytes with 2 bytes padding.
-					unsigned hash_key = read_u32(stream); // Hash key, 4 bytes.
-					unsigned buckets = read_u32(stream); // Buckets, 4 bytes.
+					uint32_t stream_number = read_u32(stream) & 0x0000FFFF; // Stream number, 2 bytes with 2 bytes padding.
+					uint32_t hash_key = read_u32(stream); // Hash key, 4 bytes.
+					uint32_t buckets = read_u32(stream); // Buckets, 4 bytes.
 
 					// Each composed of an offset and length, each 4 bytes.
-					unsigned hash_value_offset = read_u32(stream);
-					unsigned hash_value_length = read_u32(stream);
+					uint32_t hash_value_offset = read_u32(stream);
+					uint32_t hash_value_length = read_u32(stream);
 
-					unsigned ti_off_offset = read_u32(stream);
-					unsigned ti_off_length = read_u32(stream);
+					uint32_t ti_off_offset = read_u32(stream);
+					uint32_t ti_off_length = read_u32(stream);
 
-					unsigned hash_adj_offset = read_u32(stream);
-					unsigned hash_adj_length = read_u32(stream);
+					uint32_t hash_adj_offset = read_u32(stream);
+					uint32_t hash_adj_length = read_u32(stream);
 
 					// Type records, variable length, count = (maximum - minimum) from above header.
-					unsigned type_record_count = (maximum - minimum);
-					for (unsigned j = 0; j < type_record_count; ++j) {
+					uint32_t type_record_count = (maximum - minimum);
+					for (uint32_t j = 0; j < type_record_count; ++j) {
 						uint16_t length = read_u16(stream);
 						uint16_t type = read_u16(stream);
 
-						int a = 0;
+						printf("Type %#06hx\n", type);
+
+						switch (type) {
+							case LF_ARGLIST: {
+								uint32_t arg_count = read_u32(stream);
+								for (uint32_t arg_index = 0; arg_index < arg_count; ++arg_index) {
+									uint32_t arg_type = read_u32(stream);
+									printf("Argument Type %#06hx\n", arg_type);
+								}
+							} break;
+							case LF_ARRAY: {
+							} break;
+							case LF_ARRAY_ST: {
+							} break;
+							case LF_BITFIELD: {
+							} break;
+							case LF_CLASS: {
+							} break;
+							case LF_ENUM: {
+							} break;
+							case LF_FIELDLIST: {
+							} break;
+							case LF_MFUNCTION: {
+							} break;
+							case LF_MODIFIER: {
+								uint32_t modifier_type = read_u32(stream);
+								uint16_t attributes = read_u16(stream);
+								uint16_t padding = read_u16(stream);
+
+								CV_modifier_t mod = *(CV_modifier_t*)&attributes;
+
+								int a = 0;
+							} break;
+							case LF_POINTER: {
+								uint32_t pointer_type = read_u32(stream);
+								uint32_t attributes = read_u32(stream);
+
+								lfPointer::lfPointerBody::lfPointerAttr ptr_attrib = *(lfPointer::lfPointerBody::lfPointerAttr*)&attributes;
+
+								int a = 0;
+							} break;
+							case LF_PROCEDURE: {
+								uint32_t return_type = read_u32(stream);
+								uint8_t calling_convention = read_u8(stream);
+								uint8_t reserved8 = read_u8(stream);
+								uint16_t parameter_count = read_u16(stream);
+								uint32_t arglist = read_u32(stream);
+
+								int a = 0;
+							} break;
+							case LF_STRUCTURE: {
+							} break;
+							case LF_STRUCTURE_ST: {
+							} break;
+							case LF_UNION: {
+							} break;
+							case LF_UNION_ST: {
+							} break;
+							case LF_VTSHAPE: {
+							} break;
+						}
 
 						// * Padding scheme:
 						// 	(0xF0 | [number of bytes until next structure]).
 						// 	Less formally, the upper four bits are all set, and the lower four give the number of bytes to skip until the next structure. This results in patterns that look like "?? F3 F2 F1 [next structure]".
-
 
 						// Values
 						// 	If the value of the first word is less than LF_NUMERIC (0x8000), the value data is just the value of that word. The name begins at data[2] and is a C string.
@@ -340,7 +415,7 @@ int main(int argc, char const *argv[]) {
 
 			int a = 0;
 		}
-		// unsigned type = streams[i].
+		// uint32_t type = streams[i].
 		// try:
 		// 	pdb_cls = self._stream_map[i]
 		// except KeyError:
