@@ -1,7 +1,3 @@
-#ifdef OS_WINDOWS
-	#define mkdir(name, mode) _mkdir(name)
-#endif
-
 u32 cache_lookup(Cache &cache, u64 key) {
 	u32 index = key % cache.max_count;
 	for (u32 i = 0; i < cache.max_count; ++i) {
@@ -18,7 +14,7 @@ u32 cache_lookup(Cache &cache, u64 key) {
 	return 0;
 }
 
-void make_sure_directory_exists(String directory) {
+void make_sure_directory_exists(DynamicString directory) {
 	bool success = CreateDirectory(*directory, NULL);
 	if (!success) {
 		// It's valid if the directory already exists, so assert only if there is some other error.
@@ -49,31 +45,32 @@ void register_ending(FileSystem &fs, String ending, u32 ending_id) {
 	}
 }
 
-static String s_data = MAKE_STRING("data");
-
-void init_filesystem(FileSystem &file_system, String root, String output_path, MemoryArena &arena) {
+void init_filesystem(FileSystem &file_system, String root, String output_path, ArenaAllocator &arena) {
 	Cache c = {};
+
+	file_system.allocator = allocator_mspace(MB);
+
 	file_system.cache = c;
 	file_system.cache.max_count = 8192;
-	file_system.cache.entries = PUSH_STRUCTS(arena, file_system.cache.max_count, CacheEntry, true);
-	file_system.cache.touched = PUSH_STRUCTS(arena, file_system.cache.max_count, bool, true);
+	file_system.cache.entries = PUSH(&arena, file_system.cache.max_count, CacheEntry, true);
+	file_system.cache.touched = PUSH(&arena, file_system.cache.max_count, bool, true);
 
 	file_system.root = root;
-	file_system.source_folder = root; // Should this be the asset path thing? What would we use that for?
-	file_system.output_folder = make_path(arena, root, output_path);
-	file_system.output_folder_id = make_string_id64(file_system.output_folder);
+	file_system.source_folder = dynamic_stringf(&file_system.allocator, "%s", *root); // Should this be the asset path thing? What would we use that for?
+	file_system.output_folder = dynamic_stringf(&file_system.allocator, "%s/%s", *root, *output_path);
+	file_system.output_folder_id = string_id64(file_system.output_folder);
 	make_sure_directory_exists(file_system.output_folder);
 
-	file_system.data_folder = make_path(arena, file_system.output_folder, s_data);
+	file_system.data_folder = dynamic_stringf(&file_system.allocator, "%s/%s", *file_system.output_folder, "data");
 
-	file_system.file_infos = PUSH_STRUCTS(arena, file_system.cache.max_count, FileInfo);
+	file_system.file_infos = PUSH(&arena, file_system.cache.max_count, FileInfo);
 }
 
 Ending *get_ending(FileSystem fs, String filename) {
 	ASSERT(filename.length > 0, "");
 	char key = filename[filename.length - 1];
 
-	i32 at = filename.length - 1;
+	i32 at = (i32)filename.length - 1;
 	for (; at >= 0; at--) {
         if (filename[at] == '.') {
             at++; // Ignore the dot
@@ -81,11 +78,11 @@ Ending *get_ending(FileSystem fs, String filename) {
         }
 	}
 
-	String ending_string = make_string(filename.text + at, filename.length - at);
+	String ending_string = string(filename.text + at, filename.length - at);
 
 	Ending *e = &fs.ending_lookup[key];
 	while (e && e->string.length > 0) {
-		if (is_equal(ending_string, e->string)) {
+		if (ending_string == e->string) {
 			return e;
 		} else {
 			e = e->next;
@@ -104,14 +101,14 @@ bool ignored_directory(String &file_path, u64 file_path_id, String &filename, u3
 }
 
 u32 get_file_ending(String &filename) {
-	i32 at = filename.length - 1;
+	i32 at = (i32)filename.length - 1;
 	for (; at >= 0; at--) {
 		if (filename[at] == '.')
 			break;
 	}
 
-	String ending = make_string(filename.text + at, filename.length - at);
-	u32 id = make_string_id32(ending);
+	String ending = string(filename.text + at, filename.length - at);
+	u32 id = string_id32(ending);
 	return id;
 }
 
@@ -132,10 +129,10 @@ FILETIME get_current_module_filetime() {
 	return filetime;
 }
 
-b32 remove_files(const char *search_string, const char *folder) {
+bool remove_files(const char *search_string, const char *folder) {
 	WIN32_FIND_DATA find_data = {};
 	HANDLE handle = find_first_file(search_string, &find_data);
-	b32 failed = false;
+	bool failed = false;
 
 	if (handle != INVALID_HANDLE_VALUE) {
 		do {
@@ -154,10 +151,10 @@ b32 remove_files(const char *search_string, const char *folder) {
 	return failed;
 }
 
-b32 has_locked_files(const char *search_string, const char *folder) {
+bool has_locked_files(const char *search_string, const char *folder) {
 	WIN32_FIND_DATA find_data = {};
 	HANDLE handle = find_first_file(search_string, &find_data);
-	b32 found = false;
+	bool found = false;
 
 	if (handle != INVALID_HANDLE_VALUE) {
 		do {
@@ -174,7 +171,7 @@ b32 has_locked_files(const char *search_string, const char *folder) {
 	return found;
 }
 
-u32 read_cached_info(FileSystem &file_system, String &filepath, u64 key, FILETIME last_time_modified, Ending *ending) {
+u32 read_cached_info(FileSystem &file_system, DynamicString &filepath, u64 key, FILETIME last_time_modified, Ending *ending) {
 	Cache &cache = file_system.cache;
 	u32 index = cache_lookup(cache, key);
 	CacheEntry &entry = cache.entries[index];
@@ -183,7 +180,7 @@ u32 read_cached_info(FileSystem &file_system, String &filepath, u64 key, FILETIM
 
 	CacheState state;
 	if (entry.key == key) {
-		b32 result = CompareFileTime(&entry.file_time, &last_time_modified);
+		bool result = CompareFileTime(&entry.file_time, &last_time_modified);
         state = result ? CacheState_Modified : CacheState_Unmodified;
 	} else {
 		state = CacheState_Added;
@@ -193,14 +190,14 @@ u32 read_cached_info(FileSystem &file_system, String &filepath, u64 key, FILETIM
 	entry.key = key;
 	entry.file_time = last_time_modified;
 
-	file_system.file_infos[index].filepath = filepath;
+	file_system.file_infos[index].filepath = string(&file_system.allocator, string(filepath));
 	file_system.file_infos[index].state = state;
 	file_system.file_infos[index].filetype = ending->id;
 	file_system.file_infos[index].key = key;
 
 	return index;
 }
-void read_infocache_from_disc(FILETIME executable_modifed_time, String &cache_filepath, Cache &cache) {
+void read_infocache_from_disc(FILETIME executable_modifed_time, DynamicString &cache_filepath, Cache &cache) {
 	FILE *cache_file;
 	fopen_s(&cache_file, *cache_filepath, "rb");
 	if (!cache_file)
@@ -216,7 +213,7 @@ void read_infocache_from_disc(FILETIME executable_modifed_time, String &cache_fi
 
 	fclose(cache_file);
 }
-void write_infocache_to_disc(FILETIME executable_modifed_time, String &cache_filepath, Cache &cache) {
+void write_infocache_to_disc(FILETIME executable_modifed_time, DynamicString &cache_filepath, Cache &cache) {
 	FILE *cache_file;
 	fopen_s(&cache_file, *cache_filepath, "wb");
 

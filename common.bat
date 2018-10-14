@@ -32,7 +32,7 @@ set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd
 set DISABLE_WARNINGS=%DISABLE_WARNINGS% /wd4060 /wd4068 /wd4201 /wd4127 /wd4191 /wd4505 /wd4100 /wd4324
 
 set CC=cl.exe
-set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -arch:AVX2
+set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -arch:AVX2 -MP
 
 %CC% %FLAGS% %DEFINES% %INCLUDES% opengl32.lib %ENTRY_POINT%.cpp %DISABLE_WARNINGS% -Fm%NAME%.map -LD /link -incremental:no -opt:ref -PDB:"%OUT_PATH%\%PDB_NAME%" -OUT:"%OUT_PATH%\%PLUGIN_NAME%.dll"
 

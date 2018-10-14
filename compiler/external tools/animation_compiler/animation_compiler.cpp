@@ -83,8 +83,8 @@ int main(int argc, char **argv) {
 	}
 
 	int bytes = 16*MB;
-	MemoryArena arena = init_memory(bytes);
-	MemoryArena data_arena = init_memory(bytes);
+	ArenaAllocator arena = init_memory(bytes);
+	ArenaAllocator data_arena = init_memory(bytes);
 
 	AnimationDataArray animation_data_array = {};
 

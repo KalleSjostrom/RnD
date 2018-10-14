@@ -10,7 +10,7 @@ FORCE_INLINE u64 random_population_index(Random &r) {
 	return random_u64(r);
 }
 
-void run(MemoryArena &arena, const GASettings &settings) {
+void run(ArenaAllocator &arena, const GASettings &settings) {
 	Random random = {};
 	random_init(random, rdtsc(), 54u);
 

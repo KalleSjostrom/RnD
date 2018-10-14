@@ -3,7 +3,7 @@ struct RenderPipe {
 	i32 screen_height;
 };
 
-void setup_render_pipe(MemoryArena &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+void setup_render_pipe(ArenaAllocator &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	r.screen_width = screen_width;
 	r.screen_height = screen_height;
 }

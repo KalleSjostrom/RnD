@@ -6,31 +6,44 @@ Todo:
 	- Dependencies between assets, if one change compile the asset-chain
 	- Adding a new generator won't invalidate the cache and potentially not get file changes (should get the 'added' status)
 */
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include "common.h"
 #include "plugin.h"
 
-#include "engine/utils/profiler.c"
-enum ProfilerScopes {
-	ProfilerScopes__parse_project,
-	ProfilerScopes__setup,
-	ProfilerScopes__read_cache,
-	ProfilerScopes__run,
-	ProfilerScopes__build,
-	ProfilerScopes__write_cache,
+#include "modules/error.h"
+#include "modules/logging.h"
 
-	ProfilerScopes__count,
-};
+// #include "core/utils/assert.h"
+#include "core/utils/stopwatch.h"
 
-#include "engine/utils/containers/dynamic_array.h"
-#include "engine/utils/containers/hashmap.cpp"
-#include "engine/utils/serialize.h"
-#include "engine/utils/file_system.cpp"
+#include "core/math/math.h"
+#include "utils/file_utils.h"
+#include "utils/parser.cpp"
+
+#include "core/memory/allocator.h"
+#include "core/containers/array.h"
+#include "core/containers/hashmap.cpp"
+#include "core/containers/hashmap_inplace.cpp"
+
+#include "utils/serialize.h"
+#include "utils/file_system.cpp"
 
 #include "generation_cache.cpp"
 #include "project.cpp"
 #include "builder.cpp"
 
-#define FIBER_STACK_GUARD_PAGES
-#include "engine/utils/fibers/task_scheduler.cpp"
+#include "core/utils/fiber_jobs.h"
+
+#include "core/memory/allocator.cpp"
+#include "core/memory/mspace_allocator.cpp"
+#include "core/memory/arena_allocator.cpp"
+#include "core/utils/murmur_hash.cpp"
+#include "core/containers/array.cpp"
+#include "core/utils/dynamic_string.cpp"
+#include "core/utils/string.cpp"
+
+#include "core/utils/fiber_jobs.cpp"
 
 #define MAX_PLUGINS 64
 
@@ -39,7 +52,7 @@ struct Compiler;
 struct Plugin {
 	PluginInfo *plugin_info;
 
-	b32 active;
+	bool active;
 
 	plugin_on_file_change_t *on_file_change;
 	plugin_get_file_endings_t *get_file_endings;
@@ -47,9 +60,8 @@ struct Plugin {
 typedef Plugin* PluginArray;
 
 struct Compiler {
-	MemoryArena arena;
-
-	TaskScheduler scheduler;
+	ArenaAllocator arena;
+	FiberJobManager *job_manager;
 	FileSystem file_system;
 	Project project;
 
@@ -64,7 +76,7 @@ void register_file_info_change(Compiler &compiler, u32 handle) {
 		if (plugin.active) {
 			Task *task = plugin.on_file_change(compiler.context, compiler.file_system.file_infos[handle]);
 			if (task) {
-				scheduler_add_tasks(compiler.scheduler, 1, task);
+				add_tasks(compiler.job_manager, 1, task);
 			}
 		}
 	}
@@ -112,32 +124,33 @@ void pop_directory(Plugin &plugin, u64 directory_name_id) {
 	}
 }
 
-void iterate(Compiler &compiler, String directory_path) {
+void iterate(Compiler &compiler, DynamicString directory_path) {
 	WIN32_FIND_DATA find_data = {};
 	char buffer[MAX_PATH];
-	sprintf_s(buffer, MAX_PATH, "%s/*.*", *directory_path);
+	sprintf_s(buffer, MAX_PATH, "%.*s/*.*", string_length(directory_path), *directory_path);
 	HANDLE handle = find_first_file(buffer, &find_data);
 
 	if (handle != INVALID_HANDLE_VALUE) {
 		do {
 			char *filename = find_data.cFileName;
-			b32 ignored = filename[0] == '.';
+			bool ignored = filename[0] == '.';
 			if (ignored)
 				continue;
 
-			String filename_string = make_string(filename);
-			u32 filename_id = make_string_id32(filename_string);
+			String filename_string = string(filename);
+			u32 filename_id = string_id32(filename_string);
 
-			String file_path_string = make_path(compiler.arena, directory_path, filename_string);
-			u64 file_path_id = make_string_id64(file_path_string);
+			DynamicString file_path_string = directory_path;
+			file_path_string += filename_string;
+			u64 file_path_id = string_id64(file_path_string);
 
 			if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				if (file_path_id != compiler.file_system.output_folder_id) {
-					b32 any_active = false;
+					bool any_active = false;
 					bool changed_plugin[MAX_PLUGINS];
 					for (i32 i = 0; i < array_count(compiler.plugin_array); ++i) {
 						Plugin &plugin = compiler.plugin_array[i];
-						b32 was_active = plugin.active;
+						bool was_active = plugin.active;
 						push_directory(plugin, filename_id);
 						any_active |= plugin.active;
 						changed_plugin[i] = (was_active != plugin.active);
@@ -164,6 +177,8 @@ void iterate(Compiler &compiler, String directory_path) {
 					// printf("Ignoring ending! (filename=%s)\n", *filename_string);
 				}
 			}
+
+			file_path_string -= filename_string;
 		} while (FindNextFile(handle, &find_data));
 
 		FindClose(handle);
@@ -198,11 +213,11 @@ void register_generators(Compiler &compiler) {
 }
 //////////////////////////////////////////////
 
-static String _fileinfo_cache_str = MAKE_STRING("fileinfo.cache");
+static String _fileinfo_cache_str = MAKE_STRING("");
 
 // This runs the main fiber. All other fibers will be waiting for tasks so try to kick jobs as soon as possible!
-void run(void *arg) {
-	Compiler &compiler = *(Compiler*)arg;
+void do_main_fiber_task(FiberJobManager *job_manager, void *user_data) {
+	Compiler &compiler = *(Compiler*)user_data;
 
 	iterate(compiler, compiler.file_system.source_folder);
 
@@ -225,11 +240,7 @@ void run(void *arg) {
 			}
 		}
 	}
-	// At this point, all parsing work has been dealt out. We can't exit until all tasks are done
-	// Start helping out.
-	for (i32 i = 0; i < compiler.scheduler.thread_count * MAX_JOBS_PER_THREAD; ++i) {
-		scheduler_wait_for_job(compiler.scheduler, i, 0);
-	}
+
 	// generate_reloader::coalesce(compiler.plugin_array[0], *scheduler);
 
 	// bool changed = true;
@@ -241,7 +252,7 @@ void run(void *arg) {
 // #include "SDL.h"
 
 int run(int argc, char *argv[]) {
-PROFILER_START(parse_project);
+// PROFILER_START(parse_project);
 	char *project_path = 0;
 
 	for (int i = 0; i < argc; ++i) {
@@ -257,11 +268,12 @@ PROFILER_START(parse_project);
 
 	Compiler compiler = {};
 
-	compiler.context.arena = &compiler.arena;
+	compiler.context.allocator = allocator_arena(&compiler.arena);
 	compiler.context.file_system = &compiler.file_system;
 
-	parse_project(compiler.arena, compiler.project, project_path);
-PROFILER_STOP(parse_project);
+	Allocator *allocator = &compiler.context.allocator;
+	parse_project(allocator, compiler.project, project_path);
+// PROFILER_STOP(parse_project);
 
 	// u32 sdl_subsystems = SDL_INIT_AUDIO;
 	// sdl_subsystems = SDL_INIT_AUDIO | SDL_INIT_VIDEO;
@@ -284,38 +296,42 @@ PROFILER_STOP(parse_project);
 	// SDL_GLContext glContext = SDL_GL_CreateContext(window);
 	// (void)glContext;
 
-PROFILER_START(setup);
+// PROFILER_START(setup);
 	init_filesystem(compiler.file_system, compiler.project.root, compiler.project.output_path, compiler.arena);
-	array_init(compiler.plugin_array, 8);
+	array_make(allocator, compiler.plugin_array, 8);
 	register_generators(compiler);
-PROFILER_STOP(setup);
+// PROFILER_STOP(setup);
 
-PROFILER_START(read_cache);
+// PROFILER_START(read_cache);
 	FILETIME executable_modifed_time = get_current_module_filetime();
-	String cache_filepath = make_path(compiler.arena, compiler.file_system.output_folder, _fileinfo_cache_str);
+	DynamicString cache_filepath = dynamic_stringf(allocator, "%.*s/fileinfo.cache", DSTR(compiler.file_system.output_folder));
 	read_infocache_from_disc(executable_modifed_time, cache_filepath, compiler.file_system.cache);
-PROFILER_STOP(read_cache);
+// PROFILER_STOP(read_cache);
 
-PROFILER_START(run);
-	scheduler_start(compiler.scheduler, compiler.arena, run, &compiler);
-PROFILER_STOP(run);
+// PROFILER_START(run);
+	FiberJobsResult result = run_fibertask(do_main_fiber_task, &compiler);
+	if (result == FiberJobsResult_Failed) {
+		ASSERT(false, "blah");
+	}
+	// scheduler_start(compiler.scheduler, compiler.arena, run, &compiler);
+// PROFILER_STOP(run);
 
-PROFILER_START(build);
-	b32 success = build(compiler.project, compiler.file_system);
-PROFILER_STOP(build);
+// PROFILER_START(build);
+	bool success = build(compiler.project, compiler.file_system);
+// PROFILER_STOP(build);
 
-PROFILER_START(write_cache);
+// PROFILER_START(write_cache);
 	if (success) {
 		write_infocache_to_disc(executable_modifed_time, cache_filepath, compiler.file_system.cache);
 	}
-PROFILER_STOP(write_cache);
+// PROFILER_STOP(write_cache);
 
-	PROFILER_PRINT(parse_project);
-	PROFILER_PRINT(setup);
-	PROFILER_PRINT(read_cache);
-	PROFILER_PRINT(run);
-	PROFILER_PRINT(build);
-	PROFILER_PRINT(write_cache);
+	// PROFILER_PRINT(parse_project);
+	// PROFILER_PRINT(setup);
+	// PROFILER_PRINT(read_cache);
+	// PROFILER_PRINT(run);
+	// PROFILER_PRINT(build);
+	// PROFILER_PRINT(write_cache);
 
 	return !success;
 }

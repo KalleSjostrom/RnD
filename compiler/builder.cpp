@@ -1,6 +1,6 @@
 #include "run_command.cpp"
 
-b32 build(Project &project, FileSystem &file_system) {
+bool build(Project &project, FileSystem &file_system) {
 	char command[4096] = {}; // Virtual alloc trick?
 	char *at = command;
 	u32 count = ARRAY_COUNT(command);
@@ -30,14 +30,14 @@ b32 build(Project &project, FileSystem &file_system) {
 	sprintf_s(search_string, MAX_PATH, "%s/*.dll", *file_system.output_folder);
 
 	// Check if we have any locked dlls
-	b32 instance_running = has_locked_files(search_string, *file_system.output_folder);
+	bool instance_running = has_locked_files(search_string, *file_system.output_folder);
 
 	// Setup the compiler parameters and general variables
 	// TODO(kalle): Read these from the project file?
 	const char *defines = "-D DEVELOPMENT";
 	const char *includes = "-I ../ -I ../engine/include/opencl22/";
 	const char *libraries = "opengl32.lib";
-	const char *flags = "-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -arch:AVX2";
+	const char *flags = "-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -arch:AVX2 -MP";
 
 	char plugin_name[256];
 	char *plugin_name_ptr = plugin_name;
@@ -57,7 +57,7 @@ b32 build(Project &project, FileSystem &file_system) {
 	at += bytes_written;
 	count -= bytes_written;
 
-	b32 success = run_command(0, command, *project.root);
+	bool success = run_command(0, command, *project.root);
 	if (success) {
 		char reload_marker[MAX_PATH];
 		sprintf_s(reload_marker, ARRAY_COUNT(reload_marker), "%s/%s", *file_system.output_folder, "__reload_marker");

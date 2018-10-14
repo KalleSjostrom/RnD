@@ -66,7 +66,7 @@ struct RenderPipe {
 
 void load_image(EngineApi *engine, RenderPipe &r) {
 	ImageData image_data;
-	b32 success = engine->image_load("../../game/assets/shadow.png", image_data);
+	bool success = engine->image_load("../../game/assets/shadow.png", image_data);
 	ASSERT(success, "Could not load image!");
 
 	glGenTextures(1, &r.shadow_texture);

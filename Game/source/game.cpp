@@ -1,6 +1,11 @@
 struct Game;
 #define RELOAD_ENTRY_POINT Game
 
+#define ASSERT(...)
+
+#define DATA_FOLDER "../../game/out/data"
+#define ASSET_FOLDER "../../game/assets"
+
 #define SYSTEM_OPENGL
 #define SYSTEM_AUDIO
 #define SYSTEM_GRAPHICS

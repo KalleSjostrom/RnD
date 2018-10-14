@@ -62,7 +62,7 @@ struct ComponentGroup {
 	MaterialComponent material;
 
 	Renderer renderer;
-	MemoryArena *arena;
+	ArenaAllocator *arena;
 
 	i32 entity_count;
 	Entity entities[512];

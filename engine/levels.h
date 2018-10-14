@@ -24,7 +24,7 @@ struct Level {
 
 Level make_level(Application &application);
 
-ModelCC load_model(MemoryArena &arena, const char *path) {
+ModelCC load_model(ArenaAllocator &arena, const char *path) {
 	MeshData mesh_data = read_obj(arena, path);
 	ModelCC model_cc = {};
 	model_cc.mesh_data = mesh_data;

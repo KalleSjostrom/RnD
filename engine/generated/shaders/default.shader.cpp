@@ -14,7 +14,8 @@ static const char *vertex = GLSL(
 static const char *fragment = GLSL(
 	out vec4 color;
 	void main() {
-		color = vec4(0.8f, 0.1f, 0.1f, 1.0f);
+		// color = vec4(0.8f, 1.0f, 0.1f, 1.0f);
+		color = vec4(1, 1, 1, 1);
 	}
 );
 }
@@ -74,7 +75,7 @@ static const char *fragment = GLSL(
 
 	void main() {
 		float l = distance(pos, center);
-		color = vec4(0.8f, 0.1f, 0.1f, 1-smoothstep(50, 51, l));
+		color = vec4(0.8f, 1.0f, 0.1f, 1-smoothstep(50, 51, l));
 	}
 );
 }

@@ -49,7 +49,7 @@ GLuint load_texture(EngineApi *engine, String directory, String path, bool use_m
 			buf[i] = '/';
 	}
 
-	b32 success = engine->image_load(buf, image_data);
+	bool success = engine->image_load(buf, image_data);
 	if (!success) {
 		LOG_ERROR("Model", "Could not load image '%s'!\n", buf);
 		return default_texture;

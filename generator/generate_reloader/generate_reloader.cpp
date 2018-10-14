@@ -36,12 +36,12 @@ namespace generate_reloader {
 
 	struct TLSContext {
 		ReloadableArray reloadable_array;
-		MemoryArena temp_arena;
-		MemoryArena arena;
+		ArenaAllocator temp_arena;
+		ArenaAllocator arena;
 		SerializationBuffer serialization_buffer;
 
-		b32 reloadable_array_changed;
-		b32 initialized;
+		bool reloadable_array_changed;
+		bool initialized;
 	};
 
 	struct GeneratorContext {
@@ -103,7 +103,7 @@ namespace generate_reloader {
 	void coalesce(Generator &generator, TaskScheduler &scheduler) {
 		GeneratorContext *rg = (GeneratorContext*) generator.user_data;
 		TLSContext *tls_array = rg->tls_array;
-		MemoryArena arena = {};
+		ArenaAllocator arena = {};
 
 		FileSystem &file_system = generator.compiler->file_system;
 
@@ -182,7 +182,7 @@ namespace generate_reloader {
 		generator.ignored_directory = &ignored_directory;
 		generator.register_file_info_change = &register_file_info_change;
 
-		MemoryArena arena = {}; // Free at some point?
+		ArenaAllocator arena = {}; // Free at some point?
 
 		GeneratorContext *rg = PUSH_STRUCT(arena, GeneratorContext);
 		rg->cache_hash_map = PUSH_STRUCT(arena, CacheHashMap, true);

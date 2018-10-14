@@ -27,7 +27,7 @@ struct GUI {
 	m4 projection;
 
 	font::Font font;
-	MemoryArena *transient_arena;
+	ArenaAllocator *transient_arena;
 
 	GLuint texture;
 	GLuint program;
@@ -48,7 +48,7 @@ struct GUISettings {
 	const char *text_fragment_shader;
 };
 
-void init(GUI &gui, MemoryArena &persistent_arena, MemoryArena &transient_arena, GUISettings &settings) {
+void init(GUI &gui, ArenaAllocator &persistent_arena, ArenaAllocator &transient_arena, GUISettings &settings) {
 	font::load(persistent_arena, settings.font_path, &gui.font);
 	gui.transient_arena = &transient_arena;
 	i32 width = gui.font.width;

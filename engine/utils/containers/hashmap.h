@@ -13,8 +13,8 @@ unsigned clp2(unsigned x) {
 #define b4(x)   ( b2(x) | ( b2(x) >> 2))
 #define b8(x)   ( b4(x) | ( b4(x) >> 4))
 #define b16(x)  ( b8(x) | ( b8(x) >> 8))
-#define b32(x)  (b16(x) | (b16(x) >>16))
-#define next_power_of_2(x)(b32(x-1) + 1)
+#define bool(x)  (b16(x) | (b16(x) >>16))
+#define next_power_of_2(x)(bool(x-1) + 1)
 
 #define DEFAULT_BUCKET_SIZE 2
 #define HASH_SIZE_FOR(size) (next_power_of_2((size) * DEFAULT_BUCKET_SIZE)) // NOTE(kalle): We use a default of 2 as bucket_size!

@@ -34,7 +34,7 @@ struct NeuronInputOutput {
 	i32 count;
 };
 
-void init_neuron_layer(MemoryArena &arena, NeuronLayer &layer, i32 input_count, i32 output_count, FloatArray weights) {
+void init_neuron_layer(ArenaAllocator &arena, NeuronLayer &layer, i32 input_count, i32 output_count, FloatArray weights) {
 	layer.neurons = PUSH_STRUCTS(arena, output_count, float*);
 	layer.output.values = PUSH_STRUCTS(arena, output_count, float);
 	layer.output.count = output_count;
@@ -49,7 +49,7 @@ void init_neuron_layer(MemoryArena &arena, NeuronLayer &layer, i32 input_count, 
 	}
 }
 
-NeuralNet make_neural_net(MemoryArena &arena, i32 *layer_sizes, i32 layer_size_count, float *weights, i32 weight_count) {
+NeuralNet make_neural_net(ArenaAllocator &arena, i32 *layer_sizes, i32 layer_size_count, float *weights, i32 weight_count) {
 	ASSERT(layer_size_count >= 2, "Must have at least 2 layers");
 
 	i32 layer_count = layer_size_count-1;

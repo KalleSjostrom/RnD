@@ -30,7 +30,7 @@ void update_image(RenderPipe &r) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, r.image_data.width, r.image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, r.image_data.pixels);
 }
 
-void alloc_image(MemoryArena &arena, RenderPipe &r) {
+void alloc_image(ArenaAllocator &arena, RenderPipe &r) {
 	r.image_data = {};
 
 	r.image_data.width = 1024;
@@ -59,7 +59,7 @@ void alloc_image(MemoryArena &arena, RenderPipe &r) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex, 0);
 }
 
-void setup_render_pipe(MemoryArena &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+void setup_render_pipe(ArenaAllocator &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	if (!r.fullscreen_quad) {
 		Context c = {};
 		r.fullscreen_quad = spawn_entity(engine, components, EntityType_Fullscreen, c);

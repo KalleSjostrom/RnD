@@ -30,7 +30,7 @@ char *parse_shader(parser::Tokenizer &tok) {
 }
 
 void compile_glsl(String input_directory, String input_filename, String output_directory) {
-	MemoryArena arena = {};
+	ArenaAllocator arena = {};
 
     size_t filesize;
     char buffer[1024];

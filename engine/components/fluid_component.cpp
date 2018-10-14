@@ -211,7 +211,7 @@ struct FluidComponent {
 	cid count;
 };
 
-void add(FluidComponent &fc, Entity &entity, MemoryArena &arena) {
+void add(FluidComponent &fc, Entity &entity, ArenaAllocator &arena) {
 	ASSERT((u32)fc.count < ARRAY_COUNT(fc.fluids), "Component full!");
 	entity.fluid_id = fc.count++;
 	Fluid &fluid = fc.fluids[entity.fluid_id];

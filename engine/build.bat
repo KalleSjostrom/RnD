@@ -8,16 +8,15 @@ set NAME=engine
 
 rem Setup the compiler parameters and general variables
 set DEFINES=-D DEVELOPMENT
-set INCLUDES=-I ../
+set INCLUDES=-I ../ -I .
 SET LIBS=bin/SDL2.lib bin/SDL2_Image.lib dbghelp.lib
 set ENTRY_POINT=engine
 set OUT_PATH=bin
-
-set DISABLE_WARNINGS=/wd4458 /wd4244 /wd4061 /wd4062 /wd4365 /wd4464 /wd4514 /wd4668 /wd4820 /wd4625 /wd4710 /wd4626 /wd4582 /wd4623
-set DISABLE_WARNINGS=%DISABLE_WARNINGS% /wd4060 /wd4068 /wd4201 /wd4127 /wd4191 /wd4505 /wd4711
+set OBJECTS=
+set UNITS=engine.cpp modules/logging.cpp modules/image.cpp modules/audio.cpp modules/input.cpp modules/error.cpp
 
 set CC=cl.exe
-set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -GT
-rem set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Ox -GF -WL -Wall -GT
+set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -GT -MP
+rem set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Ox -GF -WL -Wall -GT -MP
 
-%CC% %FLAGS% %DEFINES% %INCLUDES% %LIBS% %ENTRY_POINT%.cpp %DISABLE_WARNINGS% -Fe%OUT_PATH%/%NAME%.exe -Fd%OUT_PATH%/%NAME%.pdb
+%CC% %FLAGS% %DEFINES% %INCLUDES% %LIBS% %UNITS% -Fe%OUT_PATH%/%NAME%.exe -Fd%OUT_PATH%/%NAME%.pdb

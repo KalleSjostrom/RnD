@@ -1,9 +1,0 @@
-font = [
-    "foundation/gui/debug_huge"
-    "foundation/gui/debug_large"
-    "foundation/gui/debug_medium"
-    "foundation/gui/debug_small"
-]
-material = [
-    "foundation/gui/gui"
-]

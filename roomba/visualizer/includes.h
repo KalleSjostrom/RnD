@@ -14,7 +14,7 @@
 typedef uint16_t GLindex;
 
 #include "engine/plugin.h"
-#include "engine/utils/memory/memory_arena.cpp"
+#include "engine/utils/memory/arena_allocator.cpp"
 #include "engine/utils/file_utils.h"
 #include "engine/opengl/gl_program_builder.cpp"
 

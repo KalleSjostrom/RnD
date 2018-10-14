@@ -28,7 +28,7 @@ static void _print_cl_device_info(u32 num_devices, cl_device_id *devices) {
 }
 
 // 384 CUDA cores
-ClInfo init_opencl(MemoryArena &arena) {
+ClInfo init_opencl(ArenaAllocator &arena) {
 	TempAllocator ta(&arena);
 
 	cl_int errcode_ret;

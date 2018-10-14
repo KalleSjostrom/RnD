@@ -32,7 +32,7 @@ struct Material {
 	String map_bump; // Path to bump map texture
 };
 
-Material *parse_mtllib(MemoryArena &arena, const char *mtllib_filepath) {
+Material *parse_mtllib(ArenaAllocator &arena, const char *mtllib_filepath) {
 	size_t filesize;
 	FILE *file = try_open_file(mtllib_filepath, &filesize);
 	if (!file)
