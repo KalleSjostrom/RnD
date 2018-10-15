@@ -1,7 +1,3 @@
-int _______test() {
-	return 0;
-}
-
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -50,6 +46,17 @@ __forceinline uint32_t read_u32(uint8_t *buffer, size_t *cursor) {
 	*cursor += sizeof(uint32_t);
 	return result;
 }
+
+__forceinline uint8_t peek_u8(uint8_t *buffer, size_t cursor) {
+	return *(uint8_t*)(buffer + cursor);
+}
+__forceinline uint16_t peek_u16(uint8_t *buffer, size_t cursor) {
+	return *(uint16_t*)(buffer + cursor);
+}
+__forceinline uint32_t peek_u32(uint8_t *buffer, size_t cursor) {
+	return *(uint32_t*)(buffer + cursor);
+}
+
 __forceinline uint8_t *read(uint8_t *buffer, size_t *cursor, size_t size) {
 	uint8_t *result = (uint8_t*)(buffer + *cursor);
 	*cursor += size;
@@ -65,10 +72,23 @@ __forceinline uint16_t read_u16(StreamData &stream) {
 __forceinline uint32_t read_u32(StreamData &stream) {
 	return read_u32(stream.data, &stream.cursor);
 }
+
+__forceinline uint8_t peek_u8(StreamData &stream) {
+	return peek_u8(stream.data, stream.cursor);
+}
+__forceinline uint16_t peek_u16(StreamData &stream) {
+	return peek_u16(stream.data, stream.cursor);
+}
+__forceinline uint32_t peek_u32(StreamData &stream) {
+	return peek_u32(stream.data, stream.cursor);
+}
+
 __forceinline uint8_t *read(StreamData &stream, size_t size) {
 	return read(stream.data, &stream.cursor, size);
 }
-
+__forceinline uint8_t *data(StreamData &stream) {
+	return (uint8_t*)(stream.data + stream.cursor);
+}
 
 uint32_t _pages(uint32_t length, uint32_t page_size) {
 	PDB_ASSERT(length > 0);
@@ -187,6 +207,85 @@ struct _flags {
 60	4	RESERVED	future expansion, pad to 64 bytes
 }
 #endif
+
+void parse_fieldlist(StreamData &stream) {
+	uint16_t leaf_type = peek_u16(stream);
+	printf("FieldList type %#06hx\n", leaf_type);
+	switch (leaf_type) {
+		case LF_BCLASS: {
+			lfBClass *field = (lfBClass*) read(stream, sizeof(lfBClass));
+		} break;
+		case LF_VBCLASS:
+		case LF_IVBCLASS: {
+			lfVBClass *field = (lfVBClass*) read(stream, sizeof(lfVBClass));
+		} break;
+		case LF_FRIENDFCN_ST: {
+			lfFriendFcn *field = (lfFriendFcn*) read(stream, sizeof(lfFriendFcn));
+		} break;
+		case LF_INDEX: {
+			lfIndex *field = (lfIndex*) read(stream, sizeof(lfIndex));
+		} break;
+		case LF_MEMBER_ST: {
+			lfMember *field = (lfMember*) read(stream, sizeof(lfMember));
+		} break;
+		case LF_STMEMBER_ST: {
+			lfSTMember *field = (lfSTMember*) read(stream, sizeof(lfSTMember));
+		} break;
+		case LF_METHOD_ST: {
+			lfMethod *field = (lfMethod*) read(stream, sizeof(lfMethod));
+		} break;
+		case LF_NESTTYPE_ST: {
+			lfNestType *field = (lfNestType*) read(stream, sizeof(lfNestType));
+		} break;
+		case LF_VFUNCTAB: {
+			lfVFuncTab *field = (lfVFuncTab*) read(stream, sizeof(lfVFuncTab));
+		} break;
+		case LF_FRIENDCLS: {
+			lfFriendCls *field = (lfFriendCls*) read(stream, sizeof(lfFriendCls));
+		} break;
+		case LF_ONEMETHOD_ST: {
+			lfOneMethod *field = (lfOneMethod*) read(stream, sizeof(lfOneMethod));
+		} break;
+		case LF_VFUNCOFF: {
+			lfVFuncOff *field = (lfVFuncOff*) read(stream, sizeof(lfVFuncOff));
+		} break;
+		case LF_NESTTYPEEX_ST: {
+			lfNestTypeEx *field = (lfNestTypeEx*) read(stream, sizeof(lfNestTypeEx));
+		} break;
+		case LF_MEMBERMODIFY_ST: {
+			lfMemberModify *field = (lfMemberModify*) read(stream, sizeof(lfMemberModify));
+		} break;
+		case LF_MANAGED_ST: {
+			lfManaged *field = (lfManaged*) read(stream, sizeof(lfManaged));
+		} break;
+
+	LF_TYPESERVER       = 0x1501,       // not referenced from symbol
+    LF_ENUMERATE        = 0x1502,
+    LF_ARRAY            = 0x1503,
+    LF_CLASS            = 0x1504,
+    LF_STRUCTURE        = 0x1505,
+    LF_UNION            = 0x1506,
+    LF_ENUM             = 0x1507,
+    LF_DIMARRAY         = 0x1508,
+    LF_PRECOMP          = 0x1509,       // not referenced from symbol
+    LF_ALIAS            = 0x150a,       // alias (typedef) type
+    LF_DEFARG           = 0x150b,
+    LF_FRIENDFCN        = 0x150c,
+    LF_MEMBER           = 0x150d,
+    LF_STMEMBER         = 0x150e,
+    LF_METHOD           = 0x150f,
+    LF_NESTTYPE         = 0x1510,
+    LF_ONEMETHOD        = 0x1511,
+    LF_NESTTYPEEX       = 0x1512,
+    LF_MEMBERMODIFY     = 0x1513,
+    LF_MANAGED          = 0x1514,
+    LF_TYPESERVER2      = 0x1515,
+
+		default: {
+			PDB_ASSERT(false);
+		}
+	}
+}
 
 int main(int argc, char const *argv[]) {
 	const char *test = "pdb.pdb";
@@ -330,71 +429,88 @@ int main(int argc, char const *argv[]) {
 					uint32_t type_record_count = (maximum - minimum);
 					for (uint32_t j = 0; j < type_record_count; ++j) {
 						uint16_t length = read_u16(stream);
-						uint16_t type = read_u16(stream);
 
-						printf("Type %#06hx\n", type);
+						size_t type_start = stream.cursor;
+						uint16_t leaf_type = peek_u16(stream);
+						printf("Leaf Type %#06hx\n", leaf_type);
 
-						switch (type) {
+						switch (leaf_type) {
 							case LF_ARGLIST: {
-								uint32_t arg_count = read_u32(stream);
-								for (uint32_t arg_index = 0; arg_index < arg_count; ++arg_index) {
+								lfArgList *type = (lfArgList *)read(stream, sizeof(lfArgList));
+								for (uint32_t arg_index = 0; arg_index < type->count; ++arg_index) {
 									uint32_t arg_type = read_u32(stream);
 									printf("Argument Type %#06hx\n", arg_type);
 								}
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_ARRAY: {
-							} break;
-							case LF_ARRAY_ST: {
+								lfArray *type = (lfArray *)read(stream, sizeof(lfArray));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_BITFIELD: {
-							} break;
-							case LF_CLASS: {
+								lfBitfield *type = (lfBitfield *)read(stream, sizeof(lfBitfield));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_ENUM: {
+								lfEnum *type = (lfEnum *)read(stream, sizeof(lfEnum));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_FIELDLIST: {
+								// after the standard size and type fields, the body of the structure is made up of an arbitrary number of leaf types of type LF_MEMBER, LF_ENUMERATE, LF_BCLASS, LF_VFUNCTAB, LF_ONEMETHOD, LF_METHOD, or LF_NESTTYPE. This is somewhat annoying to parse, because the number of substructures is not known in advance, and so the only way to know when field list is finished is to see how many bytes have been parsed and compare it to the size of the overall structure.
+								lfFieldList *type = (lfFieldList *)read(stream, sizeof(lfFieldList));
+								while (stream.cursor < type_start + length) {
+									parse_fieldlist(stream);
+								}
 							} break;
 							case LF_MFUNCTION: {
+								lfMFunc *type = (lfMFunc *)read(stream, sizeof(lfMFunc));
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_MODIFIER: {
-								uint32_t modifier_type = read_u32(stream);
-								uint16_t attributes = read_u16(stream);
+								lfModifier *type = (lfModifier *)read(stream, sizeof(lfModifier));
 								uint16_t padding = read_u16(stream);
 
-								CV_modifier_t mod = *(CV_modifier_t*)&attributes;
-
-								int a = 0;
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_POINTER: {
-								uint32_t pointer_type = read_u32(stream);
-								uint32_t attributes = read_u32(stream);
+								lfPointer::lfPointerBody *type = (lfPointer::lfPointerBody *)read(stream, sizeof(lfPointer::lfPointerBody));
 
-								lfPointer::lfPointerBody::lfPointerAttr ptr_attrib = *(lfPointer::lfPointerBody::lfPointerAttr*)&attributes;
-
-								int a = 0;
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_PROCEDURE: {
-								uint32_t return_type = read_u32(stream);
-								uint8_t calling_convention = read_u8(stream);
-								uint8_t reserved8 = read_u8(stream);
-								uint16_t parameter_count = read_u16(stream);
-								uint32_t arglist = read_u32(stream);
+								lfProc *type = (lfProc *)read(stream, sizeof(lfProc));
 
-								int a = 0;
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
+							case LF_CLASS:
+							case LF_INTERFACE:
 							case LF_STRUCTURE: {
-							} break;
-							case LF_STRUCTURE_ST: {
+								lfClass *type = (lfClass *)read(stream, sizeof(lfClass));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_UNION: {
-							} break;
-							case LF_UNION_ST: {
+								lfUnion *type = (lfUnion *)read(stream, sizeof(lfUnion));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
 							} break;
 							case LF_VTSHAPE: {
+								lfVTShape *type = (lfVTShape *)read(stream, sizeof(lfVTShape));
+
+								PDB_ASSERT((peek_u8(stream) & 0xF0) != 0xF0);
+							} break;
+							default: {
+								PDB_ASSERT(false);
 							} break;
 						}
 
-						// * Padding scheme:
+						PDB_ASSERT(stream.cursor == type_start + length);
+
+						// Padding scheme:
 						// 	(0xF0 | [number of bytes until next structure]).
 						// 	Less formally, the upper four bits are all set, and the lower four give the number of bytes to skip until the next structure. This results in patterns that look like "?? F3 F2 F1 [next structure]".
 
