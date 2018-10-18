@@ -1,6 +1,47 @@
+struct Children {
+	Type *types;
+	size_t count;
+};
+struct TypeName {
+	uint64_t id;
+	size_t length;
+	const char *buffer;
+};
 struct SymbolContext {
 	Type *types;
+	TypeName *names;
+	Children *children;
 };
+
+struct TypeTag {
+	CV_typ_t type_index;
+	unsigned tag;
+};
+
+TypeName *get_type_name(SymbolContext &context, unsigned type_index) {
+	return context.names + type_index;
+}
+
+Children *get_children(SymbolContext &context, unsigned type_index) {
+	return context.children + type_index;
+}
+
+unsigned get_child_type(SymbolContext &context, Type *child) {
+	lfEasy *base = (lfEasy*)child->data;
+
+	switch (base->leaf) {
+		case LF_MEMBER_ST:
+		case LF_MEMBER: {
+			return ((lfMember*)base)->index;
+		} break;
+		case LF_STMEMBER_ST:
+		case LF_STMEMBER: {} break;
+		case LF_ONEMETHOD_ST:
+		case LF_ONEMETHOD: {} break;
+	}
+
+	return 0;
+}
 
 unsigned get_tag(SymbolContext &context, unsigned type_index) {
 	if (CV_IS_PRIMITIVE(type_index)) {
@@ -113,50 +154,49 @@ unsigned get_type(SymbolContext &context, unsigned type_index) {
 // 	return tt;
 // }
 
-struct Children {
-	Type *types;
-	size_t count;
-};
-struct TypeName {
-	uint64_t id;
-	size_t length;
-	const char *buffer;
-};
-
-struct FullType {
-
-};
-
-FullType *make_type_info(Allocator &allocator, SymbolContext &context, unsigned type_index, unsigned tag, TI_FINDCHILDREN_PARAMS **children) {
-	PDB_ASSERT(tag != SymTagNull);
-
-	Type type = context.types[type_index];
-	lfEasy *base = (lfEasy*)type.data;
-
-	unsigned size = get_size(context, type_index);
-	if (tag == SymTagUDT) {
-		CV_typ_t field_list;
-		switch (base->leaf) {
-			case LF_UNION: { field_list = ((lfUnion*)base)->field; } break;
-			case LF_CLASS:
-			case LF_INTERFACE:
-			case LF_STRUCTURE: { field_list = ((lfStructure*)base)->field; } break;
-		}
-
-		Children children = context.children[type_index];
-	}
-
-	TypeName name = context.names[type_index];
-
-	FullType *type_info = get_recorded_type_info(context, name.id);
-
-	type_info->key = name_id;
-	type_info->size = size;
-	type_info->count = count;
-	type_info->name = symbol_name;
-
-	return type_info;
+TypeTag get_type_tag(SymbolContext &context, Type &type) {
+	TypeTag tt = {};
+	tt.type_index = get_child_type(context, &type);
+	tt.tag = get_tag(context, tt.type_index);
+	return tt;
 }
+TypeTag get_type_tag(SymbolContext &context, CV_typ_t type_index) {
+	TypeTag tt = {};
+	tt.type_index = get_type(context, type_index);
+	tt.tag = get_tag(context, tt.type_index);
+	return tt;
+}
+
+// FullType *make_type_info(Allocator &allocator, SymbolContext &context, unsigned type_index, unsigned tag, TI_FINDCHILDREN_PARAMS **children) {
+// 	PDB_ASSERT(tag != SymTagNull);
+
+// 	Type type = context.types[type_index];
+// 	lfEasy *base = (lfEasy*)type.data;
+
+// 	unsigned size = get_size(context, type_index);
+// 	if (tag == SymTagUDT) {
+// 		CV_typ_t field_list;
+// 		switch (base->leaf) {
+// 			case LF_UNION: { field_list = ((lfUnion*)base)->field; } break;
+// 			case LF_CLASS:
+// 			case LF_INTERFACE:
+// 			case LF_STRUCTURE: { field_list = ((lfStructure*)base)->field; } break;
+// 		}
+
+// 		Children children = context.children[type_index];
+// 	}
+
+// 	TypeName name = context.names[type_index];
+
+// 	FullType *type_info = get_recorded_type_info(context, name.id);
+
+// 	type_info->key = name_id;
+// 	type_info->size = size;
+// 	type_info->count = count;
+// 	type_info->name = symbol_name;
+
+// 	return type_info;
+// }
 
 // static unsigned get_fill_member_info_count = 0;
 // bool fill_member_info(SymbolContext &context, MemberInfo &member_info, unsigned member, TrimmedType type) {

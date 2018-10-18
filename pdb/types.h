@@ -1,6 +1,7 @@
 // Why is this needed?
 #define _VC_VER_INC
 #include "include/cvinfo.h"
+#include "include/cvconst.h"
 
 // From pdbdump.cpp
 size_t CbExtractNumeric(uint8_t *pb, uint32_t *pul) {
