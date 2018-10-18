@@ -43,18 +43,14 @@ size_t CbExtractNumeric(uint8_t *pb, uint32_t *pul) {
 	return 0;
 }
 
-char *extract_name(uint8_t *at) {
-	uint32_t offset;
-	size_t cbOffset = CbExtractNumeric(at, &offset);
-
+char *extract_info(uint8_t *at, uint32_t *size) {
+	size_t cbOffset = CbExtractNumeric(at, size);
 	return (char *) at + cbOffset;
 }
-
-char *extract_name(Stream &stream) {
+char *extract_info(Stream &stream, uint32_t *size) {
 	uint8_t *at = data(stream);
 
-	uint32_t offset;
-	size_t cbOffset = CbExtractNumeric(at, &offset);
+	size_t cbOffset = CbExtractNumeric(at, size);
 
 	char *name = (char *)at + cbOffset;
 	stream.cursor += cbOffset + strlen(name) + 1;
@@ -63,41 +59,65 @@ char *extract_name(Stream &stream) {
 
 	return name;
 }
-void extract_offset(Stream &stream) {
+
+char *extract_name(Stream &stream, uint8_t *at) {
+	char *name = (char *)at;
+	stream.cursor += strlen(name);
+	check_padding(stream);
+
+	return name;
+}
+
+void extract_size(uint8_t *at, uint32_t *size) {
+	size_t cbOffset = CbExtractNumeric(at, size);
+}
+void extract_size(Stream &stream, uint32_t *offset) {
 	uint8_t *at = data(stream);
-
-	uint32_t offset;
-	size_t cbOffset = CbExtractNumeric(at, &offset);
-
+	size_t cbOffset = CbExtractNumeric(at, offset);
 	stream.cursor += cbOffset;
-
 	check_padding(stream);
 }
 
 void parse_fieldlist(Stream &stream) {
 	uint16_t leaf_type = peek_u16(stream);
-	// printf("FieldList type %#06hx\n", leaf_type);
+	// logf("FieldList type %#06hx\n", leaf_type);
 	switch (leaf_type) {
 		case LF_BCLASS: {
 			lfBClass *field = (lfBClass*) read(stream, sizeof(lfBClass));
-			extract_offset(stream);
+			uint32_t size;
+			extract_size(stream, &size);
+
+			logf("[bclass][%u][%lu]\n", size, field->index); // type index of base class
 		} break;
 		case LF_VBCLASS:
 		case LF_IVBCLASS: {
 			lfVBClass *field = (lfVBClass*) read(stream, sizeof(lfVBClass));
-			extract_offset(stream);
+			uint32_t size;
+			extract_size(stream, &size);
+
+			logf("[vbclass][%u][%lu,%lu]\n", size,
+				field->index, // type index of direct virtual base class
+				field->vbptr); // type index of virtual base pointer
 		} break;
 		case LF_INDEX: {
 			lfIndex *field = (lfIndex*) read(stream, sizeof(lfIndex));
+
+			logf("[index][%lu]\n", field->index); // type index of referenced leaf
 		} break;
 		case LF_VFUNCTAB: {
 			lfVFuncTab *field = (lfVFuncTab*) read(stream, sizeof(lfVFuncTab));
+
+			logf("[vfunctab][%lu]\n", field->type); // type index of pointer
 		} break;
 		case LF_FRIENDCLS: {
 			lfFriendCls *field = (lfFriendCls*) read(stream, sizeof(lfFriendCls));
+
+			logf("[friend class][%lu]\n", field->index); // index to type record of friend class
 		} break;
 		case LF_VFUNCOFF: {
 			lfVFuncOff *field = (lfVFuncOff*) read(stream, sizeof(lfVFuncOff));
+
+			logf("[virtual function offset][%lu]\n", field->type); // type index of pointer
 		} break;
 		case LF_TYPESERVER: {
 			lfTypeServer *field = (lfTypeServer*) read(stream, sizeof(lfTypeServer));
@@ -106,49 +126,53 @@ void parse_fieldlist(Stream &stream) {
 		} break;
 		case LF_ENUMERATE: {
 			lfEnumerate *field = (lfEnumerate*) read(stream, sizeof(lfEnumerate));
-			char *name = extract_name(stream);
+			uint32_t size;
+			char *name = extract_info(stream, &size);
 
-			printf("%s [enumerate]\n", name);
+			logf("[enumerate][%s(%u)]\n", name, size);
 		} break;
 		case LF_ARRAY: {
 			lfArray *field = (lfArray*) read(stream, sizeof(lfArray));
-			char *name = extract_name(stream);
+			uint32_t size;
+			char *name = extract_info(stream, &size);
 
-			printf("%s [array]\n", name);
+			logf("[array][%s(%u)][%lu,%lu]\n", name, size,
+				field->elemtype, // type index of element type
+				field->idxtype); // type index of indexing type
 		} break;
-		case LF_CLASS: {
-			lfClass *field = (lfClass*) read(stream, sizeof(lfClass));
-			char *name = extract_name(stream);
-
-			printf("%s [class]\n", name);
-		} break;
+		case LF_CLASS:
 		case LF_STRUCTURE: {
 			lfStructure *field = (lfStructure*) read(stream, sizeof(lfStructure));
-			char *name = extract_name(stream);
+			uint32_t size;
+			char *name = extract_info(stream, &size);
 
-			printf("%s [structure]\n", name);
+			logf("[structure][%s(%u)][%lu,%lu,%lu]\n", name, size,
+				field->field, // type index of LF_FIELD descriptor list
+				field->derived, // type index of derived from list if not zero
+				field->vshape); // type index of vshape table for this class
 		} break;
 		case LF_UNION: {
 			lfUnion *field = (lfUnion*) read(stream, sizeof(lfUnion));
-			char *name = extract_name(stream);
+			uint32_t size;
+			char *name = extract_info(stream, &size);
 
-			printf("%s [union]\n", name);
+			logf("[union][%s(%u)][%lu,%lu,%lu]\n", name, size, field->field); // type index of LF_FIELD descriptor list
 		} break;
 		case LF_ENUM: {
 			lfEnum *field = (lfEnum*) read(stream, sizeof(lfEnum));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [enum]\n", name);
+			logf("[enum][%s][%lu,%lu]\n", name,
+				field->utype, // underlying type of the enum
+				field->field); // type index of LF_FIELD descriptor list
 		} break;
 		case LF_DIMARRAY: {
 			lfDimArray *field = (lfDimArray*) read(stream, sizeof(lfDimArray));
-			char *name = (char *)field->name[0];
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->name);
 
-			printf("%s [enum]\n", name);
+			logf("[dim-array][%s][%lu,%lu]\n", name,
+				field->utype, // underlying type of the array
+				field->diminfo); // dimension information
 		} break;
 		case LF_PRECOMP: {
 			lfPreComp *field = (lfPreComp*) read(stream, sizeof(lfPreComp));
@@ -157,11 +181,9 @@ void parse_fieldlist(Stream &stream) {
 		} break;
 		case LF_ALIAS: {
 			lfAlias *field = (lfAlias*) read(stream, sizeof(lfAlias));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [alias]\n", name);
+			logf("[alias][%s][%lu]\n", name, field->utype); // underlying type
 		} break;
 		case LF_DEFARG: {
 			lfDefArg *field = (lfDefArg*) read(stream, sizeof(lfDefArg));
@@ -171,52 +193,46 @@ void parse_fieldlist(Stream &stream) {
 		case LF_FRIENDFCN_ST:
 		case LF_FRIENDFCN: {
 			lfFriendFcn *field = (lfFriendFcn*) read(stream, sizeof(lfFriendFcn));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [friend fcn]\n", name);
+			logf("[friend function][%s]\n", name, field->index); // index to type record of friend function
 		} break;
 		case LF_MEMBER_ST:
 		case LF_MEMBER: {
 			lfMember *field = (lfMember*) read(stream, sizeof(lfMember));
-			char *name = extract_name(stream);
+			uint32_t size;
+			char *name = extract_info(stream, &size);
 
-			printf("%s [member]\n", name);
+			logf("[member][%s(%u)][%lu]\n", name, size, field->index); // index of type record for field
 		} break;
 		case LF_STMEMBER_ST:
 		case LF_STMEMBER: {
 			lfSTMember *field = (lfSTMember*) read(stream, sizeof(lfSTMember));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [st-member]\n", name);
+			logf("[st-member][%s][%lu]\n", name, field->index); // index of type record for field
 		} break;
 		case LF_METHOD_ST:
 		case LF_METHOD: {
 			lfMethod *field = (lfMethod*) read(stream, sizeof(lfMethod));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [method]\n", name);
+			logf("[method][%s][%lu]\n", name, field->mList); // index to LF_METHODLIST record
 		} break;
 		case LF_NESTTYPE_ST:
 		case LF_NESTTYPE: {
 			lfNestType *field = (lfNestType*) read(stream, sizeof(lfNestType));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [nest-type]\n", name);
+			logf("[nest-type][%s][%lu]\n", name, field->index); // index of nested type definition
 		} break;
 		case LF_ONEMETHOD_ST:
 		case LF_ONEMETHOD: {
 			lfOneMethod *field = (lfOneMethod*) read(stream, sizeof(lfOneMethod));
 
+			uint32_t size = 0;
 			if (field->attr.mprop == CV_MTintro || field->attr.mprop == CV_MTpureintro) {
-				uint32_t offset = read_u32(stream);
+				size = read_u32(stream);
 			}
 			char *name = (char*)(stream.data + stream.cursor);
 			size_t name_length = strlen(name) + 1;
@@ -224,34 +240,28 @@ void parse_fieldlist(Stream &stream) {
 
 			check_padding(stream);
 
-			printf("%s [one-method]\n", name);
+			logf("[one-method][%s(%u)][%lu]\n", name, size, field->index); // index to type record for procedure
 		} break;
 		case LF_NESTTYPEEX_ST:
 		case LF_NESTTYPEEX: {
 			lfNestTypeEx *field = (lfNestTypeEx*) read(stream, sizeof(lfNestTypeEx));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [nest-type-ex]\n", name);
+			logf("[nest-type-ex][%s][%lu]\n", name, field->index); // index of nested type definition
 		} break;
 		case LF_MEMBERMODIFY_ST:
 		case LF_MEMBERMODIFY: {
 			lfMemberModify *field = (lfMemberModify*) read(stream, sizeof(lfMemberModify));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [member-modify]\n", name);
+			logf("[member-modify][%s][%lu]\n", name, field->index); // index of base class type definition
 		} break;
 		case LF_MANAGED_ST:
 		case LF_MANAGED: {
 			lfManaged *field = (lfManaged*) read(stream, sizeof(lfManaged));
-			char *name = (char *)field->Name;
-			stream.cursor += strlen(name);
-			check_padding(stream);
+			char *name = extract_name(stream, field->Name);
 
-			printf("%s [managed]\n", name);
+			logf("[managed][%s]\n", name);
 		} break;
 		case LF_TYPESERVER2: {
 			lfTypeServer2 *field = (lfTypeServer2*) read(stream, sizeof(lfTypeServer2));
@@ -283,12 +293,12 @@ Type *parse_types(Stream &stream) {
 	uint32_t header_size = read_u32(stream); // Header size, 4 bytes.
 	uint32_t minimum = read_u32(stream); // Minimum index for type records, 4 bytes.
 	uint32_t maximum = read_u32(stream); // Maximum (last + 1) index for type records, 4 bytes.
-	uint32_t size = read_u32(stream); // Size of following data, 4 bytes, to the end of the stream.
+	uint32_t stream_size = read_u32(stream); // Size of following data, 4 bytes, to the end of the stream.
 
 	// Hash information:
-	uint32_t stream_number = read_u32(stream) & 0x0000FFFF; // Stream number, 2 bytes with 2 bytes padding.
-	uint32_t hash_key = read_u32(stream); // Hash key, 4 bytes.
-	uint32_t buckets = read_u32(stream); // Buckets, 4 bytes.
+	uint32_t stream_number = read_u32(stream) & 0x0000FFFF; // main hash stream, 2 bytes with 2 bytes padding.
+	uint32_t hash_key = read_u32(stream); // size of hash key, 4 bytes.
+	uint32_t buckets = read_u32(stream); // number of buckets, 4 bytes.
 
 	// Each composed of an offset and length, each 4 bytes.
 	uint32_t hash_value_offset = read_u32(stream);
@@ -315,35 +325,36 @@ Type *parse_types(Stream &stream) {
 		switch (leaf_type) {
 			case LF_ARGLIST: {
 				lfArgList *type = (lfArgList *)read(stream, length);
-				printf("[argument list][%u][", j);
+				logf("[argument list][%u][", j + 0x1000);
 				for (uint32_t arg_index = 0; arg_index < type->count; ++arg_index) {
-					printf("%lu", type->arg[arg_index]);
+					logf("%lu", type->arg[arg_index]);
 					if (arg_index < type->count - 1) {
-						printf(",");
+						logf(",");
 					}
 				}
-				printf("]\n");
+				logf("]\n");
 			} break;
 			case LF_STRIDED_ARRAY: { PDB_ASSERT(false); } break;
 			case LF_VECTOR: { PDB_ASSERT(false); } break;
 			case LF_MATRIX: { PDB_ASSERT(false); } break;
 			case LF_ARRAY: {
 				lfArray *type = (lfArray *)read(stream, length);
-				char *name = extract_name(type->data);
+				uint32_t size;
+				char *name = extract_info(type->data, &size);
 
-				printf("[array][%u][%s][%lu,%lu]\n", j, name, type->elemtype, type->idxtype);
+				logf("[array][%u][%s(%u)][%lu,%lu]\n", j + 0x1000, name, size, type->elemtype, type->idxtype);
 			} break;
 			case LF_BITFIELD: {
 				PDB_ASSERT(length == (sizeof(lfBitfield) + sizeof(uint16_t)));
 				lfBitfield *type = (lfBitfield *)read(stream, length);
 
-				printf("[bitfield][%u][%lu]\n", j, type->type);
+				logf("[bitfield][%u][%lu]\n", j + 0x1000, type->type);
 			} break;
 			case LF_ENUM: {
 				lfEnum *type = (lfEnum *)read(stream, length);
 				char *name = (char *)type->Name;
 
-				printf("[enum][%u][%s][%lu]\n", j, name, type->field);
+				logf("[enum][%u][%s][%lu]\n", j + 0x1000, name, type->field);
 			} break;
 			case LF_FIELDLIST: {
 				// after the standard size and type fields, the body of the structure is made up of an arbitrary number of leaf types of type LF_MEMBER, LF_ENUMERATE, LF_BCLASS, LF_VFUNCTAB, LF_ONEMETHOD, LF_METHOD, or LF_NESTTYPE. This is somewhat annoying to parse, because the number of substructures is not known in advance, and so the only way to know when field list is finished is to see how many bytes have been parsed and compare it to the size of the overall structure.
@@ -351,51 +362,53 @@ Type *parse_types(Stream &stream) {
 				while (stream.cursor < type_start + length) {
 					parse_fieldlist(stream);
 				}
-				printf("[field list][%u]\n", j);
+				logf("[field list][%u]\n", j + 0x1000);
 			} break;
 			case LF_MFUNCTION: {
 				PDB_ASSERT(length == sizeof(lfMFunc));
 				lfMFunc *type = (lfMFunc *)read(stream, length);
 
-				printf("[member function][%u][%lu, %lu, %lu, %lu]\n", j, type->rvtype, type->classtype, type->thistype, type->arglist);
+				logf("[member function][%u][%lu, %lu, %lu, %lu]\n", j + 0x1000, type->rvtype, type->classtype, type->thistype, type->arglist);
 			} break;
 			case LF_MODIFIER: {
 				PDB_ASSERT(length == (sizeof(lfModifier) + sizeof(uint16_t)));
 				lfModifier *type = (lfModifier *)read(stream, length);
 
-				printf("[modifier][%u][%lu]\n", j, type->type);
+				logf("[modifier][%u][%lu]\n", j + 0x1000, type->type);
 			} break;
 			case LF_POINTER: {
 				PDB_ASSERT(length == sizeof(lfPointer::lfPointerBody));
 				lfPointer::lfPointerBody *type = (lfPointer::lfPointerBody *)read(stream, length);
 
-				printf("[pointer body][%u][%lu]\n", j, type->utype);
+				logf("[pointer body][%u][%lu]\n", j + 0x1000, type->utype);
 			} break;
 			case LF_PROCEDURE: {
 				PDB_ASSERT(length == sizeof(lfProc));
 				lfProc *type = (lfProc *)read(stream, length);
 
-				printf("[procedure][%u][%lu,%lu]\n", j, type->rvtype, type->arglist);
+				logf("[procedure][%u][%lu,%lu]\n", j + 0x1000, type->rvtype, type->arglist);
 			} break;
 			case LF_CLASS:
 			case LF_INTERFACE:
 			case LF_STRUCTURE: {
 				lfClass *type = (lfClass *)read(stream, length);
-				char *name = extract_name(type->data);
+				uint32_t size;
+				char *name = extract_info(type->data, &size);
 
-				printf("[structure][%u][%s][%lu,%lu,%lu]\n", j, name, type->field, type->derived, type->vshape);
+				logf("[structure][%u][%s(%u)][%lu,%lu,%lu]\n", j + 0x1000, name, size, type->field, type->derived, type->vshape);
 			} break;
 			case LF_ALIAS: {
 				lfAlias *type = (lfAlias *)read(stream, length);
 				char *name = (char *)type->Name;
 
-				printf("[alias][%u][%s]\n", j, name);
+				logf("[alias][%u][%s]\n", j + 0x1000, name);
 			} break;
 			case LF_UNION: {
 				lfUnion *type = (lfUnion *)read(stream, length);
-				char *name = extract_name(type->data);
+				uint32_t size;
+				char *name = extract_info(type->data, &size);
 
-				printf("[union][%u][%s][%lu]\n", j, name, type->field);
+				logf("[union][%u][%s(%u)][%lu]\n", j + 0x1000, name, size, type->field);
 			} break;
 			case LF_VTSHAPE: {
 				lfVTShape *type = (lfVTShape *)read(stream, length);

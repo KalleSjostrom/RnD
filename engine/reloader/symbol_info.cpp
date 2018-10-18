@@ -32,7 +32,6 @@ struct MemberInfo {
 struct FullType {
 	uint64_t key;
 	unsigned size;
-	unsigned count;
 	unsigned mask;
 	unsigned member_count;
 	MemberInfo *members;
@@ -152,16 +151,6 @@ TrimmedType get_trimmed_type(SymbolContext &context, unsigned key) {
 	return tt;
 }
 
-static unsigned get_count_count = 0;
-unsigned get_count(SymbolContext &context, unsigned type) {
-	get_count_count++;
-	unsigned count = 0;
-	BOOL success = SymGetTypeInfo(context.process, context.mod_base, type, TI_GET_COUNT, &count);
-#ifdef RELOAD_VERBOSE_DEBUGGING
-	if (!success) { log_warning("Reloader", "get_count failed! (last_error=%ld)", GetLastError()); }
-#endif
-	return count;
-}
 static unsigned get_size_count = 0;
 unsigned get_size(SymbolContext &context, unsigned type) {
 	get_size_count++;
@@ -179,7 +168,6 @@ FullType *make_type_info(Allocator &allocator, SymbolContext &context, unsigned 
 	ASSERT(tag != SymTagFunctionType, "Functions not allowed!");
 
 	unsigned size = get_size(context, type);
-	unsigned count = tag == SymTagArrayType ? get_count(context, type) : 0;
 
 	BOOL success;
 	if (tag == SymTagUDT) {
@@ -211,7 +199,6 @@ FullType *make_type_info(Allocator &allocator, SymbolContext &context, unsigned 
 
 	type_info->key = name_id;
 	type_info->size = size;
-	type_info->count = count;
 
 #ifndef RELOAD_VERBOSE_DEBUGGING
 	LocalFree(symbol_name);

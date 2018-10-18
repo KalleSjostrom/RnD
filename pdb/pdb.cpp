@@ -9,6 +9,17 @@
 #define PDB_ASSERT(x) assert(x)
 #endif
 
+static HANDLE _log_output_file;
+void logf(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	static char _log_buffer[2048];
+	int output_length = vsnprintf(_log_buffer, ARRAY_COUNT(_log_buffer), format, args);
+	BOOL success = WriteFile(_log_output_file, _log_buffer, (DWORD)output_length, 0, 0);
+	PDB_ASSERT(success);
+	va_end(args);
+}
+
 #include "test_structures.h"
 
 struct PageList {
@@ -25,8 +36,11 @@ uint32_t _pages(uint32_t length, uint32_t page_size) {
 
 #include "stream.h"
 #include "types.h"
+#include "symbol_lookup.h"
 
 int main(int argc, char const *argv[]) {
+	_log_output_file = CreateFile("../log.txt", GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+
 	const char *test = "pdb.pdb";
 	HANDLE handle = CreateFile(test, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	DWORD filesize = GetFileSize(handle, 0);
@@ -110,20 +124,20 @@ int main(int argc, char const *argv[]) {
 					char *buf = (char *)read(stream, name_string_length);
 
 #if DEBUG
-					printf("Version %u\n", version);
-					printf("Time Stamp %u\n", time_date_stamp);
-					printf("Age %u\n", age);
-					printf("Guid %u, %u, %u, %u\n", guid1, guid2, guid3, guid4);
+					logf("Version %u\n", version);
+					logf("Time Stamp %u\n", time_date_stamp);
+					logf("Age %u\n", age);
+					logf("Guid %u, %u, %u, %u\n", guid1, guid2, guid3, guid4);
 
-					printf("Names\n\t");
+					logf("Names\n\t");
 					for (uint32_t at = 0; at < name_string_length; ++at) {
 						if (buf[at] == 0) {
-							printf("\n\t");
+							logf("\n\t");
 						} else {
-							printf("%c", buf[at]);
+							logf("%c", buf[at]);
 						}
 					}
-					printf("\n");
+					logf("\n");
 #endif
 				} break;
 				case StreamType_Types: {
@@ -138,5 +152,6 @@ int main(int argc, char const *argv[]) {
 	}
 
 	CloseHandle(handle);
+	CloseHandle(_log_output_file);
 	return 0;
 }

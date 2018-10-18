@@ -252,11 +252,12 @@ void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol
 				try_fill_pointer(pointer_context, addr_old + old_offset, addr_new + new_offset, trimmed_type.type);
 			} break;
 			case SymTagArrayType: { // set_pointer_array
-				uint64_t count = get_count(new_symbol_context, trimmed_type.type);
+				uint32_t size = get_size(new_symbol_context, trimmed_type.type);
 
 				trimmed_type = get_trimmed_type(new_symbol_context, trimmed_type.type);
 				if (trimmed_type.tag == SymTagPointerType) {
 					trimmed_type = get_trimmed_type(new_symbol_context, trimmed_type.type);
+					uint32_t count = size / sizeof(void*);
 					for (unsigned j = 0; j < count; ++ j) {
 						try_fill_pointer(pointer_context, addr_old + old_offset, addr_new + new_offset, trimmed_type.type);
 
@@ -264,7 +265,6 @@ void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol
 						new_offset += sizeof(void*);
 					}
 				} else if (trimmed_type.tag == SymTagUDT) {
-
 					// In the array case (which is probably the moste common?), there is probably a lot of stuff here that is redundant..
 					NameEntry *_name_entry = get_name_hash(new_symbol_context, trimmed_type.type);
 					ASSERT(_name_entry->type == trimmed_type.type, "Found unknown struct!");
@@ -274,6 +274,7 @@ void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol
 
 					if (_type_info->mask & TypeInfoMask_ContainsPointers) {
 						FullType *_old_type_info = get_recorded_type_info(old_symbol_context, _name_entry->name_id);
+						uint32_t count = size / _type_info->size;
 						for (unsigned j = 0; j < count; ++ j) {
 							expand_pointer(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset, addr_new + new_offset, _name_entry, _type_info, _old_type_info);
 
@@ -290,7 +291,6 @@ void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol
 unsigned _patch_type(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, uint32_t thing_type, intptr_t addr_old, intptr_t addr_new);
 
 void _patch_array(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, FullType *type_info, uint32_t thing_type, intptr_t addr_old, intptr_t addr_new) {
-	uint64_t count = get_count(new_symbol_context, thing_type);
 	uint32_t size = get_size(new_symbol_context, thing_type);
 
 	uint32_t old_offset = 0;
@@ -305,7 +305,7 @@ void _patch_array(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_c
 
 		uint32_t new_element_size = new_child_type_info->size;
 		uint32_t old_element_size = old_child_type_info->size;
-		ASSERT(size / new_element_size == count, "Count does not match size / element size! :o");
+		uint32_t count = size / new_element_size;
 		ASSERT(count, "Zero count arrays??");
 
 		int first_entry_set = 0;
