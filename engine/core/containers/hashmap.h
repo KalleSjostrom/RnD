@@ -5,6 +5,7 @@
 
 struct HashEntry *_hash_grow(struct HashEntry *hashmap, int increment);
 void _hash_add(struct HashEntry *hashmap, uint64_t key, uint64_t value);
+void _hash_add(struct HashEntry *hashmap, struct HashEntry *entry, uint64_t key, uint64_t value);
 
 #define _hash_header(h) (((HashHeader *)(h))[-1])
 // TODO(kalle): round the load factor? Make it settable
@@ -78,6 +79,8 @@ HashEntry *hash_make(Allocator *allocator, int capacity);
 void hash_destroy(HashEntry *hashmap);
 /// Adds a new key/value pair
 #define hash_add(hashmap, key, value) (_hash_ensure_space(hashmap, 1), _hash_add(hashmap, key, value))
+/// Adds a previously looked up entry
+#define hash_add_entry(hashmap, entry, key, value) (_hash_ensure_space(hashmap, 1), _hash_add(hashmap, entry, key, value))
 /// Returns the pair mapped to key
 HashEntry *hash_lookup(HashEntry *hashmap, uint64_t key);
 /// Tries to removes the value mapped to key if it exists. If so, it stores a copy of it in outvalue and returns true.

@@ -105,6 +105,11 @@ void log_init() {
 	_log_inst.output_file = CreateFile("../output/logs/log.txt", GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 }
 
+void log_deinit() {
+	CloseHandle(_log_inst.output_file);
+	destroy(&_log_inst.allocator);
+}
+
 void log_update() {
 	if (_log_scratch_space.offset > 0) {
 		acquire_ticket(_log_inst.mutex);

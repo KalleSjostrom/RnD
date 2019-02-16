@@ -89,6 +89,7 @@ HashEntry *_hash_grow(HashEntry *hashmap, int increment) {
 
 
 HashEntry *hash_make(Allocator *allocator, int capacity) {
+	capacity = next_power_of_2(capacity);
 	HashHeader *header = (HashHeader*) allocate(allocator, capacity * sizeof(HashEntry) + sizeof(HashHeader));
 	if (header) {
 		header->allocator = allocator;
@@ -109,13 +110,16 @@ void hash_destroy(HashEntry *hashmap) {
 	deallocate(allocator, &_hash_header(hashmap));
 }
 
-void _hash_add(HashEntry *hashmap, uint64_t key, uint64_t value) {
-	HashEntry *entry = hash_lookup(hashmap, key);
-	// ASSERT(entry, "Critical! Hash map shouldn't every be completly full!");
+void _hash_add(HashEntry *hashmap, HashEntry *entry, uint64_t key, uint64_t value) {
 	_hash_header(hashmap).count++;
 	entry->key = key;
 	entry->value = value;
 }
+void _hash_add(HashEntry *hashmap, uint64_t key, uint64_t value) {
+	HashEntry *entry = hash_lookup(hashmap, key);
+	_hash_add(hashmap, entry, key, value);
+}
+
 HashEntry *hash_lookup(HashEntry *hashmap, uint64_t key) {
 	int bucket_size = _hash_bucket_size(hashmap);
 	int capacity = _hash_header(hashmap).capacity;

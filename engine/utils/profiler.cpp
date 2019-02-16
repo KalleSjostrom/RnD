@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "core/utils/stopwatch.cpp"
+#include "core/utils/stopwatch.h"
 
 typedef struct {
 	u64 cycle_count;
@@ -10,7 +10,7 @@ typedef struct {
 #define PROFILER_START(id) uint64_t __start_cycle_count##id = __rdtsc(); Stopwatch __start_time##id;
 #define PROFILER_STOP(id) profilers[ProfilerScopes__##id].cycle_count += (__rdtsc() - __start_cycle_count##id); profilers[ProfilerScopes__##id].hit_count++; profilers[ProfilerScopes__##id].elapsed_time += __start_time##id.stop();
 #define PROFILER_STOP_HITS(id, hits) profilers[ProfilerScopes__##id].cycle_count += (__rdtsc() - __start_cycle_count##id); profilers[ProfilerScopes__##id].hit_count+=hits; profilers[ProfilerScopes__##id].elapsed_time += __start_time##id.stop();
-#define PROFILER_PRINT(id) LOG_INFO("Profiler", "\t[time: %6f\t\t%s]\n", profilers[ProfilerScopes__##id].elapsed_time, #id);
+#define PROFILER_PRINT(id) log_info("Profiler", "\t[time: %6f\t\t%s]", profilers[ProfilerScopes__##id].elapsed_time, #id);
 #define PROFILER_RESET(id) { PerfCounter &counter = profilers[ProfilerScopes__##id]; counter.cycle_count = 0; counter.hit_count = 0; counter.elapsed_time = 0.0f; }
 #define rdtsc __rdtsc
 

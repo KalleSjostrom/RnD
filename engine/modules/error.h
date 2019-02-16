@@ -14,5 +14,6 @@ void error_deinit();
 #define ASSERT(condition, format, ...) do { \
 	if (!(condition)) {\
 		report_script_assert_failure(0, __LINE__, __FILE__, #condition, format, __VA_ARGS__); \
+		if (IsDebuggerPresent()) {DebugBreak();} else { *(volatile int*)0 = 5; } \
 	} \
 } while(0)

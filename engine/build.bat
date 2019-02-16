@@ -13,7 +13,7 @@ SET LIBS=bin/SDL2.lib bin/SDL2_Image.lib dbghelp.lib
 set ENTRY_POINT=engine
 set OUT_PATH=bin
 set OBJECTS=
-set UNITS=engine.cpp modules/logging.cpp modules/image.cpp modules/audio.cpp modules/input.cpp modules/error.cpp
+set UNITS=engine.cpp modules/logging.cpp modules/image.cpp modules/reloader.cpp modules/audio.cpp modules/input.cpp modules/error.cpp
 
 set CC=cl.exe
 set FLAGS=-nologo -fp:fast -Gm- -GR- -EHa- -FC -Z7 -GF -WL -Wall -GT -MP

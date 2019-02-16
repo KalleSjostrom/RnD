@@ -1,24 +1,41 @@
 #define PLUGIN_MEMORY_SIZE (MB*16)
 
+#if DEVELOPMENT
+struct PluginReloadContext {
+	plugin_reload_t *reload;
+
+	DynamicString marker;
+	DynamicString pdb_path;
+
+	ReloadHeader header;
+	void *handle;
+
+	FILETIME timestamp;
+};
+#endif
+
 struct Plugin {
 	HMODULE module;
-	mspace memory;
+	Allocator allocator;
+	void *userdata;
 
 	plugin_setup_t *setup;
 	plugin_update_t *update;
-	plugin_reload_t *reload;
 
 	DynamicString path;
 	DynamicString directory;
-	DynamicString reload_path_pattern;
-	DynamicString reload_marker;
+	DynamicString path_pattern;
 
-	FILETIME timestamp;
+#if DEVELOPMENT
+	PluginReloadContext reload_context;
+#endif
 
 	bool valid;
 };
 
 void load_plugin_module(Plugin &plugin) {
+	ASSERT(!plugin.valid, "Cannot load a valid plugin!");
+
 	HMODULE module = LoadLibrary(*plugin.path);
 	if (module) {
 		void *update = GetProcAddress(module, "update");
@@ -27,7 +44,9 @@ void load_plugin_module(Plugin &plugin) {
 
 			plugin.setup = (plugin_setup_t*) GetProcAddress(module, "setup");
 			plugin.update = (plugin_update_t*) update;
-			plugin.reload = (plugin_reload_t*) GetProcAddress(module, "reload");
+#if DEVELOPMENT
+			plugin.reload_context.reload = (plugin_reload_t*) GetProcAddress(module, "reload");
+#endif
 
 			plugin.valid = true;
 		} else {
@@ -60,7 +79,7 @@ void set_newest_plugin_path(Plugin &plugin) {
 	WIN32_FIND_DATA best_data = {};
 	{ // Find the newest dll in the folder
 		WIN32_FIND_DATA find_data;
-		HANDLE handle = FindFirstFile(*plugin.reload_path_pattern, &find_data);
+		HANDLE handle = FindFirstFile(*plugin.path_pattern, &find_data);
 		if (handle == INVALID_HANDLE_VALUE)
 			return;
 		do {
@@ -76,6 +95,13 @@ void set_newest_plugin_path(Plugin &plugin) {
 	resize(plugin.path, string_length(plugin.directory));
 	plugin.path += best_data.cFileName;
 	null_terminate(plugin.path);
+
+#if DEVELOPMENT
+	DynamicString &pdb_path = plugin.reload_context.pdb_path;
+	clone(pdb_path, plugin.path);
+	array_count(pdb_path.text) -= 4; // remove dll + null termination
+	pdb_path += "pdb"; // add pdb
+#endif // DEVELOPMENT
 }
 
 void init_symbols(Plugin &plugin) {
@@ -97,11 +123,10 @@ void init_symbols(Plugin &plugin) {
 	}
 }
 
-void unload_symbols(Allocator *allocator, Plugin &plugin, ReloadInfo &reload_info) { // Unload symbols
+void unload_symbols(Plugin &plugin) { // Unload symbols
 	MODULEINFO module_info = {};
 	HANDLE process = GetCurrentProcess();
 	if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
-		reloader_unload_symbols(*allocator, L"Application", module_info, reload_info.symbol_context);
 		BOOL success = SymUnloadModule64(process, (DWORD64)module_info.lpBaseOfDll);
 		if (!success) {
 			DWORD last_error = GetLastError();
@@ -110,7 +135,7 @@ void unload_symbols(Allocator *allocator, Plugin &plugin, ReloadInfo &reload_inf
 	}
 }
 
-void load_symbols(Allocator *allocator, Plugin &plugin, ReloadInfo &reload_info) { // Load symbols
+void load_symbols(Plugin &plugin) { // Load symbols
 	MODULEINFO module_info = {};
 	HANDLE process = GetCurrentProcess();
 	if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
@@ -118,74 +143,107 @@ void load_symbols(Allocator *allocator, Plugin &plugin, ReloadInfo &reload_info)
 		if (image_base == 0) {
 			DWORD last_error = GetLastError();
 			log_error("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, *plugin.path);
-		} else {
-			reloader_load_symbols(*allocator, L"Application", module_info, reload_info.symbol_context, reload_info.header);
 		}
 	}
 }
 
+#define STRINGIZE(name) #name
 
 // Make a plugin by loading the newest dll from 'directory' with the pattern 'name*.dll'
-void load_plugin(Allocator *allocator, Plugin &plugin, const char *directory, const char *name) {
+Plugin make_plugin(Allocator *allocator, const char *directory, const char *name) {
+	Plugin plugin = {};
+
 	DynamicString base = dynamic_stringf(allocator, "%s/", directory);
 
 	plugin.directory = dynamic_string(allocator, base);
 	plugin.path = dynamic_string(allocator, base);
 
+#if DEVELOPMENT
+	PluginReloadContext &reload_context = plugin.reload_context;
+	reload_context.marker = dynamic_string(allocator, base);
+	reload_context.marker += "__reload_marker";
+
+	reload_context.pdb_path = dynamic_string(allocator, base);
+#endif
+
 	base += name;
 
-	plugin.reload_path_pattern = dynamic_string(allocator, base);
-	plugin.reload_path_pattern += "*.dll";
+	plugin.path_pattern = dynamic_string(allocator, base);
+	plugin.path_pattern += "*.dll";
 
-	plugin.reload_marker = base;
-	plugin.reload_marker += ".reload_marker";
+	plugin.allocator = allocator_mspace(PLUGIN_MEMORY_SIZE);
 
-	if (plugin.valid) {
-		unload_plugin_module(plugin);
-	}
 	set_newest_plugin_path(plugin);
 	load_plugin_module(plugin);
+
+	init_symbols(plugin);
+
+	return plugin;
 }
 
+void destroy_plugin(Plugin &plugin) {
+	if (!plugin.valid)
+		return;
+
+#if DEVELOPMENT
+	unload_symbols(plugin);
+#endif
+
+	unload_plugin_module(plugin);
+	destroy(&plugin.allocator);
+}
+
+#if DEVELOPMENT
 // Try to find a plugin that matches the reload_path_pattern that is newer than the currently loaded, and load it
 void check_for_reloads(Plugin &plugin) {
+	PluginReloadContext &reload_context = plugin.reload_context;
+
 	// Check if we have a reload marker in the folder, this will indicate that a build has completed
 	// Note that we can't simply check if we have a new dll since the pdb (for instance) might not have been completly written yet.
 	WIN32_FIND_DATA data;
-	HANDLE reload_marker_handle = FindFirstFile(*plugin.reload_marker, &data);
+	HANDLE reload_marker_handle = FindFirstFile(*reload_context.marker, &data);
 	if (reload_marker_handle == INVALID_HANDLE_VALUE)
 		return;
 	FindClose(reload_marker_handle);
 
-	bool time_changed = data.ftLastWriteTime.dwLowDateTime != plugin.timestamp.dwLowDateTime || data.ftLastWriteTime.dwHighDateTime != plugin.timestamp.dwHighDateTime;
+	bool time_changed = data.ftLastWriteTime.dwLowDateTime != reload_context.timestamp.dwLowDateTime || data.ftLastWriteTime.dwHighDateTime != reload_context.timestamp.dwHighDateTime;
 	if (!time_changed)
 		return;
+	reload_context.timestamp = data.ftLastWriteTime;
 
-	plugin.timestamp = data.ftLastWriteTime;
+	ArenaAllocator arena = {};
+	init_arena_allocator(&arena, 8);
+	Allocator allocator = allocator_arena(&arena);
+	reload_context.handle = reloader_setup(&allocator, *reload_context.pdb_path, "Application");
 
-	DeleteFile(*plugin.reload_marker);
+	DeleteFile(*reload_context.marker);
 
-	Allocator allocator = allocator_mspace(8*MB);
-
-	ReloadInfo reload = {};
-	reload.header.old_mspace = plugin.memory;
-	reload.header.old_memory_size = PLUGIN_MEMORY_SIZE;
-	unload_symbols(&allocator, plugin, reload);
+	unload_symbols(plugin);
 
 	unload_plugin_module(plugin);
 	set_newest_plugin_path(plugin);
+
 	load_plugin_module(plugin);
+	load_symbols(plugin);
 
-	mspace new_plugin_mspace = create_mspace(PLUGIN_MEMORY_SIZE, 0);
-	reload.header.new_mspace = new_plugin_mspace;
-	load_symbols(&allocator, plugin, reload);
+	if (reload_context.handle) { // Did we get a valid handle from setup? If not, we cannot reload.
+		Allocator new_plugin_allocator = allocator_mspace(PLUGIN_MEMORY_SIZE);
 
-	if (plugin.reload) {
-		plugin.reload(new_plugin_mspace);
+		reload_context.header.old_allocator = &plugin.allocator;
+		reload_context.header.new_allocator = &new_plugin_allocator;
+		reload_context.header.memory_size = PLUGIN_MEMORY_SIZE;
+
+		int success = reloader_reload(&allocator, *reload_context.pdb_path, &reload_context.header, reload_context.handle);
+		if (success) { // Only tell the plugin & swap allocator memory if we actually succeeded with the memory swap!
+			if (reload_context.reload) {
+				reload_context.reload(&plugin.allocator, &new_plugin_allocator);
+			}
+
+			destroy(&plugin.allocator);
+			plugin.allocator = new_plugin_allocator;
+		}
 	}
-
-	destroy_mspace(plugin.memory);
-	plugin.memory = new_plugin_mspace;
 
 	log_info("Plugin", "Plugin reloaded!\n");
 }
+#endif

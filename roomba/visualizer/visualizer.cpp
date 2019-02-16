@@ -1,6 +1,3 @@
-struct Roomba;
-#define RELOAD_ENTRY_POINT Roomba
-
 #define SYSTEM_OPENGL
 #define SYSTEM_AUDIO
 #define SYSTEM_GRAPHICS
@@ -142,7 +139,7 @@ void plugin_setup(Application &application) {
 			sensor_data.Buttons           = buffer[(int)Sensor_Buttons];
 			sensor_data.ChargingState     = buffer[(int)Sensor_ChargingState];
 			sensor_data.Temperature       = (int8_t) buffer[(int)Sensor_Temperature];
-			
+
 			sensor_data.distance = (int16_t)(buffer[(int)Sensor_DistanceMSB] << 8 | buffer[(int)Sensor_DistanceLSB]);
 			sensor_data.angle    = (int16_t)(buffer[(int)Sensor_AngleMSB]    << 8 | buffer[(int)Sensor_AngleLSB]);
 			sensor_data.voltage  = buffer[(int)Sensor_VoltageMSB]  << 8 | buffer[(int)Sensor_VoltageLSB];
@@ -237,7 +234,7 @@ MotionDelta convert(int angle, int distance, v2_f64 position, double rotation) {
 		delta.position = direction * straight_distance / 1000.0;
 		delta.rotation = angle_in_radians;
 	}
-	
+
 	return delta;
 }
 
@@ -289,7 +286,7 @@ void plugin_update(Application &application, float dt) {
 	m4 &pose = get_pose(components.model, entity);
 	v3 &position = translation(pose);
 	v2_f64 p = V2_f64((double)position.x, (double)position.y);
-	
+
 	// sensor_data.distance = 7;
 	// sensor_data.angle = 0;
 
@@ -312,7 +309,7 @@ void plugin_update(Application &application, float dt) {
 	}
 
 	Sleep(sensor_data.time * 1000);
-		
+
 	if (IS_HELD(*application.input, InputKey_Escape)) {
 		application.engine->quit();
 	}

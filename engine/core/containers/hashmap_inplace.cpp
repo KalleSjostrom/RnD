@@ -1,5 +1,4 @@
 #include "hashmap_inplace.h"
-#include "core/utils/assert.h"
 
 #define b2(x)   (   (x) | (   (x) >> 1))
 #define b4(x)   ( b2(x) | ( b2(x) >> 2))

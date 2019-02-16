@@ -1,6 +1,3 @@
-struct Roomba;
-#define RELOAD_ENTRY_POINT Roomba
-
 #define SYSTEM_OPENGL
 #define SYSTEM_AUDIO
 #define SYSTEM_GRAPHICS

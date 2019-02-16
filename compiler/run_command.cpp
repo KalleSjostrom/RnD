@@ -11,7 +11,7 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 
 	BOOL success = CreateProcessA(appname, cmd, 0, 0, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW, 0, cwd, &si, &pi);
 	if (!success) {
-		fprintf(stderr, "Error in CreateProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
+		log_error("Compiler", "Error in CreateProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
 		return false;
 	}
 	WaitForSingleObject(pi.hProcess, INFINITE);
@@ -19,7 +19,7 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 	DWORD exit_code = 0;
 	success = GetExitCodeProcess(pi.hProcess, &exit_code);
 	if (!success) {
-		fprintf(stderr, "Error in GetExitCodeProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
+		log_error("Compiler", "Error in GetExitCodeProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
 	}
 
 	CloseHandle(pi.hProcess);
@@ -38,7 +38,7 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 	HANDLE child_write_handle;
 
 	if (!CreatePipe(&child_read_handle, &child_write_handle, &saAttr, 0)) {
-		fprintf(stderr, "Error in CreatePipe while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
+		log_error("Compiler", "Error in CreatePipe while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
 		return false;
 	}
 
@@ -59,11 +59,9 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 	PROCESS_INFORMATION pi;
 	memset(&pi, 0, sizeof(pi));
 
-	Stopwatch sw;
-	sw.start();
 	BOOL success = CreateProcessA(appname, cmd, 0, 0, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW, 0, cwd, &si, &pi);
 	if (!success) {
-		fprintf(stderr, "Error in CreateProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
+		log_error("Compiler", "Error in CreateProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
 		return false;
 	}
 
@@ -99,11 +97,11 @@ BOOL run_command(char *appname, char *cmd, char *cwd) {
 	DWORD exit_code = 0;
 	success = GetExitCodeProcess(pi.hProcess, &exit_code);
 	if (!success) {
-		fprintf(stderr, "Error in GetExitCodeProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
+		log_error("Compiler", "Error in GetExitCodeProcess while generating `%s`\n\n`Windows error code: %ld`\n\n", cmd, GetLastError());
 	} else {
 		success = exit_code == 0;
 		if (!success) {
-			fprintf(stderr, "Error while generating `%s`\n\n%s\n", cmd, child_output_buffer);
+			log_error("Compiler", "Error while generating `%s`\n\n%s\n", cmd, child_output_buffer);
 		} else {
 			fprintf(stdout, "`%s`:\n%s\n", cmd, child_output_buffer);
 		}

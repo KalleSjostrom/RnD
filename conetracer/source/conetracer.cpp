@@ -1,7 +1,3 @@
-struct Conetracer;
-#define RELOAD_ENTRY_POINT Conetracer
-
-#define SYSTEM_OPENGL
 #define SYSTEM_GRAPHICS
 #define SYSTEM_COMPONENTS
 #include "engine/systems.h"

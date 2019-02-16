@@ -1,7 +1,6 @@
 #pragma once
 
 #include <io.h>
-#include "core/utils/assert.h"
 
 inline u64 get_filesize(FILE *file) {
 	return (u64)_filelengthi64(_fileno(file));

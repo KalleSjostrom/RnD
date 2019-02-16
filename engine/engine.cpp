@@ -1,5 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <psapi.h>
+
 #include "common.h"
 #include "plugin.h"
 
@@ -10,6 +12,7 @@
 #include "modules/input.h"
 #include "modules/audio.h"
 #include "modules/image.h"
+#include "modules/reloader.h"
 
 #include "core/utils/string_id.h"
 
@@ -18,19 +21,9 @@
 #include "core/memory/arena_allocator.cpp"
 #include "core/utils/murmur_hash.cpp"
 #include "core/containers/array.cpp"
+#include "core/containers/hashmap.cpp"
 #include "core/utils/dynamic_string.cpp"
 #include "core/utils/string.cpp"
-
-#if DEVELOPMENT
-	#include "reloader/reloader.cpp"
-#endif //DEVELOPMENT
-
-struct ReloadInfo {
-#ifdef DEVELOPMENT
-	ReloadHeader header;
-	SymbolContext symbol_context;
-#endif // DEVELOPMENT
-};
 
 #include "plugin.cpp"
 
@@ -67,15 +60,11 @@ static void screen_dimensions(i32 &screen_width, i32 &screen_height) {
 
 static void run(const char *plugin_directory, const char *plugin_name) {
 	log_init(); // We need logging asap!
+	error_init();
 
 	running = true;
 
 	Allocator allocator = allocator_mspace();
-	Plugin plugin = {};
-	load_plugin(&allocator, plugin, plugin_directory, plugin_name);
-
-	ReloadInfo reload = {};
-	init_symbols(plugin);
 
 	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)) {
 		ASSERT(0, "SDL_Init failed: %s", SDL_GetError());
@@ -113,11 +102,18 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	engine.image.load = image_load;
 	engine.screen_dimensions = screen_dimensions;
 
+	engine.error.report_assert_failure = report_script_assert_failure;
+
+	engine.logging.log_info = log_info;
+	engine.logging.log_warning = log_warning;
+	engine.logging.log_error = log_error;
+
 	engine.quit = quit;
 
 	InputData input = {};
-	mspace plugin_mspace = create_mspace(PLUGIN_MEMORY_SIZE, 0);
-	plugin.setup(plugin_mspace, &engine, &input);
+
+	Plugin plugin = make_plugin(&allocator, plugin_directory, plugin_name);
+	plugin.setup(&plugin.allocator, &engine, &input);
 
 	TimeInfo time = {};
 	setup_time(time);
@@ -180,7 +176,8 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 			}
 		}
 
-		plugin.update(plugin_mspace, (float) dt);
+		plugin.update(&plugin.allocator, (float) dt);
+		log_update();
 
 		for (i32 i = 0; i < InputKey_Count; ++i) {
 			input.pressed[i] = false;
@@ -194,7 +191,10 @@ static void run(const char *plugin_directory, const char *plugin_name) {
 	image_deinit();
 	SDL_Quit();
 
-	destroy_mspace(plugin_mspace);
+	destroy_plugin(plugin);
+
+	error_deinit();
+	log_deinit();
 }
 
 #include <shellapi.h>

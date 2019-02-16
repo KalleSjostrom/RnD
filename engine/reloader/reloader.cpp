@@ -1,40 +1,66 @@
-#include "reloader.h"
-#include "core/utils/stopwatch.h"
+////////////////////////////////////////////////////////////
+///////////////////////// POINTERS /////////////////////////
+////////////////////////////////////////////////////////////
+struct Pointer {
+	AddressPair address;
+	AddressPair target_address;
+	CV_typ_t type_index;
+};
+inline Pointer make_pointer(intptr_t addr_old, CV_typ_t type_index) {
+	Pointer p = {};
 
-#define RELOAD_PROFILING 1
+	p.address.o = addr_old;
+	p.address.n = 0;
+	p.target_address.o = *(intptr_t*)(addr_old);
+	p.target_address.n = 0;
+	p.type_index = type_index;
 
-// Should we instead allocate the memory here? So that we will expand into system memory if size is larger than the engines default plugin memory size
-void set_malloc_chunk_head(malloc_chunk *old_chunk, malloc_chunk *new_chunk, size_t new_size) {
-	new_chunk->head = pad_request(new_size) | cinuse(old_chunk) | pinuse(old_chunk);
-}
-size_t safe_ratio_0(size_t numerator, size_t divisor) {
-	return divisor == 0 ? 0 : (numerator / divisor);
-}
-size_t estimate_unpadded_request(size_t chunksize) {
-    /////// TODO ///////
-    return chunksize;
+	return p;
 }
 
-bool search_for_next_reloadable_pointer(PointerContext &pointer_context, Pointer *out_pointer, intptr_t min_address, intptr_t max_address) {
+struct PointerContext {
+	void *memory;
+
+	Pointer *pointer_array;
+	SortElement *sorted_pointer_indices;
+
+	unsigned current_pointer_index;
+	unsigned sorted_pointer_count;
+};
+PointerContext setup_pointer_context(Allocator &allocator) {
+	PointerContext pointer_context = {};
+
+	// Set up the address lookup.
+	array_make(&allocator, pointer_context.pointer_array, (1 << 16));
+	array_make(&allocator, pointer_context.sorted_pointer_indices, (1 << 16))
+
+	return pointer_context;
+}
+
+/**
+ * Goes through the pointers in the given context and searches for the one with the lowest target address (in the old range).
+ * This is because we want to handle the memory sequentially from start of the memory block to the end.
+ */
+bool search_for_next_reloadable_pointer(PointerContext &pointer_context, Pointer *out_pointer, AllocatorBackendHeader *backend) {
 	// The cursor should always be on the pointer that has the lowest target address
 	intptr_t lowest_target_address = INTPTR_MAX;
 	int best_pointer_index = -1;
-	PointerArray &pointer_array = pointer_context.pointer_array;
-	for (uint32_t i = pointer_context.current_pointer_index; i < pointer_array.count; ++i) {
-		Pointer &pointer = pointer_array.entries[i];
+	Pointer *pointer_array = pointer_context.pointer_array;
+	for (int32_t i = pointer_context.current_pointer_index; i < array_count(pointer_array); ++i) {
+		Pointer &pointer = pointer_array[i];
 
-		if (pointer.target_addr_old < lowest_target_address && pointer.target_addr_old >= min_address && pointer.target_addr_old < max_address) {
-			lowest_target_address = pointer.target_addr_old;
+		if (pointer.target_address.o < lowest_target_address && is_address_in_old_range(backend, pointer.target_address.o)) {
+			lowest_target_address = pointer.target_address.o;
 			best_pointer_index = (int)i;
 		}
 	}
 
 	if (best_pointer_index >= 0) {
-		*out_pointer = pointer_array.entries[best_pointer_index];
+		*out_pointer = pointer_array[best_pointer_index];
 
-		Pointer temp = pointer_array.entries[pointer_context.current_pointer_index];
-		pointer_array.entries[pointer_context.current_pointer_index] = *out_pointer;
-		pointer_array.entries[best_pointer_index] = temp;
+		Pointer temp = pointer_array[pointer_context.current_pointer_index];
+		pointer_array[pointer_context.current_pointer_index] = *out_pointer;
+		pointer_array[best_pointer_index] = temp;
 
 		pointer_context.current_pointer_index++;
 		return true;
@@ -42,41 +68,46 @@ bool search_for_next_reloadable_pointer(PointerContext &pointer_context, Pointer
 
 	return false;
 }
+
+/**
+ * Sort the pointers from lowest target address to highest.
+ * This is to make sure we always look at the most relevant pointers first.
+ */
 void sort_pointers(PointerContext &pointer_context, intptr_t base_old, size_t size) {
 	pointer_context.current_pointer_index = 0;
 
-	PointerArray &pointer_array = pointer_context.pointer_array;
+	Pointer *pointer_array = pointer_context.pointer_array;
 	int count = 0;
-	for (uint32_t i = 0; i < pointer_array.count; ++i) {
-		Pointer &p = pointer_array.entries[i];
-		intptr_t offset = p.target_addr_old - base_old;
+	for (int32_t i = 0; i < array_count(pointer_array); ++i) {
+		Pointer &p = pointer_array[i];
+		intptr_t offset = p.target_address.o - base_old;
 		if (offset >= 0 && offset < (int)size) { // Pointing into our chunk
-			pointer_context.sorted_pointer_indices[count].value = (unsigned)offset;
+			pointer_context.sorted_pointer_indices[count].value = (uint32_t)offset;
 			pointer_context.sorted_pointer_indices[count].index = i;
 			count++;
 		} else { // I'm pointing to outside the range, just keep whatever I was pointing at
-			// *(intptr_t*)(p.addr_new) = p.target_addr_new;
-			// ASSERT(*(intptr_t*)(p.addr_new) == p.target_addr_new, "I'm pointing to outside the range, the default should be equal!");
+			// *(intptr_t*)(p.address.n) = p.target_address.n;
+			// ASSERT(*(intptr_t*)(p.address.n) == p.target_address.n, "I'm pointing to outside the range, the default should be equal!");
 		}
 	}
 	quick_sort(pointer_context.sorted_pointer_indices, count);
 	pointer_context.sorted_pointer_count = count;
 }
 
-void _check_pointer_self(PointerContext &context, intptr_t chunk_start_old, intptr_t chunk_start_new, uint32_t chunk_type) {
-	// This chunk is of a specific type that is being set (and have possibly been modified), we only need to check pointers equal to chunk_start_old.
+void check_pointer_self(PointerContext &context, AddressPair chunk, uint32_t chunk_type) {
+	// This chunk is of a specific type that is being set (and have possibly been modified), we only need to check pointers equal to chunk.o.
 	int index_offset = 0;
 	while (context.current_pointer_index + index_offset < context.sorted_pointer_count) {
 		SortElement &element = context.sorted_pointer_indices[context.current_pointer_index + index_offset];
-		Pointer &pointer = context.pointer_array.entries[element.index];
-		ASSERT(pointer.target_addr_old != 0, "We should already have removed pointers pointing to null");
+		Pointer &pointer = context.pointer_array[element.index];
+		ASSERT(pointer.target_address.o != 0, "We should already have removed pointers pointing to null");
 
-		if (pointer.target_addr_old == chunk_start_old) {
-			if (pointer.type == chunk_type) { // Also make sure I'm pointing to the correct type (and not the first member of a struct)
-				pointer.target_addr_new = chunk_start_new;
-				ASSERT(pointer.addr_new, "We need to store this for later!");
+		if (pointer.target_address.o == chunk.o) {
+			if (pointer.type_index == chunk_type) { // Also make sure I'm pointing to the correct type (and not the first member of a struct)
+				pointer.target_address.n = chunk.n;
+				ASSERT(pointer.address.n, "We need to store this for later!");
 
-				// *(intptr_t*)(pointer.addr_new) = pointer.target_addr_new;
+				// *(intptr_t*)(pointer.address.n) = pointer.target_address.n;
 
 				if (index_offset > 0) { // We have some skipped pointers
 					// Swap the current element with the first skipped pointer.
@@ -96,19 +127,19 @@ void _check_pointer_self(PointerContext &context, intptr_t chunk_start_old, intp
 	}
 }
 
-void _check_pointer_fixed(PointerContext &context, intptr_t chunk_start_old, intptr_t chunk_start_new, size_t chunk_size) {
-	// This chunk is a fixed block of memory (unmodifed), therefore we need to check all the pointers in the address range ([chunk_start_old, chunk_start_old + chunk_size])
+void check_pointer_fixed(PointerContext &context, AddressPair chunk, size_t chunk_size) {
+	// This chunk is a fixed block of memory (unmodifed), therefore we need to check all the pointers in the address range ([chunk.o, chunk.o + chunk_size])
 	while (context.current_pointer_index < context.sorted_pointer_count) {
 		SortElement &element = context.sorted_pointer_indices[context.current_pointer_index];
-		Pointer &pointer = context.pointer_array.entries[element.index];
-		ASSERT(pointer.target_addr_old != 0, "We should already have removed pointers pointing to null");
+		Pointer &pointer = context.pointer_array[element.index];
+		ASSERT(pointer.target_address.o != 0, "We should already have removed pointers pointing to null");
 
-		if (pointer.target_addr_old < (chunk_start_old + (ptrdiff_t)chunk_size)) { // Am I pointing to moved memory?
+		if (pointer.target_address.o < (chunk.o + (ptrdiff_t)chunk_size)) { // Am I pointing to moved memory?
 			// I'm pointing into an unmodified chunk. Find out how far in the pointer pointed to, this delta is the same in the old and new space!
-			pointer.target_addr_new = chunk_start_new + (pointer.target_addr_old - chunk_start_old);
-			ASSERT(pointer.addr_new, "We need to store this for later!");
+			pointer.target_address.n = chunk.n + (pointer.target_address.o - chunk.o);
+			ASSERT(pointer.address.n, "We need to store this for later!");
 
-			// *(intptr_t*)(pointer.addr_new) = pointer.target_addr_new;
+			// *(intptr_t*)(pointer.address.n) = pointer.target_address.n;
 			context.current_pointer_index++;
 		} else {
 			break;
@@ -116,170 +147,167 @@ void _check_pointer_fixed(PointerContext &context, intptr_t chunk_start_old, int
 	}
 }
 
-void move_chunk(PointerContext &pointer_context, intptr_t chunk_start_old, intptr_t chunk_start_new, size_t chunk_size) {
-	memmove((void*)chunk_start_new, (void*)chunk_start_old, chunk_size);
-	_check_pointer_fixed(pointer_context, chunk_start_old, chunk_start_new, chunk_size);
-}
+void try_add_pointer(PointerContext &pointer_context, AddressPair address, CV_typ_t type_index) {
+	AddressPair target_address = {};
+	target_address.o = *(intptr_t*)(address.o); // Chase the pointer to find whatever was pointed to in the old space, i.e. our target.\n");
+	if (target_address.o != 0) { // We don't care about pointers pointing to null!
+		array_expand(pointer_context.pointer_array, 1);
+		Pointer &p = array_peek(pointer_context.pointer_array);
 
-bool get_next_reloadable_pointer(PointerContext &pointer_context, Pointer *out_pointer) {
-	if (pointer_context.current_pointer_index >= pointer_context.sorted_pointer_count)
-		return false;
-
-	SortElement &element = pointer_context.sorted_pointer_indices[pointer_context.current_pointer_index];
-	*out_pointer = pointer_context.pointer_array.entries[element.index];
-	return true;
-}
-
-void try_fill_pointer(PointerContext &pointer_context, intptr_t addr_old, intptr_t addr_new, uint32_t type) {
-	intptr_t target_addr_old = *(intptr_t*)(addr_old); // Chase the pointer to find whatever was pointed to in the old space, i.e. our target.\n");
-	if (target_addr_old != 0) { // We don't care about pointers pointing to null!
-		ASSERT(pointer_context.pointer_array.count < MAX_POINTERS, "Array index out of bounds!");
-		Pointer &p = pointer_context.pointer_array.entries[pointer_context.pointer_array.count++];
-
-		p.addr_old = addr_old;
-		p.addr_new = addr_new;
-		p.target_addr_old = target_addr_old;
-		p.target_addr_new = target_addr_old; // By default, point to wherever it was pointing to
-		p.type = type;
+		p.address = address;
+		p.target_address.o = target_address.o;
+		p.target_address.n = target_address.o; // By default, point to wherever it was pointing to
+		p.type_index = type_index;
 	}
 }
 
-uint32_t expand_type(HANDLE process, uint64_t mod_base, Allocator &allocator, SymbolContext &symbol_context, uint32_t _type, uint32_t indentation = 0) {
-	NameEntry *name_entry = get_name_hash(symbol_context, _type);
-	if (name_entry->type == _type) {
-		FullType *type_info = get_recorded_type_info(symbol_context, name_entry->name_id);
-		return type_info->mask;
-	}
+void move_chunk(PointerContext &pointer_context, AddressPair chunk, size_t chunk_size) {
+	memmove((void*)chunk.n, (void*)chunk.o, chunk_size);
+	check_pointer_fixed(pointer_context, chunk, chunk_size);
+}
 
-	TI_FINDCHILDREN_PARAMS *children = 0;
-	FullType *type_info = make_type_info(allocator, symbol_context, _type, SymTagUDT, &children);
-	name_entry->name_id = type_info->key;
-	name_entry->type = _type;
+int check_if_new_member(TypeContextPair *type_context, MemberListPair *member_list, TypeRecord *type_record, AddressPair address, uint32_t index, OffsetPair *out_offset) {
+	Type *new_child = member_list->n->types + index;
 
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-	log_warning("Reloader", "%.*s%S = { // id=0x%016zx, type=%u, size=%d, count=%d, mask=%d", indentation, INDENTATION, type_info->name, type_info->key, _type, type_info->size, type_info->count, type_info->mask);
-#endif
+	TypeName *child_type_name = member_list->n->names + index;
+	Type *old_child = try_find_member(member_list->o, child_type_name);
 
-	// NOTE(kalle): This wastes some memory since Count also contain member functions.
-	type_info->members = (MemberInfo *)allocate(&allocator, children->Count * sizeof(MemberInfo));
-	type_info->member_count = 0;
-	for (uint32_t i = 0; i < children->Count; ++i) {
-		ULONG child = children->ChildId[i];
+	out_offset->n = get_offset(new_child);
+	out_offset->o = get_offset(old_child);
 
-		TrimmedType child_type = get_trimmed_type(symbol_context, child);
-		if (child_type.tag == SymTagFunctionType) {
-			continue;
+	TypeTag new_typetag = get_child_type_tag(type_context->n, new_child);
+
+	int is_new_variable = old_child == 0;
+	if (!is_new_variable) {
+		TypeTag old_typetag = get_child_type_tag(type_context->o, old_child);
+
+		while (new_typetag.tag == SymTagArrayType && old_typetag.tag == SymTagArrayType) {
+			new_typetag = get_type_tag(type_context->n, new_typetag.type_index);
+			old_typetag = get_type_tag(type_context->o, old_typetag.type_index);
 		}
 
-		MemberInfo &member_info = type_info->members[type_info->member_count];
-		bool valid_member = fill_member_info(symbol_context, member_info, child, child_type);
-		if (!valid_member) {
-			continue;
-		}
-		type_info->member_count++;
+		// If the tags are different, the variable is new
+		is_new_variable = old_typetag.tag != new_typetag.tag;
+		if (!is_new_variable) {
+			// NOTE(kalle):
+			// If this variable have changed its type, we treat it as a new varible.
+			// Not sure what would be the best approach here... If we change from int a to int *a, it feels strange to copy the value of a..
+			if (new_typetag.tag == SymTagBaseType) { // If we are dealing with a base type, then it is new if the type_index has changed
+				is_new_variable = new_typetag.type_index != old_typetag.type_index;
+			} else { // If it's _not_ a base type, meaning it's a user defined thing, we should have a record of it, check if the type name has changed
+				TypeName *new_type_name = get_type_name(type_context->n, new_typetag.type_index);
+				TypeName *old_type_name = get_type_name(type_context->o, old_typetag.type_index);
 
-		TrimmedType backing_type = child_type;
-		if (backing_type.tag == SymTagPointerType) {
-			type_info->mask |= TypeInfoMask_ContainsPointers;
-		}
-		while (backing_type.tag == SymTagPointerType || backing_type.tag == SymTagArrayType) {
-			backing_type = get_trimmed_type(symbol_context, backing_type.type);
-
-			if (backing_type.tag == SymTagPointerType) {
-				type_info->mask |= TypeInfoMask_ContainsPointers;
+				is_new_variable = old_type_name == 0 || new_type_name->id != old_type_name->id;
 			}
 		}
 
-		if (backing_type.tag == SymTagUDT) {
-			unsigned child_mask = expand_type(process, mod_base, allocator, symbol_context, backing_type.type, indentation + 1);
-			type_info->mask |= child_mask;
-
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-			NameEntry *debug_name_entry = get_name_hash(symbol_context, backing_type.type);
-			if (debug_name_entry->type == backing_type.type) {
-				FullType *debug_type_info = get_recorded_type_info(symbol_context, debug_name_entry->name_id);
-				log_warning("Reloader", "%.*s} // name=%S, mask=%d", indentation, INDENTATION, debug_type_info->name, debug_type_info->mask);
-			}
+		if (out_offset->n != out_offset->o) {
+			type_record->flags |= TypeRecordFlags_IsModified;
 		}
-		log_warning("Reloader", "%.*s%S // id=0x%016zx, offset=%d, type=%d", indentation+1, INDENTATION, member_info.name, member_info.key, member_info.offset, member_info.type.type);
-#else
-		}
-#endif
 	}
-	return type_info->mask;
+
+	// If we are dealing with a new variable, then just clear the memory to 0!
+	if (is_new_variable) {
+		type_record->flags |= TypeRecordFlags_IsModified;
+		uint32_t size = get_size(type_context->n, new_typetag.type_index);
+		memset((void*)(address.n + out_offset->n), 0, size);
+		member_list->n->flags[index] |= TypeRecordFlags_IsNew;
+	}
+
+	return is_new_variable;
 }
-void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, uint32_t _type, intptr_t addr_old, intptr_t addr_new, NameEntry *name_entry = 0, FullType *type_info = 0, FullType *old_type_info = 0) {
-	// In the array case (which is probably the moste common?), there is probably a lot of stuff here that is redundant..
-	name_entry = name_entry ? name_entry : get_name_hash(new_symbol_context, _type);
-	ASSERT(name_entry->type == _type, "Found unknown struct!");
 
-	type_info = type_info ? type_info : get_recorded_type_info(new_symbol_context, name_entry->name_id);
-	ASSERT(type_info->key == name_entry->name_id, "Found unknown struct!");
 
-	if (!(type_info->mask & TypeInfoMask_ContainsPointers)) {
+////////////////////////////////////////////////////////////
+///////////////////// GATHER POINTERS  /////////////////////
+////////////////////////////////////////////////////////////
+void gather_pointers(TypeContextPair *type_context, PointerContext &pointer_context, CV_typ_t type_index, AddressPair address, TypeRecordPair *existing_type_record = 0) {
+	TypeRecordPair type_record;
+	if (existing_type_record) {
+		type_record = *existing_type_record;
+	} else {
+		TypeName *type_name = get_type_name(type_context->n, type_index);
+		type_record = get_type_record_pair(type_context, type_name);
+	}
+
+	if (!(type_record.n->flags & TypeRecordFlags_ContainsPointers)) {
 		return;
 	}
 
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-	log_warning("Reloader", "Expanding pointer '%S'", type_info->name);
-#endif
+	MemberListPair member_lists = get_member_list_pair(type_context, &type_record);
+	for (int i = 0; i < array_count(member_lists.n->types); ++i) {
+		OffsetPair offset;
+		int is_new_member = check_if_new_member(type_context, &member_lists, type_record.n, address, i, &offset);
+		if (is_new_member) { continue; }
 
-	old_type_info = old_type_info ? old_type_info : get_recorded_type_info(old_symbol_context, name_entry->name_id);
+		Type *new_child = member_lists.n->types + i;
+		TypeTag typetag = get_child_type_tag(type_context->n, new_child);
 
-	for (uint32_t i = 0; i < type_info->member_count; ++i) {
-		MemberInfo *new_member_info = type_info->members + i;
-		if (new_member_info->key == 0x04cbb473586bc95f) {
-			int a = 5;
-		}
-		TrimmedType trimmed_type = new_member_info->type;
-		ASSERT(trimmed_type.tag != SymTagFunctionType, "Functions are not allowed!");
-
-		if (trimmed_type.tag != SymTagUDT && trimmed_type.tag != SymTagArrayType && trimmed_type.tag != SymTagPointerType) {
+		bool base_type_pointer = typetag.tag == SymTagBaseType && CV_TYP_IS_PTR(typetag.type_index);
+		if (!base_type_pointer && typetag.tag != SymTagUDT && typetag.tag != SymTagArrayType && typetag.tag != SymTagPointerType) {
 			continue; // Early out if it's not something that can contain a pointer!
 		}
 
-		MemberInfo *old_member_info = try_find_member_info(old_type_info->members, old_type_info->member_count, new_member_info->key, i);
-
-		uint32_t new_offset = new_member_info->offset;
-		uint32_t old_offset = old_member_info ? old_member_info->offset : 0;
-
-		switch (trimmed_type.tag) {
+		switch (typetag.tag) {
 			case SymTagUDT: {
-				expand_pointer(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset, addr_new + new_offset);
+				gather_pointers(type_context, pointer_context, typetag.type_index, address + offset);
+			} break;
+			case SymTagBaseType: {
+				ASSERT(base_type_pointer, "Not a pointer!");
+				CV_typ_t base_type_index = get_base_pointer_type(typetag.type_index);
+				try_add_pointer(pointer_context, address + offset, base_type_index);
 			} break;
 			case SymTagPointerType: {
-				trimmed_type = get_trimmed_type(new_symbol_context, trimmed_type.type);
-				try_fill_pointer(pointer_context, addr_old + old_offset, addr_new + new_offset, trimmed_type.type);
+				typetag = get_type_tag(type_context->n, typetag.type_index);
+#if 0
+				if (typetag.tag == SymTagFunctionType) {
+					TypeName *function_name = get_type_name(type_context->n, typetag.type_index);
+
+					intptr_t target_address.n = get_symbol_address(function_name);
+					intptr_t target_address.o = *(intptr_t*)(addr_old); // Chase the pointer to find whatever was pointed to in the old space, i.e. our target.\n");
+
+					array_expand(pointer_context.pointer_array, 1);
+					Pointer &p = array_peek(pointer_context.pointer_array);
+					p.addr_old = addr_old + old_offset;
+					p.address.n = address.n + new_offset;
+					p.target_address.o = target_address.o;
+					p.target_address.n = target_address.n;
+					p.type_index = typetag.type_index;
+				} else {
+#endif
+					try_add_pointer(pointer_context, address + offset, typetag.type_index);
 			} break;
 			case SymTagArrayType: { // set_pointer_array
-				uint32_t size = get_size(new_symbol_context, trimmed_type.type);
+				uint32_t array_size = get_size(type_context->n, typetag.type_index);
+				while (typetag.tag == SymTagArrayType) {
+					typetag = get_type_tag(type_context->n, typetag.type_index);
+				}
 
-				trimmed_type = get_trimmed_type(new_symbol_context, trimmed_type.type);
-				if (trimmed_type.tag == SymTagPointerType) {
-					trimmed_type = get_trimmed_type(new_symbol_context, trimmed_type.type);
-					uint32_t count = size / sizeof(void*);
-					for (unsigned j = 0; j < count; ++ j) {
-						try_fill_pointer(pointer_context, addr_old + old_offset, addr_new + new_offset, trimmed_type.type);
+				if (typetag.tag == SymTagUDT) {
+					// In the array case (which is probably the most common?), there is probably a lot of stuff here that is redundant..
+					TypeName *_type_name = get_type_name(type_context->n, typetag.type_index);
 
-						old_offset += sizeof(void*); // TODO(kalle): I can't really add to old_offset here unless I _know_ that they are the same size
-						new_offset += sizeof(void*);
+					TypeRecordPair _type_record = get_type_record_pair(type_context, _type_name);
+
+					if (_type_record.n->flags & TypeRecordFlags_ContainsPointers) {
+						OffsetPair element_size = get_size_pair(type_context, &_type_record);
+						size_t count = array_size / element_size.n;
+						for (size_t j = 0; j < count; ++ j) {
+							gather_pointers(type_context, pointer_context, typetag.type_index, address + offset, &_type_record);
+							offset += element_size;
+						}
 					}
-				} else if (trimmed_type.tag == SymTagUDT) {
-					// In the array case (which is probably the moste common?), there is probably a lot of stuff here that is redundant..
-					NameEntry *_name_entry = get_name_hash(new_symbol_context, trimmed_type.type);
-					ASSERT(_name_entry->type == trimmed_type.type, "Found unknown struct!");
+				} else {
+					int is_pointer = (typetag.tag == SymTagBaseType && CV_TYP_IS_PTR(typetag.type_index)) || (typetag.tag == SymTagPointerType);
+					if (is_pointer) {
+						uint32_t element_size = get_size(type_context->n, typetag.type_index);
+						uint32_t count = array_size / element_size;
+						for (uint32_t j = 0; j < count; ++ j) {
+							try_add_pointer(pointer_context, address + offset, typetag.type_index);
 
-					FullType *_type_info = get_recorded_type_info(new_symbol_context, _name_entry->name_id);
-					ASSERT(_type_info->key == _name_entry->name_id, "Found unknown struct!");
-
-					if (_type_info->mask & TypeInfoMask_ContainsPointers) {
-						FullType *_old_type_info = get_recorded_type_info(old_symbol_context, _name_entry->name_id);
-						uint32_t count = size / _type_info->size;
-						for (unsigned j = 0; j < count; ++ j) {
-							expand_pointer(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset, addr_new + new_offset, _name_entry, _type_info, _old_type_info);
-
-							old_offset += _old_type_info->size;
-							new_offset += _type_info->size;
+							offset.o += element_size;
+							offset.n += element_size;
 						}
 					}
 				}
@@ -288,166 +316,194 @@ void expand_pointer(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol
 	}
 }
 
-unsigned _patch_type(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, uint32_t thing_type, intptr_t addr_old, intptr_t addr_new);
+////////////////////////////////////////////////////////////
+///////////////////// GATHER TYPE INFO /////////////////////
+////////////////////////////////////////////////////////////
+uint32_t gather_type_information(TypeContext *type_context, CV_typ_t type_index) {
+	TypeName *type_name = get_type_name(type_context, type_index);
 
-void _patch_array(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, FullType *type_info, uint32_t thing_type, intptr_t addr_old, intptr_t addr_new) {
-	uint32_t size = get_size(new_symbol_context, thing_type);
+	TypeRecord *type_record = get_type_record(type_context, type_name->id);
+	if (type_record->flags & TypeRecordFlags_CheckedForPointers) {
+		return type_record->flags;
+	}
 
-	uint32_t old_offset = 0;
-	uint32_t new_offset = 0;
+	MemberList *member_list = get_member_list(type_context, type_record);
+	for (int i = 0; i < array_count(member_list->types); ++i) {
+		Type *child = member_list->types + i;
 
-	TrimmedType trimmed_type = get_trimmed_type(new_symbol_context, thing_type);
-	if (trimmed_type.tag == SymTagUDT) {
-		NameEntry *type_name_entry = get_name_hash(new_symbol_context, trimmed_type.type);
-		ASSERT(type_name_entry->type == trimmed_type.type, "Could not find type!");
-		FullType *new_child_type_info = get_recorded_type_info(new_symbol_context, type_name_entry->name_id);
-		FullType *old_child_type_info = get_recorded_type_info(old_symbol_context, type_name_entry->name_id);
+		TypeTag typetag = get_child_type_tag(type_context, child);
+		if (typetag.tag == SymTagNull)
+			continue; // Early out if we have no valid type info
 
-		uint32_t new_element_size = new_child_type_info->size;
-		uint32_t old_element_size = old_child_type_info->size;
-		uint32_t count = size / new_element_size;
-		ASSERT(count, "Zero count arrays??");
-
-		int first_entry_set = 0;
-		if (!(new_child_type_info->mask & TypeInfoMask_IsVisited)) {
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-			log_warning("Reloader", "Visiting first in array");
-#endif
-
-			// If I haven't visited the type in the array, visit the first via _patch_type.
-			unsigned child_mask = _patch_type(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset, addr_new + new_offset);
-			first_entry_set = 1;
-
-			FullType *test_new_child_type_info = get_recorded_type_info(new_symbol_context, type_name_entry->name_id);
-			ASSERT(test_new_child_type_info == new_child_type_info, "Does this work?");
-
-			type_info->mask |= child_mask;
+		while(typetag.tag == SymTagArrayType) {
+			// If array of X, get the type of X through potentially multi-dimensional arrays.
+			typetag = get_type_tag(type_context, typetag.type_index);
 		}
 
-		ASSERT(new_child_type_info->mask & TypeInfoMask_IsVisited, "The child type needs to have been visited here!");
+		bool base_type_pointer = typetag.tag == SymTagBaseType && CV_TYP_IS_PTR(typetag.type_index);
+		if (!base_type_pointer && typetag.tag != SymTagUDT && typetag.tag != SymTagPointerType) {
+			continue; // Early out if it's not something that can contain a pointer!
+		}
 
-		if (new_child_type_info->mask & TypeInfoMask_IsModified) {
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-			log_warning("Reloader", "Found array of modified structs! (count=%zu, type=%u)", count, trimmed_type.type);
-			log_warning("Reloader", "Performance warning! Array entries have been modifed, move each one! (count=%zu)", count);
-#endif
-			for (unsigned j = first_entry_set; j < count; ++j) {
-				_patch_type(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset + j * old_element_size, addr_new + new_offset + j * new_element_size);
-			}
+		bool contains_pointers = false;
+		switch (typetag.tag) {
+			case SymTagBaseType: {
+				ASSERT(base_type_pointer, "Not a pointer!");
+				contains_pointers = true;
+			} break;
+			case SymTagUDT: {
+				uint32_t child_flags = gather_type_information(type_context, typetag.type_index);
+				if (child_flags & TypeRecordFlags_ContainsPointers) {
+					type_record->flags |= TypeRecordFlags_ContainsPointers;
+				}
+			} break;
+			case SymTagPointerType: {
+				contains_pointers = true;
+			} break;
 		}
-		else {
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-			log_warning("Reloader", "Found array of unmodified structs! (count=%zu, type=%u)", count, trimmed_type.type);
-#endif
-			move_chunk(pointer_context, addr_old + old_offset + first_entry_set * old_element_size, addr_new + new_offset + first_entry_set * new_element_size, size - first_entry_set * new_element_size);
+
+		if (contains_pointers) {
+			type_record->flags |= TypeRecordFlags_ContainsPointers;
 		}
 	}
-	else if (trimmed_type.tag == SymTagArrayType) {
-		// ASSERT(false, "Arrays of arrays are not yet implemented!");
-		_patch_array(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, type_info, trimmed_type.type, addr_old + old_offset, addr_new + new_offset);
-	}
-	else if (trimmed_type.tag == SymTagBaseType || trimmed_type.tag == SymTagEnum || trimmed_type.tag == SymTagPointerType) {
-		move_chunk(pointer_context, addr_old + old_offset, addr_new + new_offset, size);
-	}
-	else {
-		ASSERT(false, "Unsupported tag '%u'", trimmed_type.tag);
-		move_chunk(pointer_context, addr_old + old_offset, addr_new + new_offset, size);
-	}
+
+	type_record->flags |= TypeRecordFlags_CheckedForPointers;
+	return type_record->flags;
 }
 
-unsigned _patch_type(HANDLE process, uint64_t mod_base, SymbolContext &old_symbol_context, SymbolContext &new_symbol_context, PointerContext &pointer_context, uint32_t thing_type, intptr_t addr_old, intptr_t addr_new) {
-	NameEntry *name_entry = get_name_hash(new_symbol_context, thing_type);
-	ASSERT(name_entry->type == thing_type, "Found unknown struct!");
-
-	FullType *type_info = get_recorded_type_info(new_symbol_context, name_entry->name_id);
-	ASSERT(type_info->key == name_entry->name_id, "Found unknown struct!");
-
-	// In order to move this as a chunk, it cannot contain pointers, it cannot be modified and we need to have visited it so that we are sure we know these two pieces of info.
-	if ((type_info->mask & TypeInfoMask_IsVisited) && !(type_info->mask & TypeInfoMask_IsModified)) {
-		move_chunk(pointer_context, addr_old, addr_new, type_info->size);
-		return type_info->mask;
+////////////////////////////////////////////////////////////
+///////////////////// PATCH DATA TYPES /////////////////////
+////////////////////////////////////////////////////////////
+uint32_t patch_type(TypeContextPair *type_context, PointerContext &pointer_context, uint32_t type_index, AddressPair address);
+uint32_t patch_array(TypeContextPair *type_context, PointerContext &pointer_context, TypeTag &typetag, AddressPair address) {
+	// Get the total size of the array
+	uint32_t array_size = get_size(type_context->n, typetag.type_index);
+	while (typetag.tag == SymTagArrayType) {
+		// Get the backing typetag (could also be an array in case of multi-dimensional arrays, therefore we need a while loop).
+		typetag = get_type_tag(type_context->n, typetag.type_index);
 	}
 
-	_check_pointer_self(pointer_context, addr_old, addr_new, thing_type); // Check pointer to myself
-	FullType *old_type_info = get_recorded_type_info(old_symbol_context, name_entry->name_id);
+	uint32_t result_flags = 0;
+	switch (typetag.tag) {
+		case SymTagUDT: {
+			TypeName *type_name = get_type_name(type_context->n, typetag.type_index);
+			TypeRecordPair type_record = get_type_record_pair(type_context, type_name);
 
-	MemberInfo dummy = {}; // In case we didn't have a given member in the old version, we use this dummy as a placeholder.
+			int first_entry_set = 0;
+			if (!(type_record.n->flags & TypeRecordFlags_Patched)) {
+				// If I haven't visited the type in the array, visit the first via patch_type.
+				uint32_t child_flags = patch_type(type_context, pointer_context, typetag.type_index, address);
+				first_entry_set = 1;
 
-	for (uint32_t i = 0; i < type_info->member_count; ++i) {
-		MemberInfo *new_member_info = type_info->members + i;
-		MemberInfo *old_member_info = try_find_member_info(old_type_info->members, old_type_info->member_count, new_member_info->key, i);
+				if (child_flags & TypeRecordFlags_IsModified) {
+					result_flags |= TypeRecordFlags_IsModified;
+				}
+			}
 
-		// If we have no record of the old member, it is newly added, and this struct is modified!
-		if (old_member_info == 0) {
-			old_member_info = &dummy;
-			type_info->mask |= TypeInfoMask_IsModified;
+			ASSERT(type_record.n->flags & TypeRecordFlags_Patched, "The child type needs to have been visited here!");
+
+			OffsetPair element_size = get_size_pair(type_context, &type_record);
+			size_t count = array_size / element_size.n;
+			ASSERT(count, "Zero count arrays??");
+
+			OffsetPair offset = {};
+			if (first_entry_set) { offset = element_size; };
+
+			if (type_record.n->flags & TypeRecordFlags_IsModified) {
 #if defined(RELOAD_VERBOSE_DEBUGGING)
-			log_warning("Reloader", "Detected new member. (new=%S)", new_member_info->name);
-#endif
-		}
-
-		uint32_t new_offset = new_member_info->offset;
-		uint32_t old_offset = old_member_info->offset;
-
-		// If we do have a record, check if the data have changed
-		if ((old_member_info->type.tag != new_member_info->type.tag) || (old_offset != new_offset)) {
-			type_info->mask |= TypeInfoMask_IsModified;
-		}
-
-#if defined(RELOAD_VERBOSE_DEBUGGING)
-		if (old_member_info->type.tag != new_member_info->type.tag) {
-			type_info->mask |= TypeInfoMask_IsModified;
-			log_warning("Reloader", "Detected missmatch in tag (old=%u, new=%u)", old_member_info->type.tag, new_member_info->type.tag);
-		} else if (old_offset != new_offset) {
-			type_info->mask |= TypeInfoMask_IsModified;
-			log_warning("Reloader", "Detected missmatch in offset (old=%u, new=%u)", old_offset, new_offset);
-		}
+				log_warning("Reloader", "Found array of modified structs! (count=%zu, type=%u)", count, typetag.type_index);
+				log_warning("Reloader", "Performance warning! Array entries have been modifed, move each one! (count=%zu)", count);
 #endif
 
-		TrimmedType trimmed_type = new_member_info->type;
-		ASSERT(trimmed_type.tag != SymTagFunctionType, "Functions are not allowed!");
-		switch (trimmed_type.tag) {
+				for (size_t j = first_entry_set; j < count; ++j) {
+					patch_type(type_context, pointer_context, typetag.type_index, address + offset);
+					offset += element_size;
+				}
+			} else {
+#if defined(RELOAD_VERBOSE_DEBUGGING)
+				log_warning("Reloader", "Found array of unmodified structs! (count=%zu, type=%u)", count, typetag.type_index);
+#endif
+				move_chunk(pointer_context, address + offset, array_size - first_entry_set * element_size.n);
+			}
+		} break;
+		case SymTagBaseType:
+		case SymTagEnum:
+		case SymTagPointerType: {
+			move_chunk(pointer_context, address, array_size);
+		} break;
+		default: {
+			ASSERT(false, "Unsupported tag '%u'", typetag.tag);
+			move_chunk(pointer_context, address, array_size);
+		}
+	}
+
+	return result_flags;
+}
+
+uint32_t patch_type(TypeContextPair *type_context, PointerContext &pointer_context, uint32_t type_index, AddressPair address) {
+	TypeName *type_name = get_type_name(type_context->n, type_index);
+
+	TypeRecordPair type_record = get_type_record_pair(type_context, type_name);
+
+	// In order to move this as a chunk, it cannot contain pointers, it cannot be modified and we need to have visited it so that we are sure we know these two pieces of info.
+	if ((type_record.n->flags & TypeRecordFlags_Patched) && !(type_record.n->flags & TypeRecordFlags_IsModified)) {
+		uint32_t size = get_size(type_context->n, type_record.n->type_index);
+		move_chunk(pointer_context, address, size);
+		return type_record.n->flags;
+	}
+
+	check_pointer_self(pointer_context, address, type_index); // Check pointer to myself
+
+	MemberListPair member_lists = get_member_list_pair(type_context, &type_record);
+	for (int i = 0; i < array_count(member_lists.n->types); ++i) {
+		unsigned member_flags = member_lists.n->flags[i];
+		if (member_flags & TypeRecordFlags_IsNew)
+			continue;
+
+		OffsetPair offset;
+		int is_new = check_if_new_member(type_context, &member_lists, type_record.n, address, i, &offset);
+		if (is_new)
+			continue;
+
+		Type *new_child = member_lists.n->types + i;
+		TypeTag new_typetag = get_child_type_tag(type_context->n, new_child);
+
+		unsigned tag = new_typetag.tag;
+		bool base_type_pointer = tag == SymTagBaseType && CV_TYP_IS_PTR(new_typetag.type_index);
+		if (base_type_pointer) { // Pretend that the tag is SymTagPointerType if we have a pointer to base type.
+			tag = SymTagPointerType;
+		}
+
+		switch (tag) {
 			case SymTagUDT: {
-				uint32_t child_mask = _patch_type(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, trimmed_type.type, addr_old + old_offset, addr_new + new_offset);
-				type_info->mask |= child_mask;
+				uint32_t child_flags = patch_type(type_context, pointer_context, new_typetag.type_index, address + offset);
+				if (child_flags & TypeRecordFlags_IsModified) {
+					type_record.n->flags |= TypeRecordFlags_IsModified;
+				}
 			} break;
 			case SymTagTypedef: {
 				ASSERT(false, "Not implemented");
 			} break;
 			case SymTagPointerType: {
-				_check_pointer_fixed(pointer_context, addr_old + old_offset, addr_new + new_offset, sizeof(void*));
+				check_pointer_fixed(pointer_context, address + offset, sizeof(void*));
 			} break;
 			case SymTagArrayType: {
-				_patch_array(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, type_info, trimmed_type.type, addr_old + old_offset, addr_new + new_offset);
+				uint32_t child_flags = patch_array(type_context, pointer_context, new_typetag, address + offset);
+				if (child_flags & TypeRecordFlags_IsModified) {
+					type_record.n->flags |= TypeRecordFlags_IsModified;
+				}
 			} break;
 			default: {
-				uint32_t size = get_size(new_symbol_context, trimmed_type.type);
-				move_chunk(pointer_context, addr_old + old_offset, addr_new + new_offset, size);
+				uint32_t size = get_size(type_context->n, new_typetag.type_index);
+				move_chunk(pointer_context, address + offset, size);
 			} break;
 		}
 	}
-	type_info->mask |= TypeInfoMask_IsVisited;
-	return type_info->mask;
+	type_record.n->flags |= TypeRecordFlags_Patched;
+	return type_record.n->flags;
 }
 
-SymbolContext _create_symbol_context(Allocator &a, HANDLE process, uint64_t mod_base, SYMBOL_INFOW *entry) {
-#if defined(RELOAD_PROFILING)
-	Stopwatch sw;
-	sw.start();
-#endif
-
-	SymbolContext symbol_context = setup_symbol_context(process, mod_base);
-	expand_type(process, mod_base, a, symbol_context, entry->TypeIndex);
-
-#if defined(RELOAD_PROFILING)
-	float time = sw.stop();
-	log_warning("Reloader", "Took %g seconds to expand types.", time);
-#endif
-
-	return symbol_context;
-}
-
-void _patch_memory(Allocator &a, HANDLE process, uint64_t mod_base, SYMBOL_INFOW *entry, SymbolContext &old_symbol_context, ReloadHeader &header) {
+void patch_memory(Allocator &a, const char *pdb_name, uint64_t entry_name_id, TypeContext &old_type_context, TypeContext &new_type_context, Allocator *new_allocator, Allocator *old_allocator, size_t memory_size) {
 #if defined(RELOAD_PROFILING)
 	Stopwatch pointer_sw;
 	Stopwatch data_sw;
@@ -457,68 +513,39 @@ void _patch_memory(Allocator &a, HANDLE process, uint64_t mod_base, SYMBOL_INFOW
 	pointer_sw.start();
 #endif
 
-	size_t old_memory_size = header.old_memory_size;
-	malloc_state *malloc_state_new = (malloc_state *)(header.new_mspace);
+	size_t old_memory_size = memory_size;
+	AllocatorBackendHeader *backend = init_allocator_backend(&a, old_allocator, new_allocator, memory_size);
 
-	malloc_chunk *current_malloc_chunk_old = (malloc_chunk*)mem2chunk(header.old_mspace);
-	malloc_chunk *current_malloc_chunk_new = (malloc_chunk*)mem2chunk(header.new_mspace);
-
-	intptr_t old_memory = (intptr_t)current_malloc_chunk_old;
-	intptr_t new_memory = (intptr_t)current_malloc_chunk_new;
-
-	PointerContext pointer_context = setup_pointer_context();
-	SymbolContext new_symbol_context = _create_symbol_context(a, process, mod_base, entry);
+	PointerContext pointer_context = setup_pointer_context(a);
 
 	// TODO(kalle): Clone the malloc_state? Should we keep the information about the freed objects?
 
+	TypeContextPair type_context = {};
+	type_context.n = &new_type_context;
+	type_context.o = &old_type_context;
+	TypeRecord *entry_record = get_type_record(type_context.n, entry_name_id);
+
 	{ // Gather pointers
-		current_malloc_chunk_old = next_chunk(current_malloc_chunk_old);
-		current_malloc_chunk_new = next_chunk(current_malloc_chunk_new);
+		AddressPair base_address;
+		bool done = next(backend, &base_address);
+		ASSERT(!done, "Reload backend was empty! No base address to follow.");
 
-		intptr_t base_old = (intptr_t)chunk2mem(current_malloc_chunk_old);
-		intptr_t base_new = (intptr_t)chunk2mem(current_malloc_chunk_new);
+		Pointer current_pointer = make_pointer(base_address.o, entry_record->type_index);
+		gather_pointers(&type_context, pointer_context, current_pointer.type_index, base_address);
 
-		Pointer current_pointer = make_entry_pointer(base_old, entry);
-
-		bool done = false;
 		while (!done) {
-			size_t current_chuck_size = estimate_unpadded_request(chunksize(current_malloc_chunk_old));
+			TypeName *type_name = get_type_name(type_context.n, current_pointer.type_index);
+			TypeRecordPair type_record = get_type_record_pair(&type_context, type_name);
+			OffsetPair size = get_size_pair(&type_context, &type_record);
 
-			expand_pointer(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, current_pointer.type, base_old, base_new);
+			size_t count = get_count(backend, size.o);
+			set_head(backend, size.n, count);
 
-			NameEntry *name_entry = get_name_hash(new_symbol_context, current_pointer.type);
-			FullType *new_type_info = get_recorded_type_info(new_symbol_context, name_entry->name_id);
-			size_t new_size = new_type_info->size;
-
-			FullType *old_type_info = get_recorded_type_info(old_symbol_context, name_entry->name_id);
-			size_t old_size = old_type_info->key == current_pointer.type ? old_type_info->size : new_size;
-
-			size_t count = safe_ratio_0(current_chuck_size, old_size);
-
-			base_new += new_size * count;
-			base_old += old_size * count;
-
-			set_malloc_chunk_head(current_malloc_chunk_old, current_malloc_chunk_new, new_size * count);
-
-			// Go to the next chunk
-			current_malloc_chunk_old = next_chunk(current_malloc_chunk_old);
-			current_malloc_chunk_new = next_chunk(current_malloc_chunk_new);
-
-			base_old = (intptr_t)chunk2mem(current_malloc_chunk_old);
-			base_new = (intptr_t)chunk2mem(current_malloc_chunk_new);
-
-			size_t size_from_chunk = estimate_unpadded_request(chunksize(current_malloc_chunk_old));
-			if (base_old + size_from_chunk >= old_memory + old_memory_size) {
-				intptr_t used_space_new = base_new - new_memory;
-				intptr_t used_space_old = base_old - old_memory;
-				intptr_t size_diff = used_space_new - used_space_old;
-				// If we have used more space in the new state, we have less size left to init the top with
-				current_malloc_chunk_new->head = current_malloc_chunk_old->head - size_diff;
-				init_top(malloc_state_new, current_malloc_chunk_new, chunksize(current_malloc_chunk_new));
-				done = true;
-			}
-			else {
-				bool success = search_for_next_reloadable_pointer(pointer_context, &current_pointer, base_old, old_memory + old_memory_size);
+			done = next(backend, &base_address);
+			if (done) {
+				init_top(backend, &base_address);
+			} else {
+				bool success = search_for_next_reloadable_pointer(pointer_context, &current_pointer, backend);
 				if (!success) {
 #if defined(RELOAD_PROFILING)
 					log_warning("Reloader", "Could not find another pointer to follow!");
@@ -537,94 +564,56 @@ void _patch_memory(Allocator &a, HANDLE process, uint64_t mod_base, SYMBOL_INFOW
 #endif
 
 	// Reset state for the next iteration
-	current_malloc_chunk_old = (malloc_chunk*)old_memory;
-	current_malloc_chunk_new = (malloc_chunk*)new_memory;
+	reset(backend);
 
 	{ // Copy the data
-		current_malloc_chunk_old = next_chunk(current_malloc_chunk_old);
-		current_malloc_chunk_new = next_chunk(current_malloc_chunk_new);
-
-		intptr_t base_old = (intptr_t)chunk2mem(current_malloc_chunk_old);
-		intptr_t base_new = (intptr_t)chunk2mem(current_malloc_chunk_new);
-
-		sort_pointers(pointer_context, base_old, old_memory_size);
+		AddressPair base_address;
+		next(backend, &base_address);
+		sort_pointers(pointer_context, base_address.o, old_memory_size);
 
 		// We require to know about the "entry point", i.e. the layout of where the input memory is pointing.
-		Pointer current_pointer = make_entry_pointer(base_old, entry);
+		Pointer current_pointer = make_pointer(base_address.o, entry_record->type_index);
 
 		bool done = false;
 		while (!done) {
-			size_t current_chuck_size = estimate_unpadded_request(chunksize(current_malloc_chunk_old));
+			TypeName *type_name = get_type_name(type_context.n, current_pointer.type_index);
+			TypeRecordPair type_record = get_type_record_pair(&type_context, type_name);
+			OffsetPair sizes = get_size_pair(&type_context, &type_record);
 
-			NameEntry *name_entry = get_name_hash(new_symbol_context, current_pointer.type);
-			FullType *old_type_info = get_recorded_type_info(old_symbol_context, name_entry->name_id);
-			FullType *new_type_info = get_recorded_type_info(new_symbol_context, name_entry->name_id);
-
-			size_t old_size = old_type_info->size;
-			size_t new_size = new_type_info->size;
-
-			size_t count = safe_ratio_0(current_chuck_size, old_size);
-			for (unsigned i = 0; i < count; i++) {
-				_patch_type(process, mod_base, old_symbol_context, new_symbol_context, pointer_context, current_pointer.type, base_old, base_new);
-				base_new += new_size;
-				base_old += old_size;
+			size_t count = get_count(backend, sizes.o);
+			for (uint32_t i = 0; i < count; i++) {
+				patch_type(&type_context, pointer_context, current_pointer.type_index, base_address);
+				base_address += sizes;
 			}
 			// We have reached the end of a new:ed struct. We need to look at the next newed portion, i.e. the next malloc chunk to find out where to go next.
 
-			// Go to the next chunk
-			current_malloc_chunk_old = next_chunk(current_malloc_chunk_old);
-			current_malloc_chunk_new = next_chunk(current_malloc_chunk_new);
-
-			base_old = (intptr_t)chunk2mem(current_malloc_chunk_old);
-			base_new = (intptr_t)chunk2mem(current_malloc_chunk_new);
-
-			size_t size_from_chunk = estimate_unpadded_request(chunksize(current_malloc_chunk_old));
-			if (base_old + size_from_chunk >= old_memory + old_memory_size) {
+			if (next(backend, &base_address)) {
 				done = true;
 			} else {
-				get_next_reloadable_pointer(pointer_context, &current_pointer);
+				bool has_valid_pointer = pointer_context.current_pointer_index < pointer_context.sorted_pointer_count;
+				ASSERT(has_valid_pointer, "No valid pointer found!");
+
+				SortElement &element = pointer_context.sorted_pointer_indices[pointer_context.current_pointer_index];
+				current_pointer = pointer_context.pointer_array[element.index];
 			}
 		}
 	}
 
 	{ // Update all pointers!
-		PointerArray &pointer_array = pointer_context.pointer_array;
-		for (unsigned i = 0; i < pointer_array.count; ++i) {
-			Pointer &p = pointer_array.entries[i];
-			*(intptr_t*)(p.addr_new) = p.target_addr_new;
+		Pointer *pointer_array = pointer_context.pointer_array;
+		for (int32_t i = 0; i < array_count(pointer_array); ++i) {
+			Pointer &p = pointer_array[i];
+			*(intptr_t*)(p.address.n) = p.target_address.n;
 
-			bool in_old_space = p.target_addr_new >= old_memory && p.target_addr_new < (intptr_t)(old_memory + old_memory_size);
+			bool in_old_space = is_address_in_old_range(backend, p.target_address.n);
 			ASSERT(!in_old_space, "Pointer in new memory chunk still points to old memory!");
 		}
 	}
 
-	free(pointer_context.memory);
+	// free(pointer_context.memory);
 
 #if defined(RELOAD_PROFILING)
 	log_warning("Reloader", "Took %g seconds to move data.", data_sw.stop());
 	log_warning("Reloader", "Took %g seconds to patch memory.", total_sw.stop());
 #endif
-}
-
-void reloader_unload_symbols(Allocator &a, WCHAR *entry_point_name, MODULEINFO &module_info, SymbolContext &symbol_context) {
-	HANDLE process = GetCurrentProcess();
-
-	SymbolInfoPackage symbol_info_package;
-	BOOL result = SymGetTypeFromNameW(process, (DWORD64)module_info.lpBaseOfDll, entry_point_name, &symbol_info_package.si);
-
-	if (result) {
-		SYMBOL_INFOW *symbol_info = &symbol_info_package.si;
-		symbol_context = _create_symbol_context(a, process, symbol_info->ModBase, symbol_info);
-	}
-}
-void reloader_load_symbols(Allocator &a, WCHAR *entry_point_name, MODULEINFO &module_info, SymbolContext &symbol_context, ReloadHeader &reload_header) {
-	HANDLE process = GetCurrentProcess();
-
-	SymbolInfoPackage symbol_info_package;
-	BOOL result = SymGetTypeFromNameW(process, (DWORD64)module_info.lpBaseOfDll, entry_point_name, &symbol_info_package.si);
-
-	if (result) {
-		SYMBOL_INFOW *symbol_info = &symbol_info_package.si;
-		_patch_memory(a, process, symbol_info->ModBase, symbol_info, symbol_context, reload_header);
-	}
 }

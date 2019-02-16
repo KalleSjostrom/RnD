@@ -1,0 +1,4 @@
+translation_units = {
+	"source/reloader_test.cpp"
+}
+output_path = out

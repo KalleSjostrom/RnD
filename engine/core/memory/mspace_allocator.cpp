@@ -13,32 +13,32 @@
 #include "../third_party/dlmalloc.c"
 #pragma warning(pop)
 
-struct MSpaceAllocator {
-	mspace _mspace;
-};
-
 void *allocate(MSpaceAllocator *a, size_t size, bool clear_to_zero, unsigned alignment) {
-	void *result = mspace_memalign(a->_mspace, alignment, size);
+	void *result = mspace_memalign(a, alignment, size);
 	if (clear_to_zero) {
 		memset(result, 0, size);
 	}
 	return result;
 }
 void *realloc(MSpaceAllocator *a, void *p, size_t new_size) {
-	return mspace_realloc(a->_mspace, p, new_size);
+	return mspace_realloc(a, p, new_size);
 }
 void deallocate(MSpaceAllocator *a, void *p) {
-	mspace_free(a->_mspace, p);
+	mspace_free(a, p);
 }
 void destroy(MSpaceAllocator *a) {
-	destroy_mspace(a->_mspace);
+	destroy_mspace(a);
+}
+
+void *top_memory(MSpaceAllocator *a) {
+	malloc_state *mstate = (malloc_state *)a;
+	return chunk2mem(next_chunk(mem2chunk(mstate)));
 }
 
 MSpaceAllocator *mspace_allocator(size_t capacity) {
-	MSpaceAllocator a = {};
-	a._mspace = create_mspace(capacity, 0);
-
-	MSpaceAllocator *storage = (MSpaceAllocator*)allocate(&a, sizeof(MSpaceAllocator));
-	*storage = a;
-	return storage;
+	mspace _mspace = create_mspace(capacity, 0);
+	return (MSpaceAllocator *)_mspace;
 }
+
+
+#include "mspace_reloader_backend.cpp"

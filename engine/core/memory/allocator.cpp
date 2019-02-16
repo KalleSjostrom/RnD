@@ -1,9 +1,12 @@
 #include "allocator.h"
 
-Allocator allocator_arena(ArenaAllocator *arena) {
+Allocator allocator_arena(ArenaAllocator *arena, size_t page_count) {
 	Allocator allocator = {};
 	allocator.type = AllocatorType_Arena;
 	allocator.arena = arena;
+	if (page_count != 0) {
+		init_arena_allocator(arena, page_count);
+	}
 	return allocator;
 }
 Allocator allocator_mspace(size_t capacity) {
@@ -13,7 +16,7 @@ Allocator allocator_mspace(size_t capacity) {
 	return allocator;
 }
 
-void *allocate(Allocator *allocator, size_t size, bool clear_to_zero , unsigned alignment) {
+void *allocate(Allocator *allocator, size_t size, bool clear_to_zero, unsigned alignment) {
 	void *memory = 0;
 	switch (allocator->type) {
 		case AllocatorType_Arena: {
@@ -41,8 +44,9 @@ void *realloc(Allocator *allocator, void *p, size_t new_size) {
 	void *memory = 0;
 	switch (allocator->type) {
 		case AllocatorType_Arena: {
-			ASSERT(false, "Cannot realloc with arena allocator!");
-			// memory = allocate(allocator->arena, new_size);
+			memory = allocate(allocator->arena, new_size);
+			if (p)
+				memcpy(memory, p, new_size);
 		} break;
 		case AllocatorType_MSpace: {
 			memory = realloc(allocator->mspace, p, new_size);

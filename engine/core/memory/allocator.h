@@ -20,7 +20,7 @@ struct Allocator {
 	};
 };
 
-Allocator allocator_arena(ArenaAllocator *arena);
+Allocator allocator_arena(ArenaAllocator *arena, size_t page_count = 0);
 Allocator allocator_mspace(size_t capacity = 0);
 
 /// Allocates size bytes

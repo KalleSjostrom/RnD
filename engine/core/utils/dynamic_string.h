@@ -43,9 +43,13 @@ __forceinline DynamicString & operator+=(DynamicString &a, DynamicString s) {
 	return a;
 }
 
+__forceinline DynamicString & operator-=(DynamicString &a, int l) {
+	ASSERT(l <= array_count(a.text), "Can't subtract longer than length!");
+	array_count(a.text) -= l;
+	return a;
+}
 __forceinline DynamicString & operator-=(DynamicString &a, String s) {
-	// TODO(kalle): This is very unsafe! If s length is greater than a length!
-	array_count(a.text) -= (i32)s.length;
+	a -= (int)s.length;
 	return a;
 }
 
@@ -82,11 +86,16 @@ __forceinline void resize(DynamicString &ds, size_t new_size) {
 	array_count(ds.text) = (int)new_size;
 }
 
+__forceinline void clone(DynamicString &a, DynamicString &b) {
+	array_count(a.text) = 0;
+	_array_ensure_space(a.text, string_length(b), 0);
+	a += b;
+}
+
 __forceinline void null_terminate(DynamicString &ds) {
 	array_push(ds.text, '\0');
 }
 
 void printf(DynamicString &ds, const char *format, ...);
 
-#define STR(s) s.length, s.text
-#define DSTR(s) string_length(s), s.text
+#define STR(s) (int)string_length(s), s.text

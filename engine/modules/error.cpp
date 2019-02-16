@@ -142,8 +142,7 @@ void _fill_stacktrace(CONTEXT &context, unsigned skip_frames = 0) {
 		};
 	}
 
-	log_error("CrashHandler", "Callstack:\n%s\n\n", *buffer);
-	dynamic_string_destroy(buffer);
+	log_error("CrashHandler", "Callstack:\n%.*s\n\n", STR(buffer));
 	destroy(&a);
 }
 
@@ -200,12 +199,14 @@ void print_callstack(int line, const char *file, const char *assert, const char 
 
 		static char buffer[512] = {};
 		String filename = get_filename(string(file), true);
-		_snprintf_s(buffer, 512, _TRUNCATE, "../output/asserts/%.*s_%d.dmp", (int)filename.length, *filename, line);
+		_snprintf_s(buffer, 512, _TRUNCATE, "../output/asserts/%.*s_%d.dmp", STR(filename), line);
 
 		write_crash_dump(buffer, &ep); // NOTE(kalle): This needs to go before the other stack walk, otherwise the dump will not contain the actual crash info.
 	}
 
 	_setup_stack_walk(context, skip_frames + 1); // Skip this frame too
+
+	log_update();
 }
 
 __declspec(thread) char _assert_message_buffer[2048];
@@ -235,7 +236,7 @@ void report_script_assert_failure(int skip_frames, int line, const char *file, c
 
 		static char buffer[512] = {};
 		String filename = get_filename(string(file), true);
-		_snprintf_s(buffer, 512, _TRUNCATE, "../output/asserts/%.*s_%d.dmp", (int)filename.length, *filename, line);
+		_snprintf_s(buffer, 512, _TRUNCATE, "../output/asserts/%.*s_%d.dmp", STR(filename), line);
 
 		write_crash_dump(buffer, &ep); // NOTE(kalle): This needs to go before the other stack walk, otherwise the dump will not contain the actual crash info.
 	}
@@ -243,6 +244,8 @@ void report_script_assert_failure(int skip_frames, int line, const char *file, c
 	_setup_stack_walk(context, skip_frames + 1); // Skip this frame too
 
 	LeaveCriticalSection(&__cs);
+
+	log_update();
 }
 
 LONG WINAPI exception_filter(EXCEPTION_POINTERS *ep) {
@@ -260,6 +263,7 @@ LONG WINAPI exception_filter(EXCEPTION_POINTERS *ep) {
 	EnterCriticalSection(&__cs);
 	_setup_stack_walk(context);
 	LeaveCriticalSection(&__cs);
+	log_update();
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 

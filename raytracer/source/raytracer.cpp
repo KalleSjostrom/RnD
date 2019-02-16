@@ -1,7 +1,5 @@
 #define CL_ERROR_CHECKING
 
-struct Raytracer;
-#define RELOAD_ENTRY_POINT Raytracer
 #define SYSTEM_OPENGL
 #define SYSTEM_OPENCL
 #define SYSTEM_GRAPHICS

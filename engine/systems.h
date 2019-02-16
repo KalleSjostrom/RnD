@@ -1,3 +1,5 @@
+#define PLUGIN 1
+
 #include "common.h"
 #include "plugin.h"
 
@@ -28,11 +30,10 @@
 #endif // SYSTEM_OPENGL
 
 #ifdef SYSTEM_COMPONENTS
-	namespace globals {
-		static ArenaAllocator *transient_arena;
-	};
-	#define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
-
+	// namespace globals {
+	// 	static ArenaAllocator *transient_arena;
+	// };
+	// #define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
 	#include "engine/generated/component_group.cpp"
 #endif
 
@@ -40,11 +41,8 @@
 	#include "utils/audio_manager.cpp"
 #endif // SYSTEM_AUDIO
 
-#if defined(FEATURE_RELOAD) || defined(SYSTEM_OPENGL) || defined(SYSTEM_OPENCL) || defined(TEST_RELOAD)
+#if defined(FEATURE_RELOAD) || defined(SYSTEM_OPENGL) || defined(SYSTEM_OPENCL)
 	#define SYSTEM_RELOAD
-	#if defined(TEST_RELOAD)
-		#include "reloader/reloader_tests.h"
-	#endif
 #endif
 
 #ifdef SYSTEM_GUI
@@ -55,8 +53,7 @@ struct Application {
 	EngineApi *engine;
 	InputData *input;
 
-	Allocator allocator;
-	ArenaAllocator persistent_arena;
+	Allocator *allocator;
 	ArenaAllocator transient_arena;
 
 #ifdef SYSTEM_COMPONENTS
@@ -81,30 +78,25 @@ struct Application {
 	GUI gui;
 #endif
 
-	RELOAD_ENTRY_POINT *user_data;
-
-#ifdef TEST_RELOAD
-	// Tests
-	ArrayTest array_test;
-#endif
+	PLUGIN_DATA plugin_data;
 };
 
-void plugin_setup(Application &application);
-void plugin_update(Application &application, float dt);
-void plugin_render(Application &application);
+#define EXPORT extern "C" __declspec(dllexport)
+
+void plugin_setup(Application *application);
+void plugin_update(Application *application, float dt);
+void plugin_render(Application *application);
 
 #ifdef SYSTEM_RELOAD
-	#ifdef TEST_RELOAD
-		#include "reloader/reloader_tests.cpp"
-	#endif
 	#ifdef FEATURE_RELOAD
-		void plugin_reloaded(Application &application);
+		void plugin_reloaded(Application *application);
 	#endif
 
 	EXPORT PLUGIN_RELOAD(reload) {
-		malloc_chunk *_mem = (malloc_chunk*)mem2chunk((malloc_state *)(_mspace));
-		void *memory = chunk2mem(next_chunk(_mem));
-		Application &application = *(Application*)memory;
+		Application *application = (Application *)top_memory(new_allocator->mspace);
+
+		global_set_error(application->engine->error);
+		global_set_logging(application->engine->logging);
 
 		#ifdef OS_WINDOWS
 			#ifdef SYSTEM_OPENGL
@@ -115,19 +107,13 @@ void plugin_render(Application &application);
 			#endif
 		#endif
 
-		reset_arena(application.transient_arena, MB);
+		reset(&application->transient_arena);
 		#ifdef SYSTEM_COMPONENTS
-			globals::transient_arena = &application.transient_arena;
+			application->components.allocator = application->allocator;
+			application->components.input.input_data = input;
 
-			application.components.arena = &application.persistent_arena;
-			application.components.input.input_data = input;
-
-			reload_programs(application.components);
+			reload_programs(application->components);
 		#endif // SYSTEM_COMPONENTS
-
-		#ifdef TEST_RELOAD
-			tests_reloaded(application);
-		#endif
 
 		#ifdef FEATURE_RELOAD
 			plugin_reloaded(application);
@@ -136,14 +122,14 @@ void plugin_render(Application &application);
 #endif // FEATURE_RELOAD
 
 EXPORT PLUGIN_SETUP(setup) {
-	Application &application = *(Application*)mspace_malloc(_mspace, sizeof(Application));
-	application.allocator._mspace = _mspace;
+	global_set_error(engine->error);
+	global_set_logging(engine->logging);
 
-	application.engine = engine;
-	application.input = input;
+	Application *application = (Application *)allocate(allocator, sizeof(Application), true);
+	application->allocator = allocator;
 
-	ArenaAllocator empty = {};
-	application.persistent_arena = empty;
+	application->engine = engine;
+	application->input = input;
 
 	#ifdef OS_WINDOWS
 		#ifdef SYSTEM_OPENGL
@@ -155,53 +141,45 @@ EXPORT PLUGIN_SETUP(setup) {
 	#endif
 
 	#ifdef SYSTEM_COMPONENTS
-		application.transient_arena = empty;
-		setup_arena(application.transient_arena, MB);
-		globals::transient_arena = &application.transient_arena;
+		init_arena_allocator(&application->transient_arena, 8*MB);
+		globals::transient_arena = &application->transient_arena;
 
-		application.components.input.input_data = input;
-		application.components.arena = &application.persistent_arena;
+		application->components.input.input_data = input;
+		application->components.arena = &application->persistent_arena;
 
-		setup_programs(application.components);
+		setup_programs(application->components);
 	#endif
 
 	#ifdef SYSTEM_OPENCL
-		application.cl_info = init_opencl(application.transient_arena);
+		application->cl_info = init_opencl(application->transient_arena);
 	#endif
 
 	#ifdef SYSTEM_GRAPHICS
-		setup_camera(application.camera, V3(0, 0, 1000), 60, ASPECT_RATIO);
+		setup_camera(application->camera, V3(0, 0, 1000), 60, ASPECT_RATIO);
 	#endif
 
 	plugin_setup(application);
-
-	#ifdef TEST_RELOAD
-		tests_setup(application);
-	#endif
 }
 
 EXPORT PLUGIN_UPDATE(update) {
-	malloc_chunk *_mem = (malloc_chunk*)mem2chunk((malloc_state *)(_mspace));
-	void *memory = chunk2mem(next_chunk(_mem));
-	Application &application = *(Application*) memory;
+	Application *application = (Application*) top_memory(allocator->mspace);
 	plugin_update(application, dt);
 
 	{ // Update the application
 		#ifdef SYSTEM_COMPONENTS
 			// Update all the components
-			update_components(application.components, dt);
+			update_components(application->components, dt);
 			// Handle component/component communication.
-			component_glue::update(application.components, dt);
+			component_glue::update(application->components, dt);
 		#endif
 
 		#ifdef SYSTEM_AUDIO
 			// Update sound
-			application.audio_manager.update(application.transient_arena, application.engine, dt);
+			application->audio_manager.update(application->transient_arena, application->engine, dt);
 		#endif
 	}
 
 	plugin_render(application);
 
-	reset_transient_memory(*globals::transient_arena);
-	return 0;
+	reset(&application->transient_arena);
 }

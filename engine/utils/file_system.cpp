@@ -19,7 +19,7 @@ void make_sure_directory_exists(DynamicString directory) {
 	if (!success) {
 		// It's valid if the directory already exists, so assert only if there is some other error.
 		bool already_exists = GetLastError() == ERROR_ALREADY_EXISTS;
-		ASSERT(already_exists, "Error making directory! (dirpath=%s, error=%ld)", *directory, GetLastError());
+		ASSERT(already_exists, "Error making directory! (dirpath=%.*s, error=%ld)", STR(directory), GetLastError());
 	}
 }
 
@@ -46,6 +46,8 @@ void register_ending(FileSystem &fs, String ending, u32 ending_id) {
 }
 
 void init_filesystem(FileSystem &file_system, String root, String output_path, ArenaAllocator &arena) {
+	ASSERT(output_path.length, "Need to specify an output directory! (output_path in project file)");
+
 	Cache c = {};
 
 	file_system.allocator = allocator_mspace(MB);
@@ -56,12 +58,12 @@ void init_filesystem(FileSystem &file_system, String root, String output_path, A
 	file_system.cache.touched = PUSH(&arena, file_system.cache.max_count, bool, true);
 
 	file_system.root = root;
-	file_system.source_folder = dynamic_stringf(&file_system.allocator, "%s", *root); // Should this be the asset path thing? What would we use that for?
-	file_system.output_folder = dynamic_stringf(&file_system.allocator, "%s/%s", *root, *output_path);
+	file_system.source_folder = dynamic_stringf(&file_system.allocator, "%.*s", STR(root)); // Should this be the asset path thing? What would we use that for?
+	file_system.output_folder = dynamic_stringf(&file_system.allocator, "%.*s/%.*s", STR(file_system.source_folder), STR(output_path));
 	file_system.output_folder_id = string_id64(file_system.output_folder);
 	make_sure_directory_exists(file_system.output_folder);
 
-	file_system.data_folder = dynamic_stringf(&file_system.allocator, "%s/%s", *file_system.output_folder, "data");
+	file_system.data_folder = dynamic_stringf(&file_system.allocator, "%-*s/%s", STR(file_system.output_folder), "data");
 
 	file_system.file_infos = PUSH(&arena, file_system.cache.max_count, FileInfo);
 }

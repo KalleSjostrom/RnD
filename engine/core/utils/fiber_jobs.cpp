@@ -1,5 +1,4 @@
-#include "core/common.h"
-#include "core/utils/assert.h"
+#include "engine/common.h"
 #include "core/memory/arena_allocator.h"
 #include "core/utils/jobs.h"
 #include "core/utils/fiber_jobs.h"
@@ -421,7 +420,7 @@ FiberJobsResult run_fibertask(MainTaskFunction main_task, void *user_data, int t
 		}
 	}
 
-	main_task(user_data); // Call the main task procedure
+	main_task(fjm, user_data); // Call the main task procedure
 	atomic_store_n(&fjm->quit, 1, ATOMIC_RELEASE); // Request that all the threads quit
 
 	// Switch to the thread fibers

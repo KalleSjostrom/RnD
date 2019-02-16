@@ -13,28 +13,22 @@
 			"variants":
 			[
 				{
-					"name": "PDB",
-					"working_dir": "${project_path}/pdb/"
-				},
-				{
-					"name": "Ballista",
-					"working_dir": "${project_path}/ballista/"
-				},
-				{
-					"name": "Ballista/FileSystem",
-					"working_dir": "${project_path}/ballista/file_system"
-				},
-				{
-					"name": "Ballista/Undo",
-					"working_dir": "${project_path}/ballista/undo"
-				},
-				{
-					"name": "Ballista/Test",
-					"working_dir": "${project_path}/ballista/test"
-				},
-				{
 					"name": "Engine",
 					"working_dir": "${project_path}/engine/"
+				},
+				{
+					"name": "Reloader Test",
+					"windows":
+					{
+						"cmd":
+						[
+							"compiler.exe",
+							"--project",
+							"../../reloader_test/reloader_test.project"
+						],
+						"file_regex": "(.*?)(?:\\(|\\:)(\\d+)(?:\\)|\\:)(.+)error"
+					},
+					"working_dir": "${project_path}/compiler/bin/"
 				},
 				{
 					"name": "Compiler",
@@ -133,7 +127,23 @@
 				{
 					"name": "Compiler Glsl",
 					"working_dir": "${project_path}/compiler_plugins/glsl"
-				}
+				},
+				{
+					"name": "Ballista",
+					"working_dir": "${project_path}/ballista/"
+				},
+				{
+					"name": "Ballista/FileSystem",
+					"working_dir": "${project_path}/ballista/file_system"
+				},
+				{
+					"name": "Ballista/Undo",
+					"working_dir": "${project_path}/ballista/undo"
+				},
+				{
+					"name": "Ballista/Test",
+					"working_dir": "${project_path}/ballista/test"
+				},
 			],
 			"windows":
 			{

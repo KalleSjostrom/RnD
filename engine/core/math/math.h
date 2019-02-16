@@ -12,7 +12,7 @@ __forceinline float lerp(float a, float b, float t) {
 	return a + (b-a)*t;
 }
 
-__forceinline float safe_divide(float numerator, float divisior, float default_value) {
+__forceinline float safe_divide(float numerator, float divisior, float default_value = 0.0f) {
 	return divisior != 0.0f ? (numerator / divisior) : default_value;
 }
 
@@ -41,3 +41,4 @@ __forceinline void sincosf(float x, float *sinx, float *cosx) {
 	// __sincosf(x, sinx, cosx);
 	// sincosf(x, sinx, cosx);
 }
+

@@ -32,8 +32,6 @@ struct Project {
 	String *translation_units; // Dynamically allocate this!
 	PluginInfo *plugin_infos;
 
-	Allocator allocator; // Used for strings atm
-
 	String name;
 	String asset_path;
 	String output_path;
@@ -81,7 +79,7 @@ void parse_project(Allocator *allocator, Project &project, char *project_path) {
 					assert_next_token_type(&tok, '{');
 					token = next_token(&tok);
 					while (token.type != '}') {
-						array_push(project.translation_units, string(&project.allocator, token.string));
+						array_push(project.translation_units, string(allocator, token.string));
 						token = next_token(&tok);
 					}
 				} else if (is_equal(token, t_plugins)) {
@@ -98,7 +96,7 @@ void parse_project(Allocator *allocator, Project &project, char *project_path) {
 								if (is_equal(token, t_path)) {
 									assert_next_token_type(&tok, '=');
 									token = next_token(&tok);
-									plugin_info.path = string(&project.allocator, token.string);
+									plugin_info.path = string(allocator, token.string);
 									token = next_token(&tok);
 								} else if (is_equal(token, t_include)) {
 									assert_next_token_type(&tok, '=');
@@ -121,7 +119,7 @@ void parse_project(Allocator *allocator, Project &project, char *project_path) {
 									}
 									token = next_token(&tok);
 								} else {
-									PARSER_ASSERT(false, "Invalid plugin tag '%.*s'", (i32)token.string.length, *token.string);
+									PARSER_ASSERT(false, "Invalid plugin tag '%.*s'", STR(token.string));
 								}
 							}
 							array_push(project.plugin_infos, plugin_info);
@@ -133,15 +131,15 @@ void parse_project(Allocator *allocator, Project &project, char *project_path) {
 				} else if (is_equal(token, t_asset_path)) {
 					assert_next_token_type(&tok, '=');
 					token = next_token(&tok);
-					project.asset_path = string(&project.allocator, token.string);
+					project.asset_path = string(allocator, token.string);
 				} else if (is_equal(token, t_output_path)) {
 					assert_next_token_type(&tok, '=');
 					token = next_token(&tok);
-					project.output_path = string(&project.allocator, token.string);
+					project.output_path = string(allocator, token.string);
 				} else if (is_equal(token, t_user_commands)) {
 					assert_next_token_type(&tok, '=');
 					token = next_token(&tok);
-					project.user_commands = string(&project.allocator, token.string);
+					project.user_commands = string(allocator, token.string);
 				}
 			} break;
 			case '\0': {
@@ -152,6 +150,6 @@ void parse_project(Allocator *allocator, Project &project, char *project_path) {
 
 	DynamicString project_path_string = dynamic_string(allocator, project_path);
 	project.name = get_filename(string(project_path_string), true);
-
 	project.root = get_directory(string(project_path_string));
+	project.root.text[project.root.length] = 0; // This will place a null termination at the / between root and name
 }

@@ -1,6 +1,3 @@
-struct Game;
-#define RELOAD_ENTRY_POINT Game
-
 #define ASSERT(...)
 
 #define DATA_FOLDER "../../game/out/data"
