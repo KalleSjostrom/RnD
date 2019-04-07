@@ -56,9 +56,9 @@ void load_plugin_module(Plugin &plugin) {
 
 	if (!plugin.valid || plugin.update == 0) {
 		plugin.valid = false;
-		log_error("Plugin", "Loading plugin module failed! (path=%s, error=%ld)\n", *plugin.path, GetLastError());
+		log_error("Plugin", "Loading plugin module failed! (path=%s, error=%ld)", *plugin.path, GetLastError());
 	} else {
-		log_info("Plugin", "Plugin module loaded! (path=%s)\n", *plugin.path);
+		log_info("Plugin", "Plugin module loaded! (path=%s)", *plugin.path);
 	}
 }
 
@@ -67,12 +67,12 @@ void unload_plugin_module(Plugin &plugin) {
 	plugin.valid = false;
 
 	if (!FreeLibrary(plugin.module)) {
-		log_error("Plugin", "Plugin unload failed! (path=%s, GetLastError=%u)\n", *plugin.path, GetLastError());
+		log_error("Plugin", "Plugin unload failed! (path=%s, GetLastError=%u)", *plugin.path, GetLastError());
 		return;
 	}
 
 	plugin.module = 0;
-	log_info("Plugin", "Plugin unloaded! (path=%s)\n", *plugin.path);
+	log_info("Plugin", "Plugin unloaded! (path=%s)", *plugin.path);
 }
 
 void set_newest_plugin_path(Plugin &plugin) {
@@ -123,10 +123,10 @@ void init_symbols(Plugin &plugin) {
 	}
 }
 
-void unload_symbols(Plugin &plugin) { // Unload symbols
+void unload_symbols(HMODULE module) { // Unload symbols
 	MODULEINFO module_info = {};
 	HANDLE process = GetCurrentProcess();
-	if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
+	if (GetModuleInformation(process, module, &module_info, sizeof(module_info))) {
 		BOOL success = SymUnloadModule64(process, (DWORD64)module_info.lpBaseOfDll);
 		if (!success) {
 			DWORD last_error = GetLastError();
@@ -135,14 +135,14 @@ void unload_symbols(Plugin &plugin) { // Unload symbols
 	}
 }
 
-void load_symbols(Plugin &plugin) { // Load symbols
+void load_symbols(HMODULE module, const char *path) { // Load symbols
 	MODULEINFO module_info = {};
 	HANDLE process = GetCurrentProcess();
-	if (GetModuleInformation(process, plugin.module, &module_info, sizeof(module_info))) {
-		DWORD64 image_base = SymLoadModuleEx(process, 0, *plugin.path, 0, (DWORD64)module_info.lpBaseOfDll, module_info.SizeOfImage, 0, 0);
+	if (GetModuleInformation(process, module, &module_info, sizeof(module_info))) {
+		DWORD64 image_base = SymLoadModuleEx(process, 0, path, 0, (DWORD64)module_info.lpBaseOfDll, module_info.SizeOfImage, 0, 0);
 		if (image_base == 0) {
 			DWORD last_error = GetLastError();
-			log_error("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, *plugin.path);
+			log_error("Reload", "Could not load symbols for plugin dll! (error=%ld, file=%s).", last_error, path);
 		}
 	}
 }
@@ -186,7 +186,7 @@ void destroy_plugin(Plugin &plugin) {
 		return;
 
 #if DEVELOPMENT
-	unload_symbols(plugin);
+	unload_symbols(plugin.module);
 #endif
 
 	unload_plugin_module(plugin);
@@ -211,29 +211,54 @@ void check_for_reloads(Plugin &plugin) {
 		return;
 	reload_context.timestamp = data.ftLastWriteTime;
 
-	ArenaAllocator arena = {};
-	init_arena_allocator(&arena, 8);
-	Allocator allocator = allocator_arena(&arena);
-	reload_context.handle = reloader_setup(&allocator, *reload_context.pdb_path, "Application");
+	/*
+	TEMPORARY!
+	*/
+	HMODULE module = LoadLibrary("../../ah_reloader/x64/Debug/ah_reloader.dll");
+	if (!module) {
+		DWORD last_error = GetLastError();
+		log_error("Error", "Could not load reloader dll %ld", last_error);
+		return;
+	}
+
+	load_symbols(module, "../../ah_reloader/x64/Debug/ah_reloader.pdb");
+	ah_reloader_setup_t *reloader_setup = (ah_reloader_setup_t*)GetProcAddress(module, "reloader_setup");
+	ah_reloader_reload_t *reloader_reload = (ah_reloader_reload_t*)GetProcAddress(module, "reloader_reload");
+
+	// ReloadHeader reload_header = {};
+	// reload_header.old_allocator = 0;
+	// reload_header.new_allocator = 0;
+	// reload_header.memory_size = 0;
+
+	// MSpaceAllocator *allocator = 0;
+	// void *handle = setup("test.pdb", "Blah", allocator);
+	// reload("test.pdb", &reload_header, handle);
+	// }
+
+
+	// ArenaAllocator arena = {};
+	// init_arena_allocator(&arena, 8);
+	Allocator allocator = allocator_mspace(1024*1024);
+	reload_context.handle = reloader_setup(*reload_context.pdb_path, "Application", allocator.mspace);
 
 	DeleteFile(*reload_context.marker);
 
-	unload_symbols(plugin);
+	unload_symbols(plugin.module);
 
 	unload_plugin_module(plugin);
 	set_newest_plugin_path(plugin);
 
 	load_plugin_module(plugin);
-	load_symbols(plugin);
+	load_symbols(plugin.module, *plugin.path);
 
 	if (reload_context.handle) { // Did we get a valid handle from setup? If not, we cannot reload.
 		Allocator new_plugin_allocator = allocator_mspace(PLUGIN_MEMORY_SIZE);
 
-		reload_context.header.old_allocator = &plugin.allocator;
-		reload_context.header.new_allocator = &new_plugin_allocator;
+		reload_context.header.old_allocator = plugin.allocator.mspace;
+		reload_context.header.new_allocator = new_plugin_allocator.mspace;
 		reload_context.header.memory_size = PLUGIN_MEMORY_SIZE;
 
-		int success = reloader_reload(&allocator, *reload_context.pdb_path, &reload_context.header, reload_context.handle);
+		int success = reloader_reload(*reload_context.pdb_path, &reload_context.header, reload_context.handle);
 		if (success) { // Only tell the plugin & swap allocator memory if we actually succeeded with the memory swap!
 			if (reload_context.reload) {
 				reload_context.reload(&plugin.allocator, &new_plugin_allocator);
@@ -244,6 +269,8 @@ void check_for_reloads(Plugin &plugin) {
 		}
 	}
 
-	log_info("Plugin", "Plugin reloaded!\n");
+	FreeLibrary(module);
+
+	log_info("Plugin", "Plugin reloaded!");
 }
 #endif

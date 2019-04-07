@@ -44,16 +44,16 @@ CALL(game.entities[game.entity_count-1], model, rotate, 0.02f);
 //// Input
 Entity &avatar = game.entities[0];
 v2 direction = V2_f32(0, 0);
-if (IS_HELD(input, InputKey_D)) {
+if (is_held(input, InputKey_D)) {
 	direction.x = 1;
 }
-if (IS_HELD(input, InputKey_A)) {
+if (is_held(input, InputKey_A)) {
 	direction.x = -1;
 }
-if (IS_HELD(input, InputKey_W)) {
+if (is_held(input, InputKey_W)) {
 	direction.y = 1;
 }
-if (IS_HELD(input, InputKey_S)) {
+if (is_held(input, InputKey_S)) {
 	direction.y = -1;
 }
 direction = normalize_or_zero(direction);

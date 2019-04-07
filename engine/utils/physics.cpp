@@ -1,32 +1,32 @@
 struct AABB {
-	f32 x, y; // Lower left corner
-	f32 w, h;
+	float x, y; // Lower left corner
+	float w, h;
 	float operator[](int index) {
 		return *((float*)this + index);
 	}
 };
 
-FORCE_INLINE AABB make_aabb(f32 x, f32 y, f32 w, f32 h) {
+__forceinline AABB make_aabb(float x, float y, float w, float h) {
 	AABB result = {x, y, w, h};
 	return result;
 }
-FORCE_INLINE AABB operator+(AABB &a, AABB &b) {
-	f32 x = fminf(a.x, b.x);
-	f32 y = fminf(a.y, b.y);
-	f32 w = fmaxf(a.x+a.w, b.x+b.w) - x;
-	f32 h = fmaxf(a.y+a.h, b.y+b.h) - y;
+__forceinline AABB operator+(AABB &a, AABB &b) {
+	float x = fminf(a.x, b.x);
+	float y = fminf(a.y, b.y);
+	float w = fmaxf(a.x+a.w, b.x+b.w) - x;
+	float h = fmaxf(a.y+a.h, b.y+b.h) - y;
 	return make_aabb(x, y, w, h);
 }
 
-FORCE_INLINE f32 area(AABB a) {
+__forceinline float area(AABB a) {
 	return a.w * a.h;
 }
 
-FORCE_INLINE bool inside(AABB &a, v3 &p) {
+__forceinline bool inside(AABB &a, Vector3 &p) {
 	return (p.x > a.x) && (p.x < (a.x + a.w)) && (p.y > a.y) && (p.y < (a.y + a.h));
 }
 
-FORCE_INLINE bool are_overlapping(AABB &a, AABB &b) {
+__forceinline bool are_overlapping(AABB &a, AABB &b) {
 	return (a.x < b.x + b.w) && (a.x + a.w > b.x) && (a.y < b.y + b.h) && (a.h + a.y > b.y);
 }
 
@@ -40,14 +40,14 @@ enum ShapeType {
 struct Shape {
 	ShapeType type;
 
-	i32 vertex_count;
-	v3 *vertices;
+	int vertex_count;
+	Vector3 *vertices;
 };
 
 struct Node {
-	i32 left;
-	i32 right;
-	i32 parent;
+	int left;
+	int right;
+	int parent;
 };
 
 #define NULL_ID 0
@@ -57,15 +57,15 @@ struct AABBTree {
 	bool used_ids[MAX_AABB_TREE_NODES];
 	AABB aabb_storage[MAX_AABB_TREE_NODES];
 	Shape shape_storage[MAX_AABB_TREE_NODES];
-	m4 pose_storage[MAX_AABB_TREE_NODES];
+	Matrix4x4 pose_storage[MAX_AABB_TREE_NODES];
 	Node nodes[MAX_AABB_TREE_NODES];
 
-	i32 cursor;
-	i32 root;
-	i64 __padding;
+	int cursor;
+	int root;
+	int64_t __padding;
 
-	i32 new_id() {
-		for (i32 i = 0; i < (i32)ARRAY_COUNT(used_ids); ++i) {
+	int new_id() {
+		for (int i = 0; i < (int)ARRAY_COUNT(used_ids); ++i) {
 			cursor++;
 			if (cursor == ARRAY_COUNT(used_ids))
 				cursor = 1;
@@ -79,7 +79,7 @@ struct AABBTree {
 		return NULL_ID;
 	}
 
-	void init_node(i32 id, i32 left = NULL_ID, i32 right = NULL_ID, i32 parent = NULL_ID) {
+	void init_node(int id, int left = NULL_ID, int right = NULL_ID, int parent = NULL_ID) {
 		Node *n = &nodes[id];
 		n->left = left;
 		n->right = right;
@@ -90,8 +90,8 @@ struct AABBTree {
 		n.left = n.right = n.parent = NULL_ID;
 	}
 
-	i32 insert_node(AABB &box) {
-		i32 id = new_id();
+	int insert_node(AABB &box) {
+		int id = new_id();
 		aabb_storage[id] = box;
 
 		init_node(id);
@@ -102,16 +102,16 @@ struct AABBTree {
 			_insert_node(id, root);
 		return id;
 	}
-	i32 _insert_node(i32 id, i32 parent) {
+	int _insert_node(int id, int parent) {
 		ASSERT(parent, "");
 		Node &p = nodes[parent];
 
 		if (p.left == NULL_ID) { // We are a leaf
-			i32 left = parent; // "Move" the parent down to the left child.
-			i32 right = id; // Set the new entry as the right child
+			int left = parent; // "Move" the parent down to the left child.
+			int right = id; // Set the new entry as the right child
 			// This is already reset from when creating node above.
 
-			i32 new_parent = new_id(); // Create a new AABB for the parent...
+			int new_parent = new_id(); // Create a new AABB for the parent...
 			if (parent == root) { // Update root if needed.
 				root = new_parent;
 			}
@@ -123,15 +123,15 @@ struct AABBTree {
 			aabb_storage[new_parent] = aabb_storage[left] + aabb_storage[right]; // ... and fill it with the sum of the childrens.
 			return new_parent;
 		} else {
-			i32 left = p.left;
-			i32 right = p.right;
+			int left = p.left;
+			int right = p.right;
 
 			// Insert id in the left or right sub tree based on which would cause the least increase in area.
 			AABB &left_aabb = aabb_storage[left];
 			AABB &right_aabb = aabb_storage[right];
 
-			f32 area_delta_left = area(left_aabb + aabb_storage[id]) - area(left_aabb);
-			f32 area_delta_right = area(right_aabb + aabb_storage[id]) - area(right_aabb);
+			float area_delta_left = area(left_aabb + aabb_storage[id]) - area(left_aabb);
+			float area_delta_right = area(right_aabb + aabb_storage[id]) - area(right_aabb);
 
 			if (area_delta_left < area_delta_right) {
 				p.left = _insert_node(id, left);
@@ -144,7 +144,7 @@ struct AABBTree {
 	}
 
 	// This function moves a sibling up the tree, replacing it's current parent.
-	inline void promote_sibling(i32 sibling, i32 parent) {
+	inline void promote_sibling(int sibling, int parent) {
 		ASSERT(parent != NULL_ID, "Can't move sibling up the tree to a null node");
 
 		Node &s = nodes[sibling];
@@ -161,18 +161,18 @@ struct AABBTree {
 		}
 	}
 
-	void remove_node(i32 id) {
+	void remove_node(int id) {
 		used_ids[id] = false;
 
 		Node &n = nodes[id];
 		ASSERT(n.left == NULL_ID, "Can't remove a non-leaf node!");
 
-		i32 parent = n.parent;
+		int parent = n.parent;
 		if (parent) {
 			used_ids[parent] = false; // Remove parent, no need to have a compund node here. It will be replaced by the sibling instead.
 			Node &p = nodes[parent];
 
-			i32 sibling = p.left == id ? p.right : p.left; // Which side is the sibling?
+			int sibling = p.left == id ? p.right : p.left; // Which side is the sibling?
 			promote_sibling(sibling, parent);
 			deinit_node(p); // Clear out the removed node
 
@@ -193,14 +193,14 @@ struct AABBTree {
 };
 
 struct Ray {
-	v3 from;
-	v3 to;
-	v3 delta;
-	v2 inv_delta;
+	Vector3 from;
+	Vector3 to;
+	Vector3 delta;
+	Vector2 inv_delta;
 };
 #include "math/intersection.cpp"
 
-FORCE_INLINE Ray make_ray(v3 &from, v3 &to) {
+__forceinline Ray make_ray(Vector3 &from, Vector3 &to) {
 	Ray r;
 
 	r.from = from;
@@ -215,19 +215,19 @@ FORCE_INLINE Ray make_ray(v3 &from, v3 &to) {
 
 // TODO(kalle): Extend to return a list of results, the closest hit or just an arbitrary hit.
 struct RaycastResults {
-	i32 id;
-	v3 position;
-	v3 normal;
+	int id;
+	Vector3 position;
+	Vector3 normal;
 };
 RaycastResults raycast(AABBTree &tree, Ray &ray) {
 	RaycastResults results = {};
 
-	i32 count = 0;
-	i32 at = 0;
-	i32 queue[32] = {};
+	int count = 0;
+	int at = 0;
+	int queue[32] = {};
 	queue[count++] = tree.root;
 	while (at < count) {
-		i32 id = queue[at++];
+		int id = queue[at++];
 		AABB &aabb = tree.aabb_storage[id];
 		bool is_inside = inside(aabb, ray.from);
 		bool is_hit = false;
@@ -248,14 +248,14 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 					Shape &shape = tree.shape_storage[id];
 					switch (shape.type) {
 						case ShapeType_Box: {
-							// v3 direction = normalize(ray.delta);
+							// Vector3 direction = normalize(ray.delta);
 
-							m4 &pose = tree.pose_storage[id];
+							Matrix4x4 &pose = tree.pose_storage[id];
 
-							v3 tv0 = multiply_perspective(pose, shape.vertices[0]);
-							v3 tv1 = multiply_perspective(pose, shape.vertices[1]);
-							v3 tv2 = multiply_perspective(pose, shape.vertices[2]);
-							v3 tv3 = multiply_perspective(pose, shape.vertices[3]);
+							Vector3 tv0 = multiply_perspective(pose, shape.vertices[0]);
+							Vector3 tv1 = multiply_perspective(pose, shape.vertices[1]);
+							Vector3 tv2 = multiply_perspective(pose, shape.vertices[2]);
+							Vector3 tv3 = multiply_perspective(pose, shape.vertices[3]);
 
 							intersection::RayRay closest_intersection = intersection::RayRay();
 							intersection::ray_ray(tv0, tv1-tv0, ray.from, ray.delta, &closest_intersection);
@@ -275,30 +275,30 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 							results.position = ray.from + ray.delta * ir.tmin;
 
 							if (float_equal(ir.tx1, ir.tmin)) {
-								results.normal = V3(-1, 0, 0);
+								results.normal = vector3(-1, 0, 0);
 							} else if (float_equal(ir.tx2, ir.tmin)) {
-								results.normal = V3(1, 0, 0);
+								results.normal = vector3(1, 0, 0);
 							} else if (float_equal(ir.ty1, ir.tmin)) {
-								results.normal = V3(0, -1, 0);
+								results.normal = vector3(0, -1, 0);
 							} else if (float_equal(ir.ty2, ir.tmin)) {
-								results.normal = V3(0, 1, 0);
+								results.normal = vector3(0, 1, 0);
 							}
 						} break;
 						case ShapeType_Sphere: {
-							f32 radius = 50;
+							float radius = 50;
 
-							m4 &pose = tree.pose_storage[id];
-							v3 center = translation(pose);
+							Matrix4x4 &pose = tree.pose_storage[id];
+							Vector3 center = translation(pose);
 
-							v3 to_center = center - ray.from;
-							v3 delta_n = normalize(ray.delta);
-							f32 length_along_delta = dot(to_center, delta_n);
+							Vector3 to_center = center - ray.from;
+							Vector3 delta_n = normalize(ray.delta);
+							float length_along_delta = dot(to_center, delta_n);
 
-							v3 closest_point = ray.from + length_along_delta * delta_n;
-							f32 opposite_cathetus = length(center - closest_point);
+							Vector3 closest_point = ray.from + length_along_delta * delta_n;
+							float opposite_cathetus = length(center - closest_point);
 							if (opposite_cathetus < radius) {
-								f32 hypotenuse = radius;
-								f32 cathetus = sqrtf(hypotenuse * hypotenuse - opposite_cathetus * opposite_cathetus);
+								float hypotenuse = radius;
+								float cathetus = sqrtf(hypotenuse * hypotenuse - opposite_cathetus * opposite_cathetus);
 
 								did_hit = true;
 								results.position = closest_point - delta_n * cathetus;
@@ -325,21 +325,21 @@ RaycastResults raycast(AABBTree &tree, Ray &ray) {
 }
 
 struct OverlapResults {
-	i32 id;
-	v3 position;
-	v3 normal;
+	int id;
+	Vector3 position;
+	Vector3 normal;
 };
-OverlapResults overlap(AABBTree &tree, i32 item) {
+OverlapResults overlap(AABBTree &tree, int item) {
 	OverlapResults results = {};
 
 	AABB &aabb = tree.aabb_storage[item];
 
-	i32 count = 0;
-	i32 at = 0;
-	i32 queue[32] = {};
+	int count = 0;
+	int at = 0;
+	int queue[32] = {};
 	queue[count++] = tree.root;
 	while (at < count) {
-		i32 id = queue[at++];
+		int id = queue[at++];
 		if (id == item)
 			continue;
 
@@ -375,11 +375,11 @@ OverlapResults overlap(AABBTree &tree, i32 item) {
 
 
 struct SweepResults {
-	i32 id;
-	v3 constrained_translation;
-	v3 normal;
+	int id;
+	Vector3 constrained_translation;
+	Vector3 normal;
 };
-SweepResults sweep(AABBTree &tree, i32 item, v3 &wanted_translation) {
+SweepResults sweep(AABBTree &tree, int item, Vector3 &wanted_translation) {
 	SweepResults results = {};
 
 	results.constrained_translation = wanted_translation;
@@ -391,12 +391,12 @@ SweepResults sweep(AABBTree &tree, i32 item, v3 &wanted_translation) {
 
 	AABB aabb = from + to;
 
-	i32 count = 0;
-	i32 at = 0;
-	i32 queue[32] = {};
+	int count = 0;
+	int at = 0;
+	int queue[32] = {};
 	queue[count++] = tree.root;
 	while (at < count) {
-		i32 id = queue[at++];
+		int id = queue[at++];
 		if (id == item)
 			continue;
 

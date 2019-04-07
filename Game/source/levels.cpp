@@ -15,7 +15,7 @@ Level make_level(Application &application) {
 
 	{
 		Context c = {};
-		c.model = PUSH_STRUCT(application.transient_arena, ModelCC);
+		c.model = (ModelCC*)allocate(&application.transient_arena, sizeof(ModelCC));
 		*c.model = load_model(application.transient_arena, DATA_FOLDER"/quad.cobj");
 		c.model->program_type = ProgramType_default;
 		l.entity_data[l.count++] = make_entity_data(EntityType_Model, { -1000, -600, 0 }, { 2000, 400, 1 }, 0, c);

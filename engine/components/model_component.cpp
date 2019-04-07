@@ -1,4 +1,4 @@
-#include "engine/utils/string.h"
+#include "core/utils/string.h"
 #include "engine/utils/texture.h"
 
 enum IlluminationMode {
@@ -16,10 +16,10 @@ enum IlluminationMode {
 };
 
 struct GroupData {
-	i32 index_count;
+	int index_count;
 	GLindex *indices;
 
-	i32 material_index;
+	int material_index;
 };
 struct MaterialData {
 	float Ns; // Specular exponent
@@ -27,10 +27,10 @@ struct MaterialData {
 	float Tr; // Translucent (1 - d)
 	float Tf; // Transmission filter
 	IlluminationMode illum; // Illumination mode
-	v3 Ka; // Ambient color
-	v3 Kd; // Diffuse color
-	v3 Ks; // Specular color
-	v3 Ke; // Emissive color
+	Vector3 Ka; // Ambient color
+	Vector3 Kd; // Diffuse color
+	Vector3 Ks; // Specular color
+	Vector3 Ke; // Emissive color
 	String map_Ka; // Path to ambient texture
 	String map_Kd; // Path to diffuse texture
 	String map_Ks; // Path to specular texture
@@ -39,15 +39,15 @@ struct MaterialData {
 	String map_bump; // Path to bump map texture
 };
 struct MeshData {
-	i32 vertex_count;
-	i32 coord_count;
-	i32 normal_count;
-	i32 group_count;
-	i32 material_count;
+	int vertex_count;
+	int coord_count;
+	int normal_count;
+	int group_count;
+	int material_count;
 
-	v3 *vertices;
-	v2 *coords;
-	v3 *normals;
+	Vector3 *vertices;
+	Vector2 *coords;
+	Vector3 *normals;
 	GroupData *groups;
 	MaterialData *materials;
 };
@@ -58,10 +58,10 @@ struct Material {
 	float Tr; // Translucent (1 - d)
 	float Tf; // Transmission filter
 	IlluminationMode illum; // Illumination mode
-	v3 Ka; // Ambient color
-	v3 Kd; // Diffuse color
-	v3 Ks; // Specular color
-	v3 Ke; // Emissive color
+	Vector3 Ka; // Ambient color
+	Vector3 Kd; // Diffuse color
+	Vector3 Ks; // Specular color
+	Vector3 Ke; // Emissive color
 	GLuint map_Ka; // ambient texture
 	GLuint map_Kd; // diffuse texture
 	GLuint map_Ks; // specular texture
@@ -76,14 +76,14 @@ enum RenderableDataType {
 };
 
 struct Group {
-	i32 index_count;
+	int index_count;
 	GLuint element_array_buffer;
 	Material *material;
 };
 
 struct Mesh {
-	i32 group_count;
-	i32 material_count;
+	int group_count;
+	int material_count;
 
 	Group *groups;
 	Material *materials;
@@ -95,7 +95,7 @@ struct Mesh {
 };
 
 struct Renderable {
-	m4 pose;
+	Matrix4x4 pose;
 	RenderableDataType datatype;
 	GLenum draw_mode; // e.g. GL_TRIANGLE_STRIP;
 	GLenum buffer_type; // e.g. GL_STATIC_DRAW;
@@ -109,7 +109,7 @@ struct ModelCC {
 	GLenum buffer_type; //  = GL_STATIC_DRAW
 	GLenum draw_mode; // = GL_TRIANGLE_STRIP
 
-	i32 program_type;
+	int program_type;
 };
 
 static String directory = MAKE_STRING(ASSET_FOLDER);
@@ -123,12 +123,12 @@ Renderable *get_model(ModelComponent &mc, Entity &entity) {
 	return mc.models + entity.model_id;
 }
 
-inline m4 &get_pose(ModelComponent &mc, Entity &entity) {
+inline Matrix4x4 &get_pose(ModelComponent &mc, Entity &entity) {
 	Renderable &model = mc.models[entity.model_id];
 	return model.pose;
 }
 
-void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &arena, v3 position, ModelCC *cc) {
+void add(ModelComponent &mc, Entity &entity, EngineApi *engine, Allocator *allocator, Vector3 position, ModelCC *cc) {
 	ASSERT((u32)mc.count < ARRAY_COUNT(mc.models), "Component full!");
 	entity.model_id = mc.count++;
 	Renderable &model = mc.models[entity.model_id];
@@ -144,11 +144,11 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &
 	Mesh &mesh = model.mesh;
 
 	mesh.material_count = mesh_data.material_count;
-	mesh.materials = PUSH_STRUCTS(arena, mesh.material_count, Material);
+	mesh.materials = PUSH(allocator, mesh.material_count, Material);
 
 	GLuint white = load_white();
 
-	for (i32 material_index = 0; material_index < mesh_data.material_count; ++material_index) {
+	for (int material_index = 0; material_index < mesh_data.material_count; ++material_index) {
 		MaterialData &material_data = mesh_data.materials[material_index];
 		Material &material = mesh.materials[material_index];
 
@@ -171,9 +171,9 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &
 	}
 
 	mesh.group_count = mesh_data.group_count;
-	mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, Group);
+	mesh.groups = PUSH(allocator, mesh.group_count, Group);
 
-	for (i32 group_index = 0; group_index < mesh.group_count; ++group_index) {
+	for (int group_index = 0; group_index < mesh.group_count; ++group_index) {
 		GroupData &group_data = mesh_data.groups[group_index];
 		Group &group = mesh.groups[group_index];
 
@@ -197,7 +197,7 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &
 		if (mesh_data.vertex_count) {
 			glGenBuffers(1, &mesh.vertex_vbo);
 			glBindBuffer(GL_ARRAY_BUFFER, mesh.vertex_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.vertex_count * sizeof(v3), mesh_data.vertices, cc->buffer_type);
+			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.vertex_count * sizeof(Vector3), mesh_data.vertices, cc->buffer_type);
 
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -210,7 +210,7 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &
 		if (mesh_data.normal_count) {
 			glGenBuffers(1, &mesh.normal_vbo);
 			glBindBuffer(GL_ARRAY_BUFFER, mesh.normal_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.normal_count * sizeof(v3), mesh_data.normals, cc->buffer_type);
+			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.normal_count * sizeof(Vector3), mesh_data.normals, cc->buffer_type);
 
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -223,7 +223,7 @@ void add(ModelComponent &mc, Entity &entity, EngineApi *engine, ArenaAllocator &
 		if (mesh_data.coord_count) {
 			glGenBuffers(1, &mesh.tex_coord_vbo);
 			glBindBuffer(GL_ARRAY_BUFFER, mesh.tex_coord_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.coord_count * sizeof(v2), mesh_data.coords, cc->buffer_type);
+			glBufferData(GL_ARRAY_BUFFER, (u32)mesh_data.coord_count * sizeof(Vector2), mesh_data.coords, cc->buffer_type);
 
 			glBindVertexArray(mesh.vertex_array_object);
 			glVertexAttribPointer(channel, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -240,7 +240,7 @@ void render(ModelComponent &mc, Entity &entity, GLint model_location) {
 
 	glBindVertexArray(re.mesh.vertex_array_object);
 
-	for (i32 i = 0; i < re.mesh.group_count; ++i) {
+	for (int i = 0; i < re.mesh.group_count; ++i) {
 		Group &group = re.mesh.groups[i];
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, group.element_array_buffer);
 		glDrawElements(re.draw_mode, group.index_count, GL_UNSIGNED_INT, (void*)0);

@@ -140,7 +140,7 @@ void _fill_stacktrace(CONTEXT &context, unsigned skip_frames = 0) {
 		};
 	}
 
-	LOG_ERROR("CrashHandler", "Callstack:\n%s\n\n", *buffer);
+	log_error("CrashHandler", "Callstack:\n%s\n", *buffer);
 	dynamic_string_destroy(buffer);
 	destroy(a);
 }
@@ -185,7 +185,7 @@ void write_crash_dump(const char *path, EXCEPTION_POINTERS *ep) {
 }
 
 void print_callstack(int line, const char *file, const char *assert, const char *msg, unsigned skip_frames) {
-	LOG_ERROR("CrashHandler", "Assertion failed at: %s:%d\n\n%s\n%s", file, line, assert, msg);
+	log_error("CrashHandler", "Assertion failed at: %s:%d\n\n%s\n%s", file, line, assert, msg);
 
 	CONTEXT context;
 	RtlCaptureContext(&context);
@@ -219,7 +219,7 @@ LONG WINAPI exception_filter(EXCEPTION_POINTERS *ep) {
 	write_crash_dump("../output/crashes/crash.dmp", ep); // NOTE(kalle): This needs to go before the other stack walk, otherwise the dump will not contain the actual crash info.
 
 	const char *exception_string = exception_name(ep->ExceptionRecord->ExceptionCode);
-	LOG_ERROR("CrashHandler", "Exception: %s\n", exception_string);
+	log_error("CrashHandler", "Exception: %s", exception_string);
 
 	CONTEXT &context = *ep->ContextRecord;
 	_setup_stack_walk(context);

@@ -1,5 +1,5 @@
 struct Input {
-	v3 move;
+	Vector3 move;
 	bool jump;
 };
 
@@ -16,22 +16,22 @@ void add(InputComponent &ic, Entity &entity) {
 
 void update(InputComponent &ic, float dt) {
 	(void) dt;
-	for (i32 i = 0; i < ic.count; ++i) {
+	for (int i = 0; i < ic.count; ++i) {
 		Input &input = ic.inputs[i];
 
 		input.move.x = 0;
 
-		if (IS_HELD(*ic.input_data, InputKey_D)) {
+		if (is_held(*ic.input_data, InputKey_D)) {
 			input.move.x += 10;
 		}
-		if (IS_HELD(*ic.input_data, InputKey_A)) {
+		if (is_held(*ic.input_data, InputKey_A)) {
 			input.move.x += -10;
 		}
-		input.jump = IS_PRESSED(*ic.input_data, InputKey_Space);
+		input.jump = is_pressed(*ic.input_data, InputKey_Space);
 	}
 }
 
-v3 get_move(InputComponent &ic, Entity &entity) {
+Vector3 get_move(InputComponent &ic, Entity &entity) {
 	return ic.inputs[entity.input_id].move;
 }
 bool get_jump(InputComponent &ic, Entity &entity) {

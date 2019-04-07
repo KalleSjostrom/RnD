@@ -5,6 +5,7 @@
 #include "common.h"
 #include "plugin.h"
 
+#include "ah_reloader/interface.h"
 #include "include/SDL.h"
 
 #include "modules/error.h"
@@ -12,7 +13,6 @@
 #include "modules/input.h"
 #include "modules/audio.h"
 #include "modules/image.h"
-#include "modules/reloader.h"
 
 #include "core/utils/string_id.h"
 

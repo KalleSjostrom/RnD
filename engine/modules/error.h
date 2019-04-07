@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <dbghelp.h>
+#include <stdlib.h>
 
 // void print_callstack(unsigned skip_frames = 0);
 void report_script_assert_failure(int skip_frames, int line, const char *file, const char *assert, const char *format, ...);
@@ -14,6 +15,6 @@ void error_deinit();
 #define ASSERT(condition, format, ...) do { \
 	if (!(condition)) {\
 		report_script_assert_failure(0, __LINE__, __FILE__, #condition, format, __VA_ARGS__); \
-		if (IsDebuggerPresent()) {DebugBreak();} else { *(volatile int*)0 = 5; } \
+		if (IsDebuggerPresent()) {DebugBreak();} else { exit(-1); } \
 	} \
 } while(0)

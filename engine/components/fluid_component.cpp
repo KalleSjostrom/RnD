@@ -1,4 +1,4 @@
-#include "engine/utils/math/random.h"
+#include "core/math/random.h"
 
 #define PARTICLE_COUNT 1024 * 2 // Must be a power of two
 
@@ -68,7 +68,7 @@ namespace fluid_common {
 		}
 		hash_map[hash] = element;
 	}
-	inline void fill_hashmap(v2 *positions, Element **hash_map, Element *elements, NeighborList *neighbors_list) {
+	inline void fill_hashmap(Vector2 *positions, Element **hash_map, Element *elements, NeighborList *neighbors_list) {
 		for (u32 i = 0; i < PARTICLE_COUNT; ++i) {
 			float x = positions[i].x;
 			float y = positions[i].y;
@@ -92,7 +92,7 @@ namespace fluid_common {
 
 	// TODO(kalle): singed distance field boundary detection
 
-	inline void integrate_wide_boundary_projection(v2 *positions, v2 *velocities) {
+	inline void integrate_wide_boundary_projection(Vector2 *positions, Vector2 *velocities) {
 		// Eight wide boundary projection (4 vectors at a time).
 		for (int i = 0; i < PARTICLE_COUNT; i+=4) {
 			vec vel8 = v_load((float*)(velocities + i));
@@ -118,7 +118,7 @@ namespace fluid_common {
 		}
 	}
 
-	inline void integrate_wide_boundary_projection_v2(v2 *positions, v2 *velocities, v2 *accelerations) {
+	inline void integrate_wide_boundary_projection_v2(Vector2 *positions, Vector2 *velocities, Vector2 *accelerations) {
 		// Eight wide boundary projection (4 vectors at a time).
 		for (int i = 0; i < PARTICLE_COUNT; i+=4) {
 			vec acc8 = v_load((float*)(accelerations + i));
@@ -148,44 +148,42 @@ namespace fluid_common {
 
 #define SPOOK 1
 
-// #if defined(MULLER)
-// #include "fluid_muller.cpp"
-// #elif defined(SPOOK)
-// #include "fluid_spook.cpp"
-// #elif defined(SPOOK_PTHREAD)
-// #include "fluid_spook_pthread.cpp"
-// #elif defined(MPM)
-// #include "fluid_mpm.cpp"
-// #endif
-
-#include "engine/utils/time.c"
+#if defined(MULLER)
+#include "fluid_muller.cpp"
+#elif defined(SPOOK)
+#include "../../fluid/source/fluid_spook.cpp"
+#elif defined(SPOOK_PTHREAD)
+#include "fluid_spook_pthread.cpp"
+#elif defined(MPM)
+#include "fluid_mpm.cpp"
+#endif
 
 struct Buffer {
 	GLuint vbo;
 	// cl_mem mem;
 };
-inline v2 zero(u64 i) {
-	return V2_f32(0.0f, 0.0f);
+inline Vector2 zero(u64 i) {
+	return vector2(0.0f, 0.0f);
 }
-inline v2 gen_random_pos(u64 i) {
+inline Vector2 gen_random_pos(u64 i) {
 	Random r;
-	random_init(r, rdtsc(), 54u);
+	random_init(r, __rdtsc(), 54u);
 	float x = random_f32(r);
 	x *= 9;
 	float y = random_f32(r);
 	y *= 9;
-	return V2_f32(x, y);
+	return vector2(x, y);
 }
 
-Buffer gen_buffer(/*cl_context context, */v2 (*f)(u64 i)) {
+Buffer gen_buffer(/*cl_context context, */Vector2 (*f)(u64 i)) {
 	Buffer buffer = {};
 	glGenBuffers(1, &buffer.vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer.vbo);
-	v2 array[PARTICLE_COUNT];
+	Vector2 array[PARTICLE_COUNT];
 	for (u64 i = 0; i < PARTICLE_COUNT; ++i) {
 		array[i] = f(i);
 	}
-	glBufferData(GL_ARRAY_BUFFER, sizeof(v2)*PARTICLE_COUNT, array, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vector2)*PARTICLE_COUNT, array, GL_DYNAMIC_DRAW);
 
 	// cl_int errcode_ret;
 	// buffer.mem = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, buffer.vbo, &errcode_ret);
@@ -211,14 +209,14 @@ struct FluidComponent {
 	cid count;
 };
 
-void add(FluidComponent &fc, Entity &entity, ArenaAllocator &arena) {
+void add(FluidComponent &fc, Entity &entity, Allocator *allocator) {
 	ASSERT((u32)fc.count < ARRAY_COUNT(fc.fluids), "Component full!");
 	entity.fluid_id = fc.count++;
 	Fluid &fluid = fc.fluids[entity.fluid_id];
 	Renderable &renderable = fluid.renderable;
 
 	renderable.pose = identity();
-	renderable.mesh.groups = PUSH_STRUCTS(arena, 1, Group);
+	renderable.mesh.groups = PUSH(allocator, 1, Group);
 
 	Group &group = renderable.mesh.groups[0];
 
@@ -249,12 +247,12 @@ inline void rotate(FluidComponent &fc, Entity &entity, float angle) {
 	float sa;
 	sincosf(angle, &sa, &ca);
 
-	m4 rotation = identity();
+	Matrix4x4 rotation = identity();
 
-	rotation.m[INDEX(0, 0)] = ca;
-	rotation.m[INDEX(0, 1)] = -sa;
-	rotation.m[INDEX(1, 0)] = sa;
-	rotation.m[INDEX(1, 1)] = ca;
+	rotation.m[matrix4x4_index(0, 0)] = ca;
+	rotation.m[matrix4x4_index(0, 1)] = -sa;
+	rotation.m[matrix4x4_index(1, 0)] = sa;
+	rotation.m[matrix4x4_index(1, 1)] = ca;
 
 	fluid.renderable.pose *= rotation;
 }
@@ -264,32 +262,32 @@ void update(FluidComponent &fc, f32 dt) {
 		Fluid &fluid = fc.fluids[i];
 
 		glBindBuffer(GL_ARRAY_BUFFER, fluid.density_pressure.vbo);
-		v2 *gpu_density_pressure = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+		Vector2 *gpu_density_pressure = (Vector2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
 
 		glBindBuffer(GL_ARRAY_BUFFER, fluid.velocities.vbo);
-		v2 *gpu_velocities = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+		Vector2 *gpu_velocities = (Vector2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
 
 		glBindBuffer(GL_ARRAY_BUFFER, fluid.positions.vbo);
-		v2 *gpu_positions = (v2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+		Vector2 *gpu_positions = (Vector2*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
 
-		v2 density_pressure[PARTICLE_COUNT] = {};
-		ALIGNED_(32) v2 velocities[PARTICLE_COUNT];
-		ALIGNED_(32) v2 positions[PARTICLE_COUNT];
+		Vector2 density_pressure[PARTICLE_COUNT] = {};
+		ALIGNED_(32) Vector2 velocities[PARTICLE_COUNT];
+		ALIGNED_(32) Vector2 positions[PARTICLE_COUNT];
 
-		// memcpy(density_pressure, gpu_density_pressure, PARTICLE_COUNT* sizeof(v2));
-		memcpy(velocities, gpu_velocities, PARTICLE_COUNT* sizeof(v2));
-		memcpy(positions, gpu_positions, PARTICLE_COUNT* sizeof(v2));
+		// memcpy(density_pressure, gpu_density_pressure, PARTICLE_COUNT* sizeof(Vector2));
+		memcpy(velocities, gpu_velocities, PARTICLE_COUNT* sizeof(Vector2));
+		memcpy(positions, gpu_positions, PARTICLE_COUNT* sizeof(Vector2));
 
-		float cos_angle = fluid.renderable.pose.m[INDEX(0, 0)];
-		float sin_angle = fluid.renderable.pose.m[INDEX(1, 0)];
+		float cos_angle = fluid.renderable.pose.m[matrix4x4_index(0, 0)];
+		float sin_angle = fluid.renderable.pose.m[matrix4x4_index(1, 0)];
 
-		v2 gravity = V2_f32(0, -9.82f);
+		Vector2 gravity = vector2(0, -9.82f);
 		float gx = cos_angle * gravity.x - sin_angle * gravity.y;
 		float gy = sin_angle * gravity.x + cos_angle * gravity.y;
 		gravity.x = -gx;
 		gravity.y = gy;
 
-		// fluid::simulate(positions, velocities, density_pressure, gravity);
+		::fluid::simulate(positions, velocities, density_pressure, gravity);
 		// memset(density_pressure, 0, sizeof(density_pressure));
 		// fluid::simulate(positions, velocities, density_pressure, gravity);
 		// memset(density_pressure, 0, sizeof(density_pressure));
@@ -297,9 +295,9 @@ void update(FluidComponent &fc, f32 dt) {
 		// memset(density_pressure, 0, sizeof(density_pressure));
 		// fluid::simulate(positions, velocities, density_pressure, gravity);
 
-		memcpy(gpu_density_pressure, density_pressure, PARTICLE_COUNT* sizeof(v2));
-		memcpy(gpu_velocities, velocities, PARTICLE_COUNT* sizeof(v2));
-		memcpy(gpu_positions, positions, PARTICLE_COUNT* sizeof(v2));
+		memcpy(gpu_density_pressure, density_pressure, PARTICLE_COUNT* sizeof(Vector2));
+		memcpy(gpu_velocities, velocities, PARTICLE_COUNT* sizeof(Vector2));
+		memcpy(gpu_positions, positions, PARTICLE_COUNT* sizeof(Vector2));
 
 		glBindBuffer(GL_ARRAY_BUFFER, fluid.density_pressure.vbo);
 		glUnmapBuffer(GL_ARRAY_BUFFER);

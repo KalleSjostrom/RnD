@@ -2,12 +2,12 @@
 
 struct EntityData {
 	EntityType type;
-	v3 offset;
-	v3 size;
+	Vector3 offset;
+	Vector3 size;
 	float rotation;
 	Context context;
 };
-EntityData make_entity_data(EntityType type, v3 offset, v3 size, float rotation, Context &context) {
+EntityData make_entity_data(EntityType type, Vector3 offset, Vector3 size, float rotation, Context &context) {
 	EntityData data = {};
 	data.type = type;
 	data.offset = offset;

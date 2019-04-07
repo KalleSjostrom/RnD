@@ -1,5 +1,11 @@
 #define PLUGIN_DATA ReloadTest
 
+struct Data {
+	int a;
+	int b;
+};
+
+// TODO(kalle): We need to handle the case where multiple pointers point to it though, with different types (like void* and SomeStruct*).
 // Case 1: Data and Pointers
 // Case 2: Arrays w. Pointers
 // Case 3: MultiDim Arrays w. Pointers
@@ -54,11 +60,20 @@ struct ReloadTest {
 #endif
 
 #if defined(CASE_4_A)
-	void (*a)(void);
+	Data *a[8];
+	Data storage[8];
 #elif defined(CASE_4_B)
+	int b[8];
+	Data storage[8];
+	Data *a[8];
+#endif
+
+#if defined(CASE_5_A)
+	void (*a)(void);
+#elif defined(CASE_5_B)
 	void (*b)(int, int);
 	void (*a)(void);
-#elif defined(CASE_4_C)
+#elif defined(CASE_5_C)
 	void (*a)(void);
 	void (*b)(int, int);
 #endif
@@ -66,13 +81,6 @@ struct ReloadTest {
 
 #define FEATURE_RELOAD
 #include "systems.h"
-
-#include "core/memory/allocator.h"
-#include "core/memory/allocator.cpp"
-#include "core/memory/mspace_allocator.cpp"
-#include "core/memory/arena_allocator.cpp"
-#include "core/containers/array.cpp"
-#include "core/utils/dynamic_string.cpp"
 
 void plugin_update(Application *application, float dt) {
 	ReloadTest &test = application->plugin_data;
@@ -155,11 +163,17 @@ void plugin_setup(Application *application) {
 #endif
 
 #if defined(CASE_4_A)
+	for (int i = ARRAY_COUNT(test.storage) - 1; i >= 0; i--) {
+		test.a[i] = &test.storage[i];
+	}
+#endif
+
+#if defined(CASE_5_A)
 	test.a = &testa;
-#elif defined(CASE_4_B)
+#elif defined(CASE_5_B)
 	test.a = &testa;
 	test.b = &testb;
-#elif defined(CASE_4_C)
+#elif defined(CASE_5_C)
 	test.a = &testa;
 	test.b = &testb;
 #endif
@@ -266,9 +280,15 @@ void plugin_reloaded(Application *application) {
 #endif
 
 #if defined(CASE_4_B)
+	for (int i = ARRAY_COUNT(test.storage) - 1; i >= 0; i--) {
+		TEST(test.a[i] == &test.storage[i]);
+	}
+#endif
+
+#if defined(CASE_5_B)
 	TEST(test.a == &testa);
 	TEST(test.b == 0);
-#elif defined(CASE_4_C)
+#elif defined(CASE_5_C)
 	TEST(test.a == &testa);
 	TEST(test.b == &testb);
 #endif

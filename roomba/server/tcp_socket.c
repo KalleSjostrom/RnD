@@ -5,11 +5,11 @@
 bool make_socket(SOCKET *socket_handle) {
 	*socket_handle = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (*socket_handle == INVALID_SOCKET) {
-		LOG_ERROR("TCPSocket", "Could not create socket! (error=%ld)\n", GetLastError());
+		log_error("TCPSocket", "Could not create socket! (error=%ld)", GetLastError());
 	}
 	return *socket_handle != INVALID_SOCKET;
 }
-bool setup_host_socket(SOCKET socket_handle, uint16_t port, uint32_t max_pending_connections) {	
+bool setup_host_socket(SOCKET socket_handle, uint16_t port, uint32_t max_pending_connections) {
 	assert(socket_handle != INVALID_SOCKET && "Ivalid socket handle.");
 	assert(max_pending_connections <= 128 && "Too many pending connections.");
 
@@ -21,13 +21,13 @@ bool setup_host_socket(SOCKET socket_handle, uint16_t port, uint32_t max_pending
 
 	int success = bind(socket_handle, (SOCKADDR*) &address, sizeof(address)) >= 0;
 	if (!success) {
-		LOG_ERROR("TCPSocket", "Could not bind socket! (error=%ld)\n", GetLastError());
+		log_error("TCPSocket", "Could not bind socket! (error=%ld)", GetLastError());
 		return false;
 	}
 
 	success = listen(socket_handle, 8) >= 0;
 	if (!success) {
-		LOG_ERROR("TCPSocket", "listen() failed! (error=%ld)\n", GetLastError());
+		log_error("TCPSocket", "listen() failed! (error=%ld)", GetLastError());
 	}
 
 	return success;
@@ -43,7 +43,7 @@ bool setup_client_socket(SOCKET socket_handle, const char *ip, uint16_t port) {
 
 	bool success = connect(socket_handle, (SOCKADDR*) &address, sizeof(address)) >= 0;
 	if (!success) {
-		LOG_ERROR("TCPSocket", "Could not connect to server! (error=%ld)\n", GetLastError());
+		log_error("TCPSocket", "Could not connect to server! (error=%ld)", GetLastError());
 	}
 	u_long nonzero = 1;
 	ioctlsocket(socket_handle, FIONBIO, &nonzero);
@@ -56,7 +56,7 @@ bool accept_client(int socket_handle, SOCKET *accepted_socket) {
 	*accepted_socket = accept(socket_handle, (SOCKADDR *) &client_address, &client_address_length);
 	bool success = *accepted_socket != INVALID_SOCKET;
 	if (!success) {
-		LOG_ERROR("TCPSocket", "accept() failed (error=%ld)\n", GetLastError());
+		log_error("TCPSocket", "accept() failed (error=%ld)", GetLastError());
 	}
 	return success;
 }
@@ -72,7 +72,7 @@ int recieve_socket(SOCKET socket_handle, uint8_t *buffer, uint32_t count) {
 int send_socket(SOCKET socket_handle, uint8_t *buffer, uint32_t count) {
 	int sent_size = send(socket_handle, (char*)buffer, count, 0);
 	if (sent_size == -1) {
-		printf("Failed to send\n");
+		printf("Failed to send");
 	}
 	return (int) sent_size;
 }
@@ -92,7 +92,7 @@ bool make_socket(int &socket_handle) {
 	socket_handle = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	bool success = socket_handle >= 0;
 	if (!success) {
-		fprintf(stderr, "Could not create socket!\n");
+		fprintf(stderr, "Could not create socket!");
 	}
 	return success;
 }
@@ -109,13 +109,13 @@ bool setup_host_socket(int socket_handle, uint32_t port, uint32_t max_pending_co
 
 	bool success = bind(socket_handle, (SOCKADDR*) &address, sizeof(address)) >= 0;
 	if (!success) {
-		fprintf(stderr, "Could not bind socket!\n");
+		fprintf(stderr, "Could not bind socket!");
 		return false;
 	}
 
 	success = listen(socket_handle, 8) >= 0;
 	if (!success) {
-		fprintf(stderr, "listen() failed!\n");
+		fprintf(stderr, "listen() failed!");
 	}
 
 	return success;
@@ -132,7 +132,7 @@ bool setup_client_socket(int socket_handle, const char *ip, uint32_t port) {
 
 	bool success = connect(socket_handle, (SOCKADDR*) &address, sizeof(address)) >= 0;
 	if (!success) {
-		fprintf(stderr, "Could not connect to server! %d\n", errno);
+		fprintf(stderr, "Could not connect to server! %d", errno);
 	}
 	return success;
 }
@@ -143,7 +143,7 @@ bool accept_client(int socket_handle, int &accepted_socket) {
 	accepted_socket = accept(socket_handle, (SOCKADDR *) &client_address, &client_address_length);
 	bool success = accepted_socket >= 0;
 	if (!success) {
-		fprintf(stderr, "accept() failed\n");
+		fprintf(stderr, "accept() failed");
 	}
 	return success;
 }
@@ -156,7 +156,7 @@ int recieve_socket(int socket_handle, uint8_t *buffer, uint32_t count) {
 int send_socket(int socket_handle, uint8_t *buffer, uint32_t count) {
 	ssize_t sent_size = send(socket_handle, buffer, count, 0);
 	if (sent_size == -1) {
-		printf("Failed to send\n");
+		printf("Failed to send");
 	}
 	return (int) sent_size;
 }

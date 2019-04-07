@@ -1,8 +1,8 @@
 namespace intersection {
 	struct RayAABB {
-		f32 tx1, tx2;
-		f32 ty1, ty2;
-		f32 tmin, tmax;
+		float tx1, tx2;
+		float ty1, ty2;
+		float tmin, tmax;
 		bool did_hit() {
 			return tmax > tmin && tmin >= 0.0f && tmin <= 1.0f;
 		}
@@ -29,11 +29,11 @@ namespace intersection {
 	}
 
 	struct RayRay {
-		f32 t;
-		f32 nx, ny;
+		float t;
+		float nx, ny;
 		RayRay() : t(10), nx(0), ny(0) {}
-		v3 normal() {
-			return normalize(V3(nx, ny, 0));
+		Vector3 normal() {
+			return normalize(vector3(nx, ny, 0));
 		}
 		bool did_hit() {
 			return t >= 0.0f && t <= 1.0f;
@@ -62,14 +62,14 @@ namespace intersection {
 	p2.x * d1.y - p1.x * d1.y - p2.y * d1.x + p1.y * d1.x = (d2.y * d1.x - d2.x * d1.y) * v
 	(p2.x * d1.y - p1.x * d1.y - p2.y * d1.x + p1.y * d1.x) / (d2.y * d1.x - d2.x * d1.y) = v
 	*/
-	void ray_ray(const v3 &p1, const v3 &d1, const v3 &p2, const v3 &d2, RayRay *out) {
-		f32 denominator = d2.y * d1.x - d2.x * d1.y;
+	void ray_ray(const Vector3 &p1, const Vector3 &d1, const Vector3 &p2, const Vector3 &d2, RayRay *out) {
+		float denominator = d2.y * d1.x - d2.x * d1.y;
 		if (fabsf(denominator) > 0.0001f) {
-			f32 nominator = p2.x * d1.y - p1.x * d1.y - p2.y * d1.x + p1.y * d1.x;
-			f32 v = nominator / denominator;
+			float nominator = p2.x * d1.y - p1.x * d1.y - p2.y * d1.x + p1.y * d1.x;
+			float v = nominator / denominator;
 
 			if (v >= 0 && v <= 1 && v < out->t) {
-				f32 u;
+				float u;
 				if (fabsf(d1.x) > fabsf(d1.y)) {
 					u = (p2.x + d2.x * v - p1.x) / d1.x;
 				} else {
@@ -87,13 +87,13 @@ namespace intersection {
 
 
 	struct AabbAabb {
-		f32 t, t_last;
+		float t, t_last;
 		AabbAabb() : t(0), t_last(1) {}
 		bool did_hit() {
 			return t >= 0.0f && t <= 1.0f;
 		}
 	};
-	bool moving_aabb_aabb(AABB &a, AABB &b, v3 v, AabbAabb *out) {
+	bool moving_aabb_aabb(AABB &a, AABB &b, Vector3 v, AabbAabb *out) {
 		bool did_hit = true;
 
 		float a_max[] = { a.x + a.w, a.y + a.h };

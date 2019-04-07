@@ -39,6 +39,3 @@ MSpaceAllocator *mspace_allocator(size_t capacity) {
 	mspace _mspace = create_mspace(capacity, 0);
 	return (MSpaceAllocator *)_mspace;
 }
-
-
-#include "mspace_reloader_backend.cpp"

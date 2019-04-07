@@ -22,7 +22,7 @@ void init_arena_allocator(ArenaAllocator *arena, size_t initial_page_count) {
 	arena->size = pagesize * initial_page_count;
 	arena->offset = 0;
 	arena->memory = VirtualAlloc(0, reserved_size, MEM_RESERVE, PAGE_READWRITE);
-	VirtualAlloc(arena->memory, arena->size, MEM_COMMIT, PAGE_READWRITE);
+	arena->memory = VirtualAlloc(arena->memory, arena->size, MEM_COMMIT, PAGE_READWRITE);
 }
 
 void *allocate(ArenaAllocator *arena, size_t size, bool clear_to_zero, unsigned alignment) {

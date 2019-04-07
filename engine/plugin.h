@@ -14,7 +14,7 @@ struct EngineApi {
 	ErrorApi error;
 	LoggingApi logging;
 
-	void (*screen_dimensions)(i32 &screen_width, i32 &screen_height);
+	void (*screen_dimensions)(int &screen_width, int &screen_height);
 
 	void (*quit)();
 };

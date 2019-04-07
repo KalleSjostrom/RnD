@@ -1,4 +1,7 @@
+#define ASSET_FOLDER "../../game/assets"
+
 #define CL_ERROR_CHECKING
+#define PLUGIN_DATA void*
 
 #define SYSTEM_OPENGL
 #define SYSTEM_OPENCL
@@ -22,7 +25,7 @@ struct Raytracer {
 	cl_kernel kernel;
 };
 
-ALIGNED_TYPE_(struct, 16) {
+ALIGNED_TYPE(struct, 16) {
 	cl_float3 position;
 	cl_float3 data;
 	cl_float3 emittance_color;
@@ -31,19 +34,19 @@ ALIGNED_TYPE_(struct, 16) {
 	cl_int type;
 } CLEntity;
 
-ALIGNED_TYPE_(struct, 16) {
+ALIGNED_TYPE(struct, 16) {
 	cl_float3 position;
 	cl_float3 data;
 	cl_int type;
 } CLEntityGeometry;
 
-ALIGNED_TYPE_(struct, 16) {
+ALIGNED_TYPE(struct, 16) {
 	cl_float3 emittance_color;
 	cl_float3 reflection_color;
 	cl_float roughness;
 } CLEntityMaterial;
 
-ALIGNED_TYPE_(struct, 16) {
+ALIGNED_TYPE(struct, 16) {
 	cl_uint width;
 	cl_uint height;
 	cl_float half_width;
@@ -55,35 +58,35 @@ ALIGNED_TYPE_(struct, 16) {
 	cl_int rays_per_pixel;
 } CLRaytracerSettings;
 
-ALIGNED_TYPE_(struct, 16) {
+ALIGNED_TYPE(struct, 16) {
 	cl_float4 x;
 	cl_float4 y;
 	cl_float4 z;
 	cl_float4 w;
 } CLM4;
 
-void plugin_reloaded(Application &application) {
-	// Raytracer &raytracer = *(Raytracer*)application.user_data;
+void plugin_reloaded(Application *application) {
+	// Raytracer &raytracer = *(Raytracer*)application->plugin_data;
 
 	// i32 screen_width, screen_height;
-	// application.engine->screen_dimensions(screen_width, screen_height);
-	// setup_render_pipe(application.persistent_arena, application.engine, raytracer.render_pipe, application.components, screen_width, screen_height);
+	// application->engine->screen_dimensions(screen_width, screen_height);
+	// setup_render_pipe(application->persistent_arena, application->engine, raytracer->render_pipe, application->components, screen_width, screen_height);
 }
 
-void plugin_setup(Application &application) {
-	Allocator &allocator = application.allocator;
-	application.user_data = (Raytracer*)allocator.allocate(sizeof(Raytracer), 4);
-	Raytracer &raytracer = *application.user_data;
+void plugin_setup(Application *application) {
+	Allocator *allocator = application->allocator;
+	application->plugin_data = PUSH(allocator, 1, Raytracer);
+	Raytracer *raytracer = (Raytracer *)application->plugin_data;
 
-	raytracer.random = {};
-	random_init(raytracer.random, rdtsc(), 54u);
+	raytracer->random = {};
+	random_init(raytracer->random, __rdtsc(), 54u);
 
 	Level level = make_level();
 	for (i32 i = 0; i < level.count; ++i) {
 		EntityData &data = level.entity_data[i];
-		Entity *entity = spawn_entity(application.engine, application.components, data.type, data.context, data.offset);
+		Entity *entity = spawn_entity(application->engine, application->components, data.type, data.context, data.offset);
 
-		m4 &pose = get_pose(application.components.model, *entity);
+		Matrix4x4 &pose = get_pose(application->components.model, *entity);
 		translation(pose) = data.offset;
 		set_rotation(pose, data.rotation);
 		set_scale(pose, data.size);
@@ -93,10 +96,10 @@ void plugin_setup(Application &application) {
 	// glEnable(GL_CULL_FACE); glCullFace(GL_BACK);
 	// glEnable(GL_DEPTH_TEST);
 
-	ClInfo &cl_info = application.cl_info;
+	ClInfo &cl_info = application->cl_info;
 	// -cl-mad-enable -cl-no-signed-zeros -cl-unsafe-math-optimizations -cl-finite-math-only -cl-single-precision-constant -cl-denorms-are-zero -cl-strict-aliasing
 	char *build_options = "-cl-fast-relaxed-math";
-	cl_program program = cl_program_builder::create_from_strings(application.transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, build_options);
+	cl_program program = cl_program_builder::create_from_strings(application->transient_arena, cl_info.context, cl_shaders::trace_ray, 1, &cl_info.device, build_options);
 
 	cl_int errcode_ret;
 
@@ -104,8 +107,8 @@ void plugin_setup(Application &application) {
 	CL_CHECK_ERRORCODE(clCreateKernel, errcode_ret);
 
 	i32 screen_width, screen_height;
-	application.engine->screen_dimensions(screen_width, screen_height);
-	setup_render_pipe(application.persistent_arena, application.engine, raytracer.render_pipe, application.components, screen_width, screen_height);
+	application->engine->screen_dimensions(screen_width, screen_height);
+	setup_render_pipe(allocator, application->engine, raytracer->render_pipe, application->components, screen_width, screen_height);
 
 	cl_uint input_entity_count = 0;
 
@@ -214,14 +217,14 @@ void plugin_setup(Application &application) {
 			sphere->roughness = 1.0f;
 		}
 
-		CLEntityGeometry *geometry = PUSH_STRUCTS(application.transient_arena, input_entity_count, CLEntityGeometry);
+		CLEntityGeometry *geometry = PUSH(&application->transient_arena, input_entity_count, CLEntityGeometry);
 		for (u32 gi = 0; gi < input_entity_count; ++gi) {
 			geometry[gi].position = entities[gi].position;
 			geometry[gi].data = entities[gi].data;
 			geometry[gi].type = entities[gi].type;
 		}
 
-		CLEntityMaterial *material = PUSH_STRUCTS(application.transient_arena, input_entity_count, CLEntityMaterial);
+		CLEntityMaterial *material = PUSH(&application->transient_arena, input_entity_count, CLEntityMaterial);
 		for (u32 gi = 0; gi < input_entity_count; ++gi) {
 			material[gi].emittance_color = entities[gi].emittance_color;
 			material[gi].reflection_color = entities[gi].reflection_color;
@@ -234,8 +237,8 @@ void plugin_setup(Application &application) {
 		input_entity_material_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(CLEntityMaterial) * input_entity_count, material, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 	}
-	raytracer.input_entity_geometry_mem = input_entity_geometry_mem;
-	raytracer.input_entity_material_mem = input_entity_material_mem;
+	raytracer->input_entity_geometry_mem = input_entity_geometry_mem;
+	raytracer->input_entity_material_mem = input_entity_material_mem;
 
 	cl_mem input_settings_mem;
 	{
@@ -257,15 +260,15 @@ void plugin_setup(Application &application) {
 
 	cl_mem accumulation_mem;
 	{
-		void *mem = PUSH_SIZE(application.transient_arena, sizeof(cl_float3) * 1024 * 768, true);
+		void *mem = allocate(&application->transient_arena, sizeof(cl_float3) * 1024 * 768, true);
 		accumulation_mem = clCreateBuffer(cl_info.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float3) * 1024 * 768, mem, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateFromGLTexture, errcode_ret);
 	}
-	raytracer.accumulation_mem = accumulation_mem;
+	raytracer->accumulation_mem = accumulation_mem;
 
 	cl_mem output_mem;
 	{
-		output_mem = clCreateFromGLTexture(cl_info.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, raytracer.render_pipe.ray_texture, &errcode_ret);
+		output_mem = clCreateFromGLTexture(cl_info.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, raytracer->render_pipe.ray_texture, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateFromGLTexture, errcode_ret);
 	}
 
@@ -288,26 +291,26 @@ void plugin_setup(Application &application) {
 	errcode_ret = clSetKernelArg(kernel, 8, sizeof(cl_mem), (void *) &output_mem);
 	CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-	raytracer.output_mem = output_mem;
-	raytracer.kernel = kernel;
+	raytracer->output_mem = output_mem;
+	raytracer->kernel = kernel;
 }
 
-void plugin_update(Application &application, float dt) {
-	Raytracer &raytracer = *(Raytracer*)application.user_data;
+void plugin_update(Application *application, float dt) {
+	Raytracer *raytracer = (Raytracer*)application->plugin_data;
 
 	static cl_ulong framecounter = 0;
 	framecounter++;
 
 	{
-		InputData &input = *application.components.input.input_data;
+		InputData &input = *application->components.input.input_data;
 		float translation_speed = 128.0f;
 		float rotation_speed = 0.1f;
-		bool moved = move(application.camera, input, translation_speed, rotation_speed, dt);
+		bool moved = move(application->camera, input, translation_speed, rotation_speed, dt);
 
 		if (moved) {
 			size_t size = sizeof(cl_float3) * 1024 * 768;
-			void *mem = PUSH_SIZE(application.transient_arena, size, true);
-			cl_int errcode_ret = clEnqueueWriteBuffer(application.cl_info.command_queue, raytracer.accumulation_mem, true, 0, size, mem, 0, 0, 0);
+			void *mem = allocate(&application->transient_arena, size, true);
+			cl_int errcode_ret = clEnqueueWriteBuffer(application->cl_info.command_queue, raytracer->accumulation_mem, true, 0, size, mem, 0, 0, 0);
 			(void) errcode_ret;
 			// CL_CHECK_ERRORCODE(clEnqueueWriteBuffer, errcode_ret);
 
@@ -333,36 +336,36 @@ void plugin_update(Application &application, float dt) {
 		// 	sphere.roughness = 1.0f;
 
 		// 	size_t offset = 2 * sizeof(CLEntity);
-		// 	errcode_ret = clEnqueueWriteBuffer(application.cl_info.command_queue, application.input_entities_mem, true, offset, sizeof(CLEntity), (void*)(&sphere), 0, 0, 0);
+		// 	errcode_ret = clEnqueueWriteBuffer(application->cl_info.command_queue, application->input_entities_mem, true, offset, sizeof(CLEntity), (void*)(&sphere), 0, 0, 0);
 		// 	CL_CHECK_ERRORCODE(clCreateBuffer, errcode_ret);
 		// }
 
-		u64 time = rdtsc();
-		errcode_ret = clSetKernelArg(raytracer.kernel, 4, sizeof(u64), (void *) &time);
+		u64 time = __rdtsc();
+		errcode_ret = clSetKernelArg(raytracer->kernel, 4, sizeof(u64), (void *) &time);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		errcode_ret = clSetKernelArg(raytracer.kernel, 5, sizeof(u64), (void *) &framecounter);
+		errcode_ret = clSetKernelArg(raytracer->kernel, 5, sizeof(u64), (void *) &framecounter);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
-		CLM4 clm = *(CLM4*)&application.camera.pose;
+		CLM4 clm = *(CLM4*)&application->camera.pose;
 
-		errcode_ret = clSetKernelArg(raytracer.kernel, 6, sizeof(CLM4), (void *) &clm);
+		errcode_ret = clSetKernelArg(raytracer->kernel, 6, sizeof(CLM4), (void *) &clm);
 		CL_CHECK_ERRORCODE(clSetKernelArg, errcode_ret);
 
 		glFinish();
-		clEnqueueAcquireGLObjects(application.cl_info.command_queue, 1, &raytracer.output_mem, 0, 0, 0);
+		clEnqueueAcquireGLObjects(application->cl_info.command_queue, 1, &raytracer->output_mem, 0, 0, 0);
 
-		errcode_ret = clEnqueueNDRangeKernel(application.cl_info.command_queue, raytracer.kernel, ARRAY_COUNT(work_group_size), 0, work_group_size, local_group_size, 0, 0, &event);
+		errcode_ret = clEnqueueNDRangeKernel(application->cl_info.command_queue, raytracer->kernel, ARRAY_COUNT(work_group_size), 0, work_group_size, local_group_size, 0, 0, &event);
 		CL_CHECK_ERRORCODE(clEnqueueNDRangeKernel, errcode_ret);
 
 		// clWaitForEvents(1, &event);
 
-		clFinish(application.cl_info.command_queue);
-		clEnqueueReleaseGLObjects(application.cl_info.command_queue, 1, &raytracer.output_mem, 0, 0, 0);
+		clFinish(application->cl_info.command_queue);
+		clEnqueueReleaseGLObjects(application->cl_info.command_queue, 1, &raytracer->output_mem, 0, 0, 0);
 	}
 }
 
-void plugin_render(Application &application) {
-	Raytracer &raytracer = *(Raytracer*)application.user_data;
-	render(raytracer.render_pipe, application.components, application.camera);
+void plugin_render(Application *application) {
+	Raytracer *raytracer = (Raytracer*)application->plugin_data;
+	render(raytracer->render_pipe, application->components, application->camera);
 }

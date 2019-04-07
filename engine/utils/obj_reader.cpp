@@ -1,8 +1,8 @@
-#include "engine/utils/string.h"
+#include "core/utils/string.h"
 
 void read_string(ArenaAllocator &arena, String &string, FILE *file) {
 	fread(&string.length, sizeof(i32), 1, file);
-	string.text = PUSH_STRING(arena, string.length);
+	string.text = (char*)allocate(&arena, string.length);
 	fread(string.text, sizeof(char), (size_t)string.length, file);
 }
 
@@ -18,27 +18,27 @@ MeshData read_obj(ArenaAllocator &arena, const char *filepath) {
 	fread(&mesh.normal_count, sizeof(int), 1, objfile);
 	fread(&mesh.group_count, sizeof(int), 1, objfile);
 
-	mesh.vertices = PUSH_STRUCTS(arena, mesh.vertex_count, v3);
-	mesh.coords = PUSH_STRUCTS(arena, mesh.coord_count, v2);
-	mesh.normals = PUSH_STRUCTS(arena, mesh.normal_count, v3);
-	mesh.groups = PUSH_STRUCTS(arena, mesh.group_count, GroupData);
+	mesh.vertices = PUSH(&arena, mesh.vertex_count, Vector3);
+	mesh.coords = PUSH(&arena, mesh.coord_count, Vector2);
+	mesh.normals = PUSH(&arena, mesh.normal_count, Vector3);
+	mesh.groups = PUSH(&arena, mesh.group_count, GroupData);
 
-	fread(mesh.vertices, sizeof(v3), (size_t)mesh.vertex_count, objfile);
-	fread(mesh.coords, sizeof(v2), (size_t)mesh.coord_count, objfile);
-	fread(mesh.normals, sizeof(v3), (size_t)mesh.normal_count, objfile);
+	fread(mesh.vertices, sizeof(Vector3), (size_t)mesh.vertex_count, objfile);
+	fread(mesh.coords, sizeof(Vector2), (size_t)mesh.coord_count, objfile);
+	fread(mesh.normals, sizeof(Vector3), (size_t)mesh.normal_count, objfile);
 
 	for (int i = 0; i < mesh.group_count; ++i) {
 		GroupData &group = mesh.groups[i];
 		fread(&group.material_index, sizeof(int), 1, objfile);
 		fread(&group.index_count, sizeof(int), 1, objfile);
-		group.indices = PUSH_STRUCTS(arena, group.index_count, GLindex);
+		group.indices = PUSH(&arena, group.index_count, GLindex);
 		fread(group.indices, sizeof(GLindex), (size_t)group.index_count, objfile);
 	}
 
 	// TODO(kalle): Move the materials elsewhere
 	fread(&mesh.material_count, sizeof(int), 1, objfile);
 
-	mesh.materials = PUSH_STRUCTS(arena, mesh.material_count, MaterialData);
+	mesh.materials = PUSH(&arena, mesh.material_count, MaterialData);
 	for (i32 i = 0; i < mesh.material_count; ++i) {
 		MaterialData &m = mesh.materials[i];
 

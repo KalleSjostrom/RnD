@@ -11,32 +11,32 @@ namespace cl_program_builder {
 			errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &build_status, 0);
 			CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
 			switch (build_status) {
-				case CL_BUILD_NONE: LOG_INFO("OpenCL", "No build.\n"); break;
-				case CL_BUILD_ERROR: LOG_INFO("OpenCL", "Build error.\n"); break;
-				case CL_BUILD_SUCCESS: LOG_INFO("OpenCL", "Build successful.\n"); break;
-				case CL_BUILD_IN_PROGRESS: LOG_INFO("OpenCL", "Build in progress.\n"); break;
+				case CL_BUILD_NONE: log_info("OpenCL", "No build."); break;
+				case CL_BUILD_ERROR: log_info("OpenCL", "Build error."); break;
+				case CL_BUILD_SUCCESS: log_info("OpenCL", "Build successful."); break;
+				case CL_BUILD_IN_PROGRESS: log_info("OpenCL", "Build in progress."); break;
 			}
 
-			u64 ret_val_size;
+			uint64_t ret_val_size;
 			errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_LOG, 0, 0, &ret_val_size);
 			CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
 
             if (errcode_ret == CL_SUCCESS) {
                 TempAllocator ta(&arena);
-                char *build_log = PUSH_STRING(arena, ret_val_size+1);
+                char *build_log = PUSH(&arena, ret_val_size+1, char);
                 errcode_ret = clGetProgramBuildInfo(program, devices[i], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, 0);
                 CL_CHECK_ERRORCODE(clGetProgramBuildInfo, errcode_ret);
                 build_log[ret_val_size] = '\0';
-                LOG_INFO("OpenCL", "CL build log:\n%s\n", build_log);
+                log_info("OpenCL", "CL build log:%s", build_log);
             }
 		}
 	}
 
 	cl_program create_from_source_file(ArenaAllocator &arena, cl_context context, const char *filename, u32 num_devices, cl_device_id *devices, const char *build_options = 0) {
-		u64 size;
+		uint64_t size;
 		FILE *file = open_file(filename, &size);
 		TempAllocator ta(&arena);
-		char *source_buffer = PUSH_STRING(arena, size);
+		char *source_buffer = PUSH(&arena, size, char);
 		size_t read_bytes = fread(source_buffer, 1, size, file);
 		fclose(file);
 		source_buffer[read_bytes] = '\0';
@@ -70,21 +70,21 @@ namespace cl_program_builder {
 		cl_uint count;
 		fread(&count, sizeof(cl_uint), 1, file);
 
-		u64 *binary_sizes = PUSH_STRUCTS(arena, count, u64);
-		fread(binary_sizes, sizeof(u64), count, file);
+		uint64_t *binary_sizes = PUSH(&arena, count, uint64_t);
+		fread(binary_sizes, sizeof(uint64_t), count, file);
 
-		u8 **binaries;
-		binaries = PUSH_STRUCTS(arena, count, u8 *);
+		uint8_t **binaries;
+		binaries = PUSH(&arena, count, uint8_t *);
 		for (u32 i = 0; i < count; ++i) {
-			binaries[i] = PUSH_STRUCTS(arena, binary_sizes[i], u8);
+			binaries[i] = PUSH(&arena, binary_sizes[i], uint8_t);
 
-			fread(binaries[i], sizeof(u8), binary_sizes[i], file);
+			fread(binaries[i], sizeof(uint8_t), binary_sizes[i], file);
 		}
 		fclose(file);
 
 		cl_int errcode_ret;
 		cl_int binary_status[16];
-		cl_program program = clCreateProgramWithBinary(context, count, devices, binary_sizes, (const u8 **) binaries, (cl_int*)binary_status, &errcode_ret);
+		cl_program program = clCreateProgramWithBinary(context, count, devices, binary_sizes, (const uint8_t **) binaries, (cl_int*)binary_status, &errcode_ret);
 		CL_CHECK_ERRORCODE(clCreateProgramWithBinary, errcode_ret);
 
 		build(arena, program, count, devices);
@@ -96,28 +96,28 @@ namespace cl_program_builder {
 		cl_int errcode_ret = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &num_devices, 0);
 		CL_CHECK_ERRORCODE(clGetProgramInfo, errcode_ret);
 
-		u64 *binary_sizes = PUSH_STRUCTS(arena, num_devices, u64);
-		errcode_ret = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_devices*sizeof(u64), binary_sizes, 0);
+		uint64_t *binary_sizes = PUSH(&arena, num_devices, uint64_t);
+		errcode_ret = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_devices*sizeof(uint64_t), binary_sizes, 0);
 		CL_CHECK_ERRORCODE(clGetProgramInfo, errcode_ret);
 
-		u8 **binaries = PUSH_STRUCTS(arena, num_devices, u8*);
-		u64 total = 0;
+		uint8_t **binaries = PUSH(&arena, num_devices, uint8_t*);
+		uint64_t total = 0;
 		for (u32 i = 0; i < num_devices; ++i) {
-			binaries[i] = PUSH_STRUCTS(arena, binary_sizes[i], u8);
+			binaries[i] = PUSH(&arena, binary_sizes[i], uint8_t);
 			total += binary_sizes[i];
 		}
 
-		errcode_ret = clGetProgramInfo(program, CL_PROGRAM_BINARIES, total*sizeof(u8 *), binaries, 0);
+		errcode_ret = clGetProgramInfo(program, CL_PROGRAM_BINARIES, total*sizeof(uint8_t *), binaries, 0);
 		CL_CHECK_ERRORCODE(clGetProgramInfo, errcode_ret);
 
 		{ // Write file
 			FILE *file;
 			fopen_s(&file, filename, "w");
 			fwrite(&num_devices, sizeof(cl_uint), 1, file);
-			fwrite(binary_sizes, sizeof(u64), num_devices, file);
+			fwrite(binary_sizes, sizeof(uint64_t), num_devices, file);
 
 			for (u32 i = 0; i < num_devices; ++i) {
-				fwrite(binaries[i], sizeof(u8), binary_sizes[i], file);
+				fwrite(binaries[i], sizeof(uint8_t), binary_sizes[i], file);
 			}
 
 			fclose(file);

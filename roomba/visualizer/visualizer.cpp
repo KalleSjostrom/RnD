@@ -310,7 +310,7 @@ void plugin_update(Application &application, float dt) {
 
 	Sleep(sensor_data.time * 1000);
 
-	if (IS_HELD(*application.input, InputKey_Escape)) {
+	if (is_held(*application.input, InputKey_Escape)) {
 		application.engine->quit();
 	}
 

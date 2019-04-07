@@ -11,8 +11,8 @@ namespace fluid {
 	float b = (4.0f * d) / (1.0f + 4.0f * d);
 
 	struct JacobianEntry {
-		v2 value;
-		v2 neighbor_values[MAX_NEIGHBORS];
+		Vector2 value;
+		Vector2 neighbor_values[MAX_NEIGHBORS];
 	};
 
 	char *transient_memory = 0;
@@ -23,17 +23,17 @@ namespace fluid {
 		PARTICLE_COUNT * sizeof(Element *) \
 	)
 
-	float *Φ = 0;
+	float *theta = 0;
 	Element *elements = 0;
 	JacobianEntry *jacobian = 0;
 	Element **hash_map = 0;
 
-	void simulate(v2 *positions, v2 *velocities, v2 *density_pressure, v2 gravity) {
+	void simulate(Vector2 *positions, Vector2 *velocities, Vector2 *density_pressure, Vector2 gravity) {
 		if (transient_memory == 0) {
 			transient_memory = (char *) malloc(TRANSIENT_MEMORY_SIZE);
 			char *memory = transient_memory;
 
-			Φ = (float *)memory;
+			theta = (float *)memory;
 			memory += PARTICLE_COUNT * sizeof(float);
 
 			elements = (Element *)memory;
@@ -71,7 +71,7 @@ namespace fluid {
 					u32 j = cursor->index;
 					cursor = cursor->next;
 					if (j > i) {
-						v2 r_ij = positions[j] - positions[i];
+						Vector2 r_ij = positions[j] - positions[i];
 						float dist_sq = dot(r_ij, r_ij);
 						if (dist_sq < H*H) {
 							NeighborList &list_j = neighbors_list[j];
@@ -88,11 +88,11 @@ namespace fluid {
 
 							// I already know that dist_sq is less than H*H, so no need to check in the poly6
 							float density = (MASS * POLY6_C        * diff_3);
-							v2 G_ij =      -(MASS * NABLA_POLY6H_C * diff_2 * inv_ρ_0) * r_ij;
+							Vector2 G_ij =      -(MASS * NABLA_POLY6H_C * diff_2 * inv_rho_0) * r_ij;
 
 							float G_ij_sq = dot(G_ij, G_ij);
-							Φ[i] += G_ij_sq;
-							Φ[j] += G_ij_sq;
+							theta[i] += G_ij_sq;
+							theta[j] += G_ij_sq;
 
 							density_pressure[i].x += density;
 							density_pressure[j].x += density;
@@ -117,14 +117,14 @@ namespace fluid {
 						}
 					}
 				}
-				if (Φ[i] != 0) {
-					v2 d = jacobian[i].value; // We have only looked on neighbors, not ourself.
-					Φ[i] = (Φ[i] + dot(d, d)) / MASS + e;
-					Φ[i] = 1.0f / Φ[i];
+				if (theta[i] != 0) {
+					Vector2 jv = jacobian[i].value; // We have only looked on neighbors, not ourself.
+					theta[i] = (theta[i] + dot(jv, jv)) / MASS + e;
+					theta[i] = 1.0f / theta[i];
 				} else {
-					Φ[i] = FLT_MAX;
+					theta[i] = FLT_MAX;
 				}
-				g[i] = (density_pressure[i].x * inv_ρ_0) - 1; // The constraint violation.
+				g[i] = (density_pressure[i].x * inv_rho_0) - 1; // The constraint violation.
 			}
 		}
 
@@ -135,7 +135,7 @@ namespace fluid {
 			// Initialized to g for efficiency.
 			float *c = g;
 			for (int i = 0; i < PARTICLE_COUNT; ++i) {
-				if (Φ[i] != FLT_MAX) {
+				if (theta[i] != FLT_MAX) {
 					// Accumulator all the contributions for the Gv
 					float Gv = dot(jacobian[i].value, velocities[i]);
 					FOR_ALL_NEIGHBORS()
@@ -146,28 +146,28 @@ namespace fluid {
 			}
 
 			// Lagrange multiliers - magnitude of the force needed to restore constraint violations.
-			float λ[PARTICLE_COUNT] = {};
+			float lambda[PARTICLE_COUNT] = {};
 
 			#define NR_GAUSS_SEIDEL_ITERATIONS 8
 			for (int iter = 0; iter < NR_GAUSS_SEIDEL_ITERATIONS; iter++) {
 				for (int i = 0; i < PARTICLE_COUNT; ++i) {
-					if (Φ[i] != FLT_MAX) {
-						float r_i = -c[i] + e*λ[i];
+					if (theta[i] != FLT_MAX) {
+						float r_i = -c[i] + e*lambda[i];
 
 						r_i += dot(jacobian[i].value, velocities[i]);
 						FOR_ALL_NEIGHBORS()
 							r_i += dot(jacobian[i].neighbor_values[k], velocities[j]);
 						}
 
-						float dλ_i = -r_i * Φ[i];
-						λ[i] += dλ_i;
+						float dlambda_i = -r_i * theta[i];
+						lambda[i] += dlambda_i;
 
 						// TODO(kalle): Where the hell are the external forces?
 						// Insert gravity here instead of in the integration step.
 						// TODO(kalle): Don't update velocities here, this is a pointer to the opengl mapped buffer and hence super slow.
-						velocities[i] = velocities[i] + (INV_MASS * dλ_i) * jacobian[i].value;
+						velocities[i] = velocities[i] + (INV_MASS * dlambda_i) * jacobian[i].value;
 						FOR_ALL_NEIGHBORS()
-							velocities[j] = velocities[j] + (INV_MASS * dλ_i) * jacobian[i].neighbor_values[k];
+							velocities[j] = velocities[j] + (INV_MASS * dlambda_i) * jacobian[i].neighbor_values[k];
 						}
 					}
 				}
@@ -182,7 +182,7 @@ namespace fluid {
 				velocities[i] += gravity * DT;
 			}
 			for (int i = 0; i < PARTICLE_COUNT; ++i) {
-				if (Φ[i] != FLT_MAX) {
+				if (theta[i] != FLT_MAX) {
 
 					// Accumulator all the contributions for the Gv
 					float Gv = dot(jacobian[i].value, velocities[i]);
@@ -191,12 +191,12 @@ namespace fluid {
 					}
 
 					float r_i = Gv + a*g[i] + b*Gv;
-					float dλ_i = -r_i * Φ[i];
-					float inv_mass_times_dλ_i = INV_MASS * dλ_i;
+					float dlambda_i = -r_i * theta[i];
+					float inv_mass_times_dlambda_i = INV_MASS * dlambda_i;
 
-					velocities[i] = velocities[i] + inv_mass_times_dλ_i * jacobian[i].value;
+					velocities[i] = velocities[i] + inv_mass_times_dlambda_i * jacobian[i].value;
 					FOR_ALL_NEIGHBORS()
-						velocities[j] = velocities[j] + inv_mass_times_dλ_i * jacobian[i].neighbor_values[_k];
+						velocities[j] = velocities[j] + inv_mass_times_dlambda_i * jacobian[i].neighbor_values[_k];
 					}
 				}
 			}

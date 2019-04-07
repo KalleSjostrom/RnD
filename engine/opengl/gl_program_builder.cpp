@@ -17,10 +17,10 @@ namespace gl_program_builder {
 		glGetShaderInfoLog(shader, 2048, &length, buffer);
 		GL_CHECK_ERROR(glGetShaderInfoLog);
 		if (length > 0) {
-			log_info("GlProgram", "Failed compiling shader!: %s\n", buffer);
-			ASSERT(false, "Failed compiling shader!: %s\n", buffer);
+			log_info("GlProgram", "Failed compiling shader!: %s", buffer);
+			ASSERT(false, "Failed compiling shader!: %s", buffer);
 		} else {
-			log_info("GlProgram", "Shader compile successful!\n");
+			log_info("GlProgram", "Shader compile successful!");
 		}
 
 		return shader;
@@ -41,21 +41,20 @@ namespace gl_program_builder {
 		GLuint program = glCreateProgram();
 		GL_CHECK_ERROR_RETVAL(glCreateProgram, program);
 
-		MemoryBlockHandle handle = begin_block(arena);
-			GLuint vs = load_and_compile(arena, GL_VERTEX_SHADER, vertex_shader_filename);
-			glAttachShader(program, vs);
-			GL_CHECK_ERROR(glAttachShader);
+		TempAllocator ta(&arena);
+		GLuint vs = load_and_compile(arena, GL_VERTEX_SHADER, vertex_shader_filename);
+		glAttachShader(program, vs);
+		GL_CHECK_ERROR(glAttachShader);
 
-			GLuint fs = load_and_compile(arena, GL_FRAGMENT_SHADER, fragment_shader_filename);
-			glAttachShader(program, fs);
-			GL_CHECK_ERROR(glAttachShader);
+		GLuint fs = load_and_compile(arena, GL_FRAGMENT_SHADER, fragment_shader_filename);
+		glAttachShader(program, fs);
+		GL_CHECK_ERROR(glAttachShader);
 
-			if (geometry_shader_filename) {
-				GLuint gs = load_and_compile(arena, GL_GEOMETRY_SHADER, geometry_shader_filename);
-				glAttachShader(program, gs);
-				GL_CHECK_ERROR(glAttachShader);
-			}
-		end_block(arena, handle);
+		if (geometry_shader_filename) {
+			GLuint gs = load_and_compile(arena, GL_GEOMETRY_SHADER, geometry_shader_filename);
+			glAttachShader(program, gs);
+			GL_CHECK_ERROR(glAttachShader);
+		}
 
 		glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		GL_CHECK_ERROR(glProgramParameteri);
@@ -68,12 +67,12 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		if (link_status == GL_TRUE) {
-			log_info("GlProgram", "Gl link successful!\n");
+			log_info("GlProgram", "Gl link successful!");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			log_info("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
+			log_info("GlProgram", "glGetProgramInfoLog: %s", info_log);
 		}
 
 		return program;
@@ -108,12 +107,12 @@ namespace gl_program_builder {
 		GL_CHECK_ERROR(glGetProgramiv);
 
 		if (link_status == GL_TRUE) {
-			log_info("GlProgram", "Gl link successful!\n");
+			log_info("GlProgram", "Gl link successful!");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			log_info("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
+			log_info("GlProgram", "glGetProgramInfoLog: %s", info_log);
 		}
 
 		return program;
@@ -121,7 +120,7 @@ namespace gl_program_builder {
 
 	GLuint create_from_binary_file(const char *filename) {
 		(void)filename;
-		log_info("GlProgram", "create_from_binary_file not implemented!\n");
+		log_info("GlProgram", "create_from_binary_file not implemented!");
 		return 0;
 	}
 
@@ -136,12 +135,12 @@ namespace gl_program_builder {
 		bool is_valid = validate_status == GL_TRUE;
 
 		if (is_valid) {
-			log_info("GlProgram", "Gl program is valid!\n");
+			log_info("GlProgram", "Gl program is valid!");
 		} else {
 			GLchar info_log[2048];
 			glGetProgramInfoLog(program, 2048, 0, info_log);
 			GL_CHECK_ERROR(glGetProgramInfoLog);
-			log_info("GlProgram", "glGetProgramInfoLog: %s\n", info_log);
+			log_info("GlProgram", "glGetProgramInfoLog: %s", info_log);
 		}
 		return is_valid;
 	}

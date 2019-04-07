@@ -64,5 +64,15 @@ pushd "../compiler/bin/"
 compiler.exe --project ../../reloader_test/reloader_test.project --command_line "-D CASE_3_D"
 popd
 
+SET /P variable=Press Enter for CASE_4_A
+pushd "../compiler/bin/"
+compiler.exe --project ../../reloader_test/reloader_test.project --command_line "-D CASE_4_A"
+popd
+
+SET /P variable=Press Enter for CASE_4_B
+pushd "../compiler/bin/"
+compiler.exe --project ../../reloader_test/reloader_test.project --command_line "-D CASE_4_B"
+popd
+
 
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "core/math/vector2.h"
+#include "core/math/vector3.h"
+
 struct Vector4 {
 	union {
 		struct {

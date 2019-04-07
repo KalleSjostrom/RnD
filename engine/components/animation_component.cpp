@@ -21,9 +21,9 @@ void set_animation(AnimationComponent &ac, Entity &entity, AnimationData *data) 
 	animation.time = 0;
 	animation.data = data;
 
-	i32 c = data->keyframe_count / data->stride;
-	for (i32 i = 0; i < c; ++i) {
-		i32 frame = i * data->stride;
+	int c = data->keyframe_count / data->stride;
+	for (int i = 0; i < c; ++i) {
+		int frame = i * data->stride;
 		animation.skeleton.position[i] = data->keyframes[frame];
 	}
 }
@@ -38,30 +38,28 @@ void add(AnimationComponent &ac, Entity &entity, AnimationData *data) {
 	set_animation(ac, entity, data);
 }
 
-v3 *get_skeleton_vertices(AnimationComponent &ac, Entity &entity) {
+void get_skeleton_vertices(AnimationComponent &ac, Entity &entity, Vector3 *vertices) {
 	Animation &animation = ac.animations[entity.animation_id];
-	v3 *vertices = SCRATCH_ALLOCATE_STRUCT(v3, (u32)animation.skeleton.count);
 	skeleton_get_vertices(animation.skeleton, vertices);
-	return vertices;
 }
 
-i32 get_skeleton_vertex_count(AnimationComponent &ac, Entity &entity) {
+int get_skeleton_vertex_count(AnimationComponent &ac, Entity &entity) {
 	Animation &animation = ac.animations[entity.animation_id];
 	return animation.skeleton.count;
 }
 
 
-inline i32 _get_frame(Animation &animation) {
-	return (i32)(animation.time * frames_per_second);
+inline int _get_frame(Animation &animation) {
+	return (int)(animation.time * frames_per_second);
 }
 
 void update(AnimationComponent &ac, f32 dt) {
-	for (i32 i = 0; i < ac.count; ++i) {
+	for (int i = 0; i < ac.count; ++i) {
 		Animation &animation = ac.animations[i];
 		AnimationData *data = animation.data;
 
 		animation.time += dt;
-		i32 frame = _get_frame(animation);
+		int frame = _get_frame(animation);
 		f32 start_time = frame / frames_per_second;
 		// f32 end_time = (frame+1) / frames_per_second;
 
@@ -73,12 +71,12 @@ void update(AnimationComponent &ac, f32 dt) {
 
 		ASSERT(frame < data->stride, "Index out of bounds!");
 
-		i32 frame_count = data->keyframe_count / data->stride;
-		for (i32 j = 0; j < frame_count; ++j) {
-			i32 start_frame = j * data->stride;
+		int frame_count = data->keyframe_count / data->stride;
+		for (int j = 0; j < frame_count; ++j) {
+			int start_frame = j * data->stride;
 			// printf("%d\n", start_frame);
-			v3 curr = data->keyframes[start_frame + frame];
-			v3 next = data->keyframes[start_frame + ((frame == data->stride-1) ? 0:frame+1)];
+			Vector3 curr = data->keyframes[start_frame + frame];
+			Vector3 next = data->keyframes[start_frame + ((frame == data->stride-1) ? 0:frame+1)];
 
 			animation.skeleton.position[j] = lerp(curr, next, t);
 		}

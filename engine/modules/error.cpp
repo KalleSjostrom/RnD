@@ -142,7 +142,7 @@ void _fill_stacktrace(CONTEXT &context, unsigned skip_frames = 0) {
 		};
 	}
 
-	log_error("CrashHandler", "Callstack:\n%.*s\n\n", STR(buffer));
+	log_error("CrashHandler", "Callstack:\n%.*s\n", STR(buffer));
 	destroy(&a);
 }
 
@@ -257,7 +257,7 @@ LONG WINAPI exception_filter(EXCEPTION_POINTERS *ep) {
 	write_crash_dump("../output/crashes/crash.dmp", ep); // NOTE(kalle): This needs to go before the other stack walk, otherwise the dump will not contain the actual crash info.
 
 	const char *exception_string = exception_name(ep->ExceptionRecord->ExceptionCode);
-	log_error("CrashHandler", "Exception: %s\n", exception_string);
+	log_error("CrashHandler", "Exception: %s", exception_string);
 
 	CONTEXT &context = *ep->ContextRecord;
 	EnterCriticalSection(&__cs);

@@ -8,6 +8,7 @@
 
 #define USE_INTRINSICS 1
 #include "core/math/math.h"
+#include "core/math/matrix4x4.h"
 
 #ifdef SYSTEM_OPENGL
 	#include <gl/gl.h>
@@ -30,10 +31,6 @@
 #endif // SYSTEM_OPENGL
 
 #ifdef SYSTEM_COMPONENTS
-	// namespace globals {
-	// 	static ArenaAllocator *transient_arena;
-	// };
-	// #define SCRATCH_ALLOCATE_STRUCT(type, count) PUSH_STRUCTS(*globals::transient_arena, count, type)
 	#include "engine/generated/component_group.cpp"
 #endif
 
@@ -48,6 +45,10 @@
 #ifdef SYSTEM_GUI
 	#include "engine/utils/gui.cpp"
 #endif
+
+#include "core/memory/allocator.cpp"
+#include "core/memory/mspace_allocator.cpp"
+#include "core/memory/arena_allocator.cpp"
 
 struct Application {
 	EngineApi *engine;
@@ -78,7 +79,10 @@ struct Application {
 	GUI gui;
 #endif
 
+	// NOTE(kalle) PLUGIN_DATA should be defined to the users "entry struct". Cannot be void* since the reloader won't know how to follow that!
+#ifdef PLUGIN_DATA
 	PLUGIN_DATA plugin_data;
+#endif
 };
 
 #define EXPORT extern "C" __declspec(dllexport)
@@ -98,19 +102,17 @@ void plugin_render(Application *application);
 		global_set_error(application->engine->error);
 		global_set_logging(application->engine->logging);
 
-		#ifdef OS_WINDOWS
-			#ifdef SYSTEM_OPENGL
-				setup_gl();
-			#endif
-			#ifdef SYSTEM_OPENCL
-				setup_cl();
-			#endif
+		#ifdef SYSTEM_OPENGL
+			setup_gl();
+		#endif
+		#ifdef SYSTEM_OPENCL
+			setup_cl();
 		#endif
 
 		reset(&application->transient_arena);
 		#ifdef SYSTEM_COMPONENTS
 			application->components.allocator = application->allocator;
-			application->components.input.input_data = input;
+			application->components.input.input_data = application->input;
 
 			reload_programs(application->components);
 		#endif // SYSTEM_COMPONENTS
@@ -131,21 +133,18 @@ EXPORT PLUGIN_SETUP(setup) {
 	application->engine = engine;
 	application->input = input;
 
-	#ifdef OS_WINDOWS
-		#ifdef SYSTEM_OPENGL
-			setup_gl();
-		#endif
-		#ifdef SYSTEM_OPENCL
-			setup_cl();
-		#endif
+	#ifdef SYSTEM_OPENGL
+		setup_gl();
+	#endif
+	#ifdef SYSTEM_OPENCL
+		setup_cl();
 	#endif
 
 	#ifdef SYSTEM_COMPONENTS
-		init_arena_allocator(&application->transient_arena, 8*MB);
-		globals::transient_arena = &application->transient_arena;
+		init_arena_allocator(&application->transient_arena, 8);
 
 		application->components.input.input_data = input;
-		application->components.arena = &application->persistent_arena;
+		application->components.allocator = allocator;
 
 		setup_programs(application->components);
 	#endif
@@ -155,7 +154,10 @@ EXPORT PLUGIN_SETUP(setup) {
 	#endif
 
 	#ifdef SYSTEM_GRAPHICS
-		setup_camera(application->camera, V3(0, 0, 1000), 60, ASPECT_RATIO);
+		int screen_width;
+		int screen_height;
+		engine->screen_dimensions(screen_width, screen_height);
+		setup_camera(application->camera, vector3(0, 0, 1000), 60, screen_width / screen_height);
 	#endif
 
 	plugin_setup(application);

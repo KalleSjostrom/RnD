@@ -1,6 +1,8 @@
 #pragma once
 
 #include <math.h>
+#include <float.h>
+#define M_PI 3.14159265358979323846264338327950288
 
 __forceinline float sigmoidal(float activation) {
 	// (1 / (1 + e^(-a/p))) where p = 1, a is the activation.

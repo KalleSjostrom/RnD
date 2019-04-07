@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma warning(push)
-#pragma warning(disable:4146)
-
 // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 struct Random {
@@ -10,6 +7,8 @@ struct Random {
 	uint64_t inc;
 };
 
+#pragma warning(push)
+#pragma warning(disable:4146)
 uint32_t random_u32(Random &r) {
 	uint64_t oldstate = r.state;
 	// Advance internal state
@@ -19,6 +18,7 @@ uint32_t random_u32(Random &r) {
 	uint32_t rot = oldstate >> 59u;
 	return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
+#pragma warning(pop)
 
 uint64_t random_u64(Random &r) {
 	u64 a = (u64)random_u32(r);

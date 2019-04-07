@@ -1,39 +1,39 @@
 struct Sound {
-	u32 at;
-	u32 length;
-	u8 *buffer;
-	f32 volume[2];
+	unsigned at;
+	unsigned length;
+	uint8_t *buffer;
+	float volume[2];
 	bool playing;
-	i32 __padding;
+	int __padding;
 };
 
 struct Fade {
-	f32 volume_start[2];
-	f32 volume_stop[2];
-	f32 duration;
-	u32 start;
+	float volume_start[2];
+	float volume_stop[2];
+	float duration;
+	unsigned start;
 };
 
 struct ActiveSound {
-	i32 sound_id;
-	i32 end_count;
+	int sound_id;
+	int end_count;
 
-	f32 volume_target[2];
+	float volume_target[2];
 };
 
 // #define SHRT_MIN -32767
 // #define SHRT_MAX 32767
 
 struct AudioManager {
-	i32 sound_count;
-	i32 __padding;
+	int sound_count;
+	int __padding;
 	Sound sounds[64];
 	Fade fades[64];
 
-	i32 play(EngineApi *engine, const char *filename, f32 volume = 1.0f) {
-		ASSERT_IN_BOUNDS(sounds, (u32)sound_count);
+	int play(EngineApi *engine, const char *filename, float volume = 1.0f) {
+		// ASSERT_IN_BOUNDS(sounds, (unsigned)sound_count);
 
-		i32 id = sound_count++;
+		int id = sound_count++;
 		Sound &sound = sounds[id];
 		sound.at = 0;
 
@@ -41,12 +41,12 @@ struct AudioManager {
 
 		sound.playing = true;
 
-		engine->audio_load(filename, &sound.buffer, &sound.length);
+		engine->audio.load(filename, &sound.buffer, &sound.length);
 
 		return id;
 	}
 
-	void set_volume(i32 id, f32 volume_ch1, f32 volume_ch2) {
+	void set_volume(int id, float volume_ch1, float volume_ch2) {
 		fades[id].start = 0xFFFFFFFF;
 
 		Sound &sound = sounds[id];
@@ -54,11 +54,11 @@ struct AudioManager {
 		sound.volume[0] = volume_ch1;
 		sound.volume[1] = volume_ch2;
 	}
-	inline void set_volume(i32 id, f32 volume_ch1) {
+	inline void set_volume(int id, float volume_ch1) {
 		set_volume(id, volume_ch1, volume_ch1);
 	}
 
-	void set_fade(i32 id, f32 duration, f32 target_volume_ch1, f32 target_volume_ch2 = 0.0f) {
+	void set_fade(int id, float duration, float target_volume_ch1, float target_volume_ch2 = 0.0f) {
 		ASSERT(duration > 0.0f, "Can't set fade with 0 duration!");
 		Sound &sound = sounds[id];
 		Fade &fade = fades[id];
@@ -72,71 +72,71 @@ struct AudioManager {
 		fade.start = sound.at;
 		fade.duration = duration;
 	}
-	inline void set_fade(i32 id, f32 duration, f32 target_volume_ch1) {
+	inline void set_fade(int id, float duration, float target_volume_ch1) {
 		set_fade(id, duration, target_volume_ch1, target_volume_ch1);
 	}
 
-	void set_playing(i32 id, bool playing) {
+	void set_playing(int id, bool playing) {
 		sounds[id].playing = playing;
 	}
 
-	bool is_playing(i32 id) {
+	bool is_playing(int id) {
 		return sounds[id].playing;
 	}
 
-	bool is_alive(i32 id) {
+	bool is_alive(int id) {
 		return sounds[id].buffer != 0;
 	}
 
-	void update(ArenaAllocator &arena, EngineApi *engine, f32 dt) {
+	void update(ArenaAllocator &arena, EngineApi *engine, float dt) {
 		(void)dt;
 
-		static i32 frequency = 44100;
-		static i32 sample_count = 4096; // 4096/44100 = 0.09287981859 seconds
-		static i32 channel_count = 2;
-		static i32 byte_count = 2;
+		static int frequency = 44100;
+		static int sample_count = 4096; // 4096/44100 = 0.09287981859 seconds
+		static int channel_count = 2;
+		static int byte_count = 2;
 
-		i32 size = (i32) engine->audio_queued_size();
-		i32 queued_samples = size / (channel_count * byte_count);
+		int size = (int) engine->audio.queued_size();
+		int queued_samples = size / (channel_count * byte_count);
 
 		// printf("%d %u %f\n", queued_samples, size, dt);
 		if (queued_samples > sample_count)
 			return;
 
-		i32 count = sample_count * channel_count * byte_count;
+		int count = sample_count * channel_count * byte_count;
 		if (queued_samples == 0) { // We are completely depleted!
 			count *= 4; // Add some extra data
 		}
 
-		MemoryBlockHandle memory_block = begin_block(arena);
-		u8 *output = (u8*) PUSH_SIZE(arena, (u32)count);
-		i32 channel = 0;
+		TempAllocator ta(&arena);
+		uint8_t *output = (uint8_t*) allocate(&arena, (unsigned)count);
+		int channel = 0;
 
-		i32 active_sound_count = 0;
+		int active_sound_count = 0;
 
 		// No-one may scratch allocate until this function returns!
-		ActiveSound *active_sounds = PUSH_STRUCTS(arena, (u32)ARRAY_COUNT(sounds), ActiveSound);
-		for (i32 i = 0; i < (i32)ARRAY_COUNT(sounds); i++) {
+		ActiveSound *active_sounds = PUSH(&arena, (unsigned)ARRAY_COUNT(sounds), ActiveSound);
+		for (int i = 0; i < (int)ARRAY_COUNT(sounds); i++) {
 			Sound &sound = sounds[i];
 			if (sound.playing) {
 				ActiveSound &active_sound = active_sounds[active_sound_count++];
 
 				active_sound.sound_id = i;
-				active_sound.end_count = (i32)sound.length - (i32)sound.at;
+				active_sound.end_count = (int)sound.length - (int)sound.at;
 			}
 		}
 
-		for (i32 i = 0; i < count; i+=2) {
-			f32 mixed = 0;
+		for (int i = 0; i < count; i+=2) {
+			float mixed = 0;
 
-			for (i32 j = 0; j < active_sound_count; j++) {
+			for (int j = 0; j < active_sound_count; j++) {
 				ActiveSound &active_sound = active_sounds[j];
 				Sound &sound = sounds[active_sound.sound_id];
 				Fade &fade = fades[active_sound.sound_id];
 
 				if (fade.start != 0xFFFFFFFF) {
-					i32 delta = (i32)sound.at - (i32)fade.start;
-					f32 t = clamp(delta / (frequency*fade.duration), 0, 1);
+					int delta = (int)sound.at - (int)fade.start;
+					float t = clamp(delta / (frequency*fade.duration), 0, 1);
 					sound.volume[channel] = lerp(fade.volume_start[channel], fade.volume_stop[channel], t);
 
 					if (float_equal(t, 1.0f) && channel == 1) { // Only remove the fade if we are on the last channel
@@ -144,7 +144,7 @@ struct AudioManager {
 					}
 				}
 
-				i16 sample = *(i16*)(sound.buffer + (sound.at + (u32)i));
+				i16 sample = *(i16*)(sound.buffer + (sound.at + (unsigned)i));
 				mixed += sample * sound.volume[channel];
 
 				if (i > active_sound.end_count) {
@@ -159,14 +159,12 @@ struct AudioManager {
 			channel = !channel;
 		}
 
-		for (i32 j = 0; j < active_sound_count; j++) {
+		for (int j = 0; j < active_sound_count; j++) {
 			ActiveSound &active_sound = active_sounds[j];
 			Sound &sound = sounds[active_sound.sound_id];
-			sound.at += (u32)count;
+			sound.at += (unsigned)count;
 		}
 
-		engine->audio_queue(output, (u32)count);
-
-		end_block(arena, memory_block);
+		engine->audio.queue(output, (unsigned)count);
 	}
 };

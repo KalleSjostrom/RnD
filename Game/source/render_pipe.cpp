@@ -1,22 +1,22 @@
 #ifdef OS_WINDOWS
-	static const f32 lightmap_resolution = 1.0f; // In percent
-	static const u32 shadowmap_resolution = 360*16; // Descreet angles. Lower means more twitchy moving shadows
-	static const f32 bloom_resolution = 0.1f; // In percent
-	static const i32 bloom_pass_count = 128; // Number of bloom passes
-	static const u32 fsaa_num_samples = 32;
+	static const float lightmap_resolution = 1.0f; // In percent
+	static const unsigned shadowmap_resolution = 360*16; // Descreet angles. Lower means more twitchy moving shadows
+	static const float bloom_resolution = 0.1f; // In percent
+	static const int bloom_pass_count = 128; // Number of bloom passes
+	static const unsigned fsaa_num_samples = 32;
 #else
-	static const f32 lightmap_resolution = 0.25f; // In percent
-	static const u32 shadowmap_resolution = 360*2; // Descreet angles. Lower means more twitchy moving shadows
-	static const f32 bloom_resolution = 0.5f; // In percent
-	static const i32 bloom_pass_count = 16; // Number of bloom passes
-	static const u32 fsaa_num_samples = 4;
+	static const float lightmap_resolution = 0.25f; // In percent
+	static const unsigned shadowmap_resolution = 360*2; // Descreet angles. Lower means more twitchy moving shadows
+	static const float bloom_resolution = 0.5f; // In percent
+	static const int bloom_pass_count = 16; // Number of bloom passes
+	static const unsigned fsaa_num_samples = 4;
 #endif
 
 #include "engine/utils/fbo.h"
 
 struct RenderPipe {
-	i32 screen_width;
-	i32 screen_height;
+	int screen_width;
+	int screen_height;
 
 	Entity *fullscreen_quad;
 
@@ -25,9 +25,9 @@ struct RenderPipe {
 	FBO lightmap[2];
 	FBO bloom[2];
 
-	v3 light_colors[4];
-	v2 light_positions[4];
-	f32 light_radii[4];
+	Vector3 light_colors[4];
+	Vector2 light_positions[4];
+	float light_radii[4];
 
 	GLuint passthrough_program;
 	GLint passthrough_render_texture_location;
@@ -66,7 +66,7 @@ struct RenderPipe {
 
 void load_image(EngineApi *engine, RenderPipe &r) {
 	ImageData image_data;
-	bool success = engine->image_load("../../game/assets/shadow.png", image_data);
+	bool success = engine->image.load("../../game/assets/shadow.png", image_data);
 	ASSERT(success, "Could not load image!");
 
 	glGenTextures(1, &r.shadow_texture);
@@ -90,7 +90,7 @@ void load_image(EngineApi *engine, RenderPipe &r) {
 	}
 }
 
-void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &components, int screen_width, int screen_height) {
 	if (!r.fullscreen_quad) {
 		Context c = {};
 		r.fullscreen_quad = spawn_entity(engine, components, EntityType_Fullscreen, c);
@@ -102,11 +102,11 @@ void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &compone
 	setup_fbo(r.scene, screen_width, screen_height);
 	setup_fbo(r.shadowmap, shadowmap_resolution, 1);
 
-	setup_fbo(r.lightmap[0], (i32)(screen_width * lightmap_resolution), (i32)(screen_height * lightmap_resolution), 2);
-	setup_fbo(r.lightmap[1], (i32)(screen_width * lightmap_resolution), (i32)(screen_height * lightmap_resolution), 2);
+	setup_fbo(r.lightmap[0], (int)(screen_width * lightmap_resolution), (int)(screen_height * lightmap_resolution), 2);
+	setup_fbo(r.lightmap[1], (int)(screen_width * lightmap_resolution), (int)(screen_height * lightmap_resolution), 2);
 
-	setup_fbo(r.bloom[0], (i32)(screen_width * bloom_resolution), (i32)(screen_height * bloom_resolution));
-	setup_fbo(r.bloom[1], (i32)(screen_width * bloom_resolution), (i32)(screen_height * bloom_resolution));
+	setup_fbo(r.bloom[0], (int)(screen_width * bloom_resolution), (int)(screen_height * bloom_resolution));
+	setup_fbo(r.bloom[1], (int)(screen_width * bloom_resolution), (int)(screen_height * bloom_resolution));
 
 	{
 		r.passthrough_program = gl_program_builder::create_from_strings(shader_passthrough::vertex, shader_passthrough::fragment, 0);
@@ -176,22 +176,22 @@ void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &compone
 
 	r.light_radii[0] = 1.0f; r.light_radii[1] = 1.0f; r.light_radii[2] = 1.0f; r.light_radii[3] = 1.0f;
 
-	r.light_colors[0] = V3(0.55f, 0.4f, 0.4f); r.light_colors[1] = V3(0.4f, 0.4f, 0.55f);
-	r.light_colors[2] = V3(0.4f, 0.55f, 0.4f); r.light_colors[3] = V3(0.55f, 0.55f, 0.4f);
+	r.light_colors[0] = vector3(0.55f, 0.4f, 0.4f); r.light_colors[1] = vector3(0.4f, 0.4f, 0.55f);
+	r.light_colors[2] = vector3(0.4f, 0.55f, 0.4f); r.light_colors[3] = vector3(0.55f, 0.55f, 0.4f);
 
-	r.light_positions[0] = V2_f32(0, -0.8f); r.light_positions[1] = V2_f32(0.8f, 0);
-	r.light_positions[2] = V2_f32(0, 0.8f); r.light_positions[3] = V2_f32(-0.8f, 0);
+	r.light_positions[0] = vector2(0, -0.8f); r.light_positions[1] = vector2(0.8f, 0);
+	r.light_positions[2] = vector2(0, 0.8f); r.light_positions[3] = vector2(-0.8f, 0);
 }
 
-void set_light_position(RenderPipe &r, Camera &camera, v3 light_position) {
-	m4 view_projection = camera.projection * camera.view;
-	v3 lp = multiply_perspective(view_projection, light_position);
-	r.light_positions[0] = V2_f32(lp.x, lp.y);
+void set_light_position(RenderPipe &r, Camera &camera, Vector3 light_position) {
+	Matrix4x4 view_projection = camera.projection * camera.view;
+	Vector3 lp = multiply_perspective(view_projection, light_position);
+	r.light_positions[0] = vector2(lp.x, lp.y);
 }
 
 void render_bloom(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	// Set a smaller viewport for down-sampling
-	glViewport(0, 0, (i32)(r.screen_width * bloom_resolution), (i32)(r.screen_height * bloom_resolution));
+	glViewport(0, 0, (int)(r.screen_width * bloom_resolution), (int)(r.screen_height * bloom_resolution));
 
 	glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[1].framebuffer_object);
 	glClearColor(0, 0, 0, 1);
@@ -203,7 +203,7 @@ void render_bloom(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Get the fullscreen quad and set it up for rendering
-	i32 model_id = r.fullscreen_quad->model_id;
+	int model_id = r.fullscreen_quad->model_id;
 	Renderable &renderable = components.model.models[model_id];
 	glBindVertexArray(renderable.mesh.vertex_array_object);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderable.mesh.groups[0].element_array_buffer);
@@ -216,7 +216,7 @@ void render_bloom(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 
 	// Start ping-pong rendering of the gaussian blur
 	glUseProgram(r.bloom_program);
-	for (i32 i = 0; i < bloom_pass_count - 1; ++i) {
+	for (int i = 0; i < bloom_pass_count - 1; ++i) {
 		// Render to the second framebuffer_object
 		glBindFramebuffer(GL_FRAMEBUFFER, r.bloom[1].framebuffer_object);
 		glBindTexture(GL_TEXTURE_2D, r.bloom[0].render_texture[0]);
@@ -250,8 +250,8 @@ void render_shadowmap(RenderPipe &r, ComponentGroup &components, Camera &camera)
 	glUseProgram(r.shadowmap_program);
 	glBindTexture(GL_TEXTURE_2D, r.scene.render_texture[0]);
 	glUniform1i(r.shadowmap_scene_location, 0);
-	glUniform2fv(r.shadowmap_light_positions_location, 4, (f32*)r.light_positions);
-	glUniform1fv(r.shadowmap_light_radii_location, 4, (f32*)r.light_radii);
+	glUniform2fv(r.shadowmap_light_positions_location, 4, (float*)r.light_positions);
+	glUniform1fv(r.shadowmap_light_radii_location, 4, (float*)r.light_radii);
 
 	render(components.model, *r.fullscreen_quad, -1);
 
@@ -272,7 +272,7 @@ void render_rest(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	// Push viewport and blend state
 	glDisable(GL_BLEND);
-	glViewport(0, 0, (i32)(r.screen_width * lightmap_resolution), (i32)(r.screen_height * lightmap_resolution));
+	glViewport(0, 0, (int)(r.screen_width * lightmap_resolution), (int)(r.screen_height * lightmap_resolution));
 
 	glBindFramebuffer(GL_FRAMEBUFFER, r.lightmap[0].framebuffer_object);
 
@@ -280,9 +280,9 @@ void render_lightmap(RenderPipe &r, ComponentGroup &components, Camera &camera) 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, r.shadowmap.render_texture[0]);
 	glUniform1i(r.lightmap_shadowmap_location, 0);
-	glUniform2fv(r.lightmap_light_positions_location, 4, (f32*)r.light_positions);
-	glUniform1fv(r.lightmap_light_radii_location, 4, (f32*)r.light_radii);
-	glUniform3fv(r.lightmap_light_colors_location, 4, (f32*)r.light_colors);
+	glUniform2fv(r.lightmap_light_positions_location, 4, (float*)r.light_positions);
+	glUniform1fv(r.lightmap_light_radii_location, 4, (float*)r.light_radii);
+	glUniform3fv(r.lightmap_light_colors_location, 4, (float*)r.light_colors);
 
 	render(components.model, *r.fullscreen_quad, -1);
 

@@ -15,7 +15,7 @@ void set_position(Camera &camera, Vector3 position) {
 
 void setup_camera(Camera &camera, Vector3 position, float fov, float aspect_ratio) {
 	camera.pose = identity();
-	forward_axis(camera.pose) = V3(0.0f, 0.0f, -1.0f);
+	forward_axis(camera.pose) = vector3(0.0f, 0.0f, -1.0f);
 	set_position(camera, position);
 
 	camera.projection = perspective_fov(fov, aspect_ratio, 0.1f, 10000.0f);
@@ -33,25 +33,25 @@ void begin_frame(Camera &camera, GLint projection_location, GLint view_location,
 bool move(Camera &camera, InputData &input, float translation_speed, float rotation_speed, float dt) {
 	bool moved = false;
 
-	v2 m = {};
-	if (IS_HELD(input, InputKey_A)) {
+	Vector2 m = {};
+	if (is_held(input, InputKey_A)) {
 		m.x = -1;
 		moved = true;
 	}
-	if (IS_HELD(input, InputKey_S)) {
+	if (is_held(input, InputKey_S)) {
 		m.y = -1;
 		moved = true;
 	}
-	if (IS_HELD(input, InputKey_D)) {
+	if (is_held(input, InputKey_D)) {
 		m.x = 1;
 		moved = true;
 	}
-	if (IS_HELD(input, InputKey_W)) {
+	if (is_held(input, InputKey_W)) {
 		m.y = 1;
 		moved = true;
 	}
 
-	if (IS_HELD(input, InputKey_MouseRight)) {
+	if (is_held(input, InputKey_MouseRight)) {
 		translation_speed *= 8;
 	}
 
@@ -65,11 +65,11 @@ bool move(Camera &camera, InputData &input, float translation_speed, float rotat
 	position += x * (m.x * dt * translation_speed);
 	position += z * (m.y * dt * translation_speed);
 
-	if (IS_HELD(input, InputKey_MouseLeft)) {
-		Vector3 world_up = V3(0, 1, 0);
-		q4 qx = Quaternion(world_up, -input.mouse_xrel * dt * rotation_speed);
-		q4 qy = Quaternion(x, -input.mouse_yrel * dt * rotation_speed);
-		q4 q = qx * qy;
+	if (is_held(input, InputKey_MouseLeft)) {
+		Vector3 world_up = vector3(0, 1, 0);
+		Quaternion qx = quaternion(world_up, -input.mouse_xrel * dt * rotation_speed);
+		Quaternion qy = quaternion(x, -input.mouse_yrel * dt * rotation_speed);
+		Quaternion q = qx * qy;
 
 		x = ::rotate_around(q, x);
 		y = ::rotate_around(q, y);

@@ -30,13 +30,13 @@ void update_image(RenderPipe &r) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, r.image_data.width, r.image_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, r.image_data.pixels);
 }
 
-void alloc_image(ArenaAllocator &arena, RenderPipe &r) {
+void alloc_image(Allocator *allocator, RenderPipe &r) {
 	r.image_data = {};
 
 	r.image_data.width = 1024;
 	r.image_data.height = 768;
 	r.image_data.bytes_per_pixel = 4;
-	r.image_data.pixels = PUSH_SIZE(arena, (size_t)(r.image_data.width * r.image_data.height * r.image_data.bytes_per_pixel));
+	r.image_data.pixels = allocate(allocator, (size_t)(r.image_data.width * r.image_data.height * r.image_data.bytes_per_pixel));
 
 	glGenTextures(1, &r.ray_texture);
 
@@ -59,7 +59,7 @@ void alloc_image(ArenaAllocator &arena, RenderPipe &r) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, r.fsaa_tex, 0);
 }
 
-void setup_render_pipe(ArenaAllocator &arena, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
+void setup_render_pipe(Allocator *allocator, EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
 	if (!r.fullscreen_quad) {
 		Context c = {};
 		r.fullscreen_quad = spawn_entity(engine, components, EntityType_Fullscreen, c);
@@ -71,7 +71,7 @@ void setup_render_pipe(ArenaAllocator &arena, EngineApi *engine, RenderPipe &r, 
 	// glDisable(GL_FRAMEBUFFER_SRGB);
 	glEnable(GL_FRAMEBUFFER_SRGB);
 
-	alloc_image(arena, r);
+	alloc_image(allocator, r);
 
 	{
 		r.passthrough_program = gl_program_builder::create_from_strings(shader_passthrough::vertex, shader_passthrough::fragment, 0);

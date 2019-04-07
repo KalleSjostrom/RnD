@@ -1,5 +1,12 @@
 #pragma once
 
+#include <immintrin.h>
+#include "core/math/vector2.h"
+#include "core/math/vector3.h"
+#include "core/math/vector4.h"
+
+#include "core/math/quaternion.h"
+
 ALIGNED_TYPE(struct, 16) {
 	float m[16];
 	__forceinline float operator[](int index) { return m[index]; }

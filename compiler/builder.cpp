@@ -71,7 +71,17 @@ bool build(Project &project, FileSystem &file_system, char *command_line) {
 	char plugin_output_path[MAX_PATH];
 	sprintf_s(plugin_output_path, ARRAY_COUNT(plugin_output_path), "%.*s/%s", STR(project.output_path), plugin_name);
 
-	bytes_written = sprintf_s(at, count, " %s %s %s %s %s /Fo%s.obj -LD /link /IMPLIB:%s.lib /PDB:%s.pdb /OUT:%s.dll", flags, defines, command_line ? command_line : "", includes, libraries, plugin_output_path, plugin_output_path, plugin_output_path, plugin_output_path);
+	bytes_written = sprintf_s(at, count, " %s %s %s %s %s", flags, defines, command_line ? command_line : "", includes, libraries);
+	at += bytes_written;
+	count -= bytes_written;
+
+	// for (i32 i = 0; i < array_count(project.translation_units); ++i) {
+	// 	bytes_written = sprintf_s(at, count, " /Fo%.*s/%.*s", STR(project.output_path), STR(project.translation_units[i]));
+	// 	at += bytes_written;
+	// 	count -= bytes_written;
+	// }
+
+	bytes_written = sprintf_s(at, count, " -LD /link /IMPLIB:%s.lib /PDB:%s.pdb /OUT:%s.dll", plugin_output_path, plugin_output_path, plugin_output_path);
 	at += bytes_written;
 	count -= bytes_written;
 

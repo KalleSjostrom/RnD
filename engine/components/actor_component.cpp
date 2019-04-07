@@ -1,24 +1,24 @@
 #include "engine/utils/physics.cpp"
 
 struct Actor {
-	i32 tree_id;
+	int tree_id;
 };
 
 struct ActorComponent {
 	Actor actors[8];
 	cid count;
-	i32 tree_to_instance[MAX_AABB_TREE_NODES];
+	int tree_to_instance[MAX_AABB_TREE_NODES];
 	AABBTree aabb_tree;
 };
 
-void update_pose(m4 &pose, v3 *vertices, int32_t vertex_count, AABB &aabb) {
+void update_pose(Matrix4x4 &pose, Vector3 *vertices, int vertex_count, AABB &aabb) {
 	float minx = FLT_MAX;
 	float maxx = -FLT_MAX;
 	float miny = FLT_MAX;
 	float maxy = -FLT_MAX;
 
-	for (i32 i = 0; i < vertex_count; ++i) {
-		v3 vertex = multiply_perspective(pose, vertices[i]);
+	for (int i = 0; i < vertex_count; ++i) {
+		Vector3 vertex = multiply_perspective(pose, vertices[i]);
 		minx = fminf(vertex.x, minx);
 		maxx = fmaxf(vertex.x, maxx);
 		miny = fminf(vertex.y, miny);
@@ -31,7 +31,7 @@ void update_pose(m4 &pose, v3 *vertices, int32_t vertex_count, AABB &aabb) {
 	aabb.h = maxy - miny;
 }
 
-void set_pose(ActorComponent &ac, Entity &entity, m4 &pose) {
+void set_pose(ActorComponent &ac, Entity &entity, Matrix4x4 &pose) {
 	Actor &actor = ac.actors[entity.actor_id];
 	AABB &aabb = ac.aabb_tree.aabb_storage[actor.tree_id];
 	Shape &shape = ac.aabb_tree.shape_storage[actor.tree_id];
@@ -45,7 +45,7 @@ void set_pose(ActorComponent &ac, Entity &entity, m4 &pose) {
 	ac.aabb_tree.pose_storage[actor.tree_id] = pose;
 }
 
-void add(ActorComponent &ac, Entity &entity, ShapeType type, m4 &pose, v3 *vertices, int32_t vertex_count) {
+void add(ActorComponent &ac, Entity &entity, ShapeType type, Matrix4x4 &pose, Vector3 *vertices, int vertex_count) {
 	ASSERT((u32)ac.count < ARRAY_COUNT(ac.actors), "Component full!");
 	entity.actor_id = ac.count++;
 	Actor &actor = ac.actors[entity.actor_id];
@@ -72,7 +72,7 @@ inline OverlapResults overlap(ActorComponent &ac, Entity &entity) {
 	return overlap(ac.aabb_tree, actor.tree_id);
 }
 
-inline SweepResults sweep(ActorComponent &ac, Entity &entity, v3 &translation) {
+inline SweepResults sweep(ActorComponent &ac, Entity &entity, Vector3 &translation) {
 	Actor &actor = ac.actors[entity.actor_id];
 	return sweep(ac.aabb_tree, actor.tree_id, translation);
 }

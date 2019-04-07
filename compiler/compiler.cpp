@@ -352,38 +352,7 @@ PROFILER_STOP(total);
 	return !success;
 }
 
-#ifdef OS_WINDOWS
-#include <shellapi.h>
-int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowCode) {
-	(void) Instance;
-	(void) PrevInstance;
-	(void) ShowCode;
-
-	char *argv[8] = {};
-	int argc = 0;
-	argv[0] = CommandLine;
-
-	int cursor = 0;
-	while(1) {
-		if (CommandLine[cursor] == ' ') {
-			argv[argc][cursor] = '\0';
-			argc++;
-			cursor++;
-			argv[argc] = CommandLine + cursor;
-			continue;
-		} else if (CommandLine[cursor] == '\0') {
-			if (cursor > 0) {
-				argc++;
-			}
-			break;
-		}
-
-		cursor++;
-	}
-	return run(argc, argv);
-}
-#else
 int main(int argc, char *argv[]) {
-	return run(argc, argv);
+	run(argc, argv);
+	return 0;
 }
-#endif

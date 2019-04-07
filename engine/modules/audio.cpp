@@ -19,28 +19,34 @@ void audio_init() {
 	wav_spec.size = 0;
 
 	if (SDL_OpenAudio(&wav_spec, &wav_spec) < 0) { // TODO(kalle): SDL_CloseAudio();
-		log_error("Audio", "Couldn't open audio: %s\n", SDL_GetError());
+		log_error("Audio", "Couldn't open audio: %s", SDL_GetError());
 	}
 
-	log_info("Audio", "audio spec.freq: %u\n", wav_spec.freq);
-	log_info("Audio", "audio spec.format: %u\n", wav_spec.format);
-	log_info("Audio", "audio spec.format BITSIZE: %u\n", (int) SDL_AUDIO_BITSIZE(wav_spec.format));
-	log_info("Audio", "audio spec.format ISFLOAT: %u\n", (int) SDL_AUDIO_ISFLOAT(wav_spec.format));
-	log_info("Audio", "audio spec.format ISBIGENDIAN: %u\n", (int) SDL_AUDIO_ISBIGENDIAN(wav_spec.format));
-	log_info("Audio", "audio spec.format ISSIGNED: %u\n", (int) SDL_AUDIO_ISSIGNED(wav_spec.format));
-	log_info("Audio", "audio spec.format ISINT: %u\n", (int) SDL_AUDIO_ISINT(wav_spec.format));
-	log_info("Audio", "audio spec.format ISLITTLEENDIAN: %u\n", (int) SDL_AUDIO_ISLITTLEENDIAN(wav_spec.format));
-	log_info("Audio", "audio spec.format ISUNSIGNED: %u\n", (int) SDL_AUDIO_ISUNSIGNED(wav_spec.format));
-	log_info("Audio", "audio spec.channels: %u\n", wav_spec.channels);
-	log_info("Audio", "audio spec.silence: %u\n", wav_spec.silence);
-	log_info("Audio", "audio spec.samples: %u\n", wav_spec.samples);
-	log_info("Audio", "audio spec.size: %u\n", wav_spec.size);
+	// int count = SDL_GetNumAudioDevices(0);
+	// for (int i = 0; i < count; ++i) {
+	// 	const char *name = SDL_GetAudioDeviceName(i, 0);
+	// 	log_info("Audio", "device %d: %s", i, name);
+	// }
+
+	log_info("Audio", "audio spec.freq: %u", wav_spec.freq);
+	log_info("Audio", "audio spec.format: %u", wav_spec.format);
+	log_info("Audio", "audio spec.format BITSIZE: %u", (int) SDL_AUDIO_BITSIZE(wav_spec.format));
+	log_info("Audio", "audio spec.format ISFLOAT: %u", (int) SDL_AUDIO_ISFLOAT(wav_spec.format));
+	log_info("Audio", "audio spec.format ISBIGENDIAN: %u", (int) SDL_AUDIO_ISBIGENDIAN(wav_spec.format));
+	log_info("Audio", "audio spec.format ISSIGNED: %u", (int) SDL_AUDIO_ISSIGNED(wav_spec.format));
+	log_info("Audio", "audio spec.format ISINT: %u", (int) SDL_AUDIO_ISINT(wav_spec.format));
+	log_info("Audio", "audio spec.format ISLITTLEENDIAN: %u", (int) SDL_AUDIO_ISLITTLEENDIAN(wav_spec.format));
+	log_info("Audio", "audio spec.format ISUNSIGNED: %u", (int) SDL_AUDIO_ISUNSIGNED(wav_spec.format));
+	log_info("Audio", "audio spec.channels: %u", wav_spec.channels);
+	log_info("Audio", "audio spec.silence: %u", wav_spec.silence);
+	log_info("Audio", "audio spec.samples: %u", wav_spec.samples);
+	log_info("Audio", "audio spec.size: %u", wav_spec.size);
 }
 
 void audio_load(const char *filename, u8 **buffer, u32 *length) {
 	SDL_AudioSpec loaded_wav_spec = {};
 	if (SDL_LoadWAV_RW(SDL_RWFromFile(filename, "rb"), 1, &loaded_wav_spec, (Uint8**)buffer, length) == 0) {
-		log_error("Audio", "Couldn't load audio! (filename=%s, error=%s)\n", filename, SDL_GetError());
+		log_error("Audio", "Couldn't load audio! (filename=%s, error=%s)", filename, SDL_GetError());
 	}
 
 #if 0
@@ -61,7 +67,7 @@ void audio_load(const char *filename, u8 **buffer, u32 *length) {
 
 void audio_queue(u8 *buffer, u32 length) {
 	if (SDL_QueueAudio(device_id, buffer, length) < 0) {
-		log_error("Audio", "Couldn't queue audio! (error=%s)\n", SDL_GetError());
+		log_error("Audio", "Couldn't queue audio! (error=%s)", SDL_GetError());
 	}
 }
 

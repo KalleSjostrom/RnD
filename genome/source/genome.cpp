@@ -154,7 +154,7 @@ EXPORT PLUGIN_UPDATE(update) {
 	}
 
 	{ // Update the application
-		if (IS_PRESSED(input, InputKey_Space)) {
+		if (is_pressed(input, InputKey_Space)) {
 			run(application.persistent_arena, ga_settings);
 		}
 		// Update all the components

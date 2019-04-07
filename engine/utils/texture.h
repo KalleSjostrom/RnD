@@ -43,15 +43,15 @@ GLuint load_texture(EngineApi *engine, String directory, String path, bool use_m
 
 	ImageData image_data;
 	char buf[1024] = {};
-	int count = snprintf(buf, ARRAY_COUNT(buf), "%.*s/%.*s", directory.length, *directory, path.length, *path);
+	int count = snprintf(buf, ARRAY_COUNT(buf), "%.*s/%.*s", (int)directory.length, *directory, (int)path.length, *path);
 	for (int i = 0; i < count; ++i) {
 		if (buf[i] == '\\')
 			buf[i] = '/';
 	}
 
-	bool success = engine->image_load(buf, image_data);
+	bool success = engine->image.load(buf, image_data);
 	if (!success) {
-		LOG_ERROR("Model", "Could not load image '%s'!\n", buf);
+		log_error("Model", "Could not load image '%s'!", buf);
 		return default_texture;
 	}
 

@@ -100,16 +100,16 @@ void plugin_update(Application &application, float dt) {
 		i16 speed = 0;
 		i16 radius = 0;
 
-		if (IS_HELD(input, InputKey_W)) {
+		if (is_held(input, InputKey_W)) {
 			speed = 200; // mm / s
 		}
-		if (IS_HELD(input, InputKey_S)) {
+		if (is_held(input, InputKey_S)) {
 			speed = -200; // mm / s
 		}
-		if (IS_HELD(input, InputKey_D)) {
+		if (is_held(input, InputKey_D)) {
 			radius = -100; // mm
 		}
-		if (IS_HELD(input, InputKey_A)) {
+		if (is_held(input, InputKey_A)) {
 			radius = 100; // mm
 		}
 
@@ -139,9 +139,9 @@ void plugin_update(Application &application, float dt) {
 
 	{
 #if 1
-		if (IS_PRESSED(*application.input, InputKey_Space)) {
+		if (is_pressed(*application.input, InputKey_Space)) {
 			send_command(roomba.connection, COMMAND_DOCK);
-		} else if (IS_PRESSED(*application.input, InputKey_Enter)) {
+		} else if (is_pressed(*application.input, InputKey_Enter)) {
 			send_command(roomba.connection, COMMAND_CLEAN);
 		}
 #endif
@@ -194,7 +194,7 @@ void plugin_update(Application &application, float dt) {
 		roomba.fps_timer = 0;
 	}
 
-	if (IS_HELD(*application.input, InputKey_Escape)) {
+	if (is_held(*application.input, InputKey_Escape)) {
 		save_stream(roomba.connection);
 		application.engine->quit();
 	}

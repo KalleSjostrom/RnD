@@ -223,43 +223,13 @@ struct MainFiberArgs {
 	TaskScheduler *scheduler;
 };
 
-#if defined(OS_WINDOWS)
-	static __declspec(thread) i32 tls_thread_index;
-	static i32 get_thread_index() {
-		return tls_thread_index;
-	}
-	static void set_thread_index(i32 index) {
-		tls_thread_index = index;
-	}
-#else
-	static __thread i32 tls_thread_index;
-
-	// To avoid the problem of tls optimization under clang, we lookup the current thread index...
-	static i32 tls_hax_thread_count;
-	static ThreadType *tls_hax_threads;
-
-	static i32 get_thread_index() {
-		pthread_t current_thread = pthread_self();
-		for (i32 i = 0; i < tls_hax_thread_count; ++i) {
-			if (pthread_equal(current_thread, tls_hax_threads[i])) {
-				ASSERT(i == tls_thread_index, "TLS optimization?");
-				return i;
-			}
-		}
-
-		// printf("%d\n", tls_hax_thread_count);
-		// printf("%lu\n", (uintptr_t) current_thread);
-		// for (i32 i = 0; i < tls_hax_thread_count; ++i) {
-		// 	printf("-- %lu\n", (uintptr_t) tls_hax_threads[i]);
-		// }
-
-		ASSERT(false, "Could not find an entry in threads for the current running thread!");
-		return -1;
-	}
-	static void set_thread_index(i32 index) {
-		tls_thread_index = index;
-	}
-#endif
+static __declspec(thread) i32 tls_thread_index;
+static i32 get_thread_index() {
+	return tls_thread_index;
+}
+static void set_thread_index(i32 index) {
+	tls_thread_index = index;
+}
 
 namespace {
 	// Gets the index of the next available fiber in the pool

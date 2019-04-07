@@ -96,7 +96,7 @@
 /**
  *  Macro useful for building other macros with strings in them
  *
- *  e.g. #define LOG_ERROR(X) OutputDebugString(SDL_STRINGIFY_ARG(__FUNCTION__) ": " X "\n")
+ *  e.g. #define log_error(X) OutputDebugString(SDL_STRINGIFY_ARG(__FUNCTION__) ": " X "\n")
  */
 #define SDL_STRINGIFY_ARG(arg)  #arg
 

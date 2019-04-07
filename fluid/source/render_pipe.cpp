@@ -4,16 +4,16 @@ struct RenderPipe {
 	i32 screen_width;
 	i32 screen_height;
 
-	Entity fullscreen_quad;
+	Entity *fullscreen_quad;
 
 	GLuint fsaa_tex;
 	GLuint fsaa_fbo;
 };
 
 void setup_render_pipe(EngineApi *engine, RenderPipe &r, ComponentGroup &components, i32 screen_width, i32 screen_height) {
-	if (r.fullscreen_quad.type != EntityType_Fullscreen) {
+	if (!r.fullscreen_quad) {
 		Context c = {};
-		spawn_entity(components, r.fullscreen_quad, EntityType_Fullscreen, c);
+		r.fullscreen_quad = spawn_entity(engine, components, EntityType_Fullscreen, c);
 	}
 
 	r.screen_width = screen_width;
@@ -36,7 +36,7 @@ void render_combine(RenderPipe &r, ComponentGroup &components, Camera &camera) {
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	components.model.render(r.fullscreen_quad.model_id, -1);
+	render(components.model, *r.fullscreen_quad, -1);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, r.fsaa_fbo); // Make sure your multisampled FBO is the read framebuffer

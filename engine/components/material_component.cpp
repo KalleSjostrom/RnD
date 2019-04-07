@@ -1,6 +1,6 @@
 struct RayMaterial {
-	v3 reflection_color;
-	v3 emittance_color;
+	Vector3 reflection_color;
+	Vector3 emittance_color;
 	float roughness;
 };
 

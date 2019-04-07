@@ -133,13 +133,13 @@ void reload_programs(ComponentGroup &components) {
 
 static const GLindex quad_vertex_indices[] = { 0, 1, 2, 3 };
 
-Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType type, Context &context, v3 position = V3(0,0,0)) {
+Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType type, Context &context, Vector3 position = vector3(0,0,0)) {
 	Entity &entity = components.entities[components.entity_count++];
 	entity.type = type;
 
 	switch (type) {
 		case EntityType_BlockAvatar: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 				{ 1.0f, 0.0f, 0.0f },
 				{ 0.0f, 1.0f, 0.0f },
@@ -158,8 +158,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
@@ -167,15 +169,15 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, get_model(components.model, entity));
 
 			// Actor
-			m4 &pose = components.model.models[entity.model_id].pose;
+			Matrix4x4 &pose = components.model.models[entity.model_id].pose;
 			add(components.actor, entity, ShapeType_AABox, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Sphere: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 			};
 
@@ -185,8 +187,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = 1;
 
@@ -194,24 +198,24 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_POINTS;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_sphere, get_model(components.model, entity));
 
 			// Material
 			add(components.material, entity, context.material);
 
 			// Actor
-			static v3 bounding_box[] = {
+			static Vector3 bounding_box[] = {
 				{ -50.0f, -50.0f, 0.0f },
 				{  50.0f, -50.0f, 0.0f },
 				{  50.0f,  50.0f, 0.0f },
 				{ -50.0f,  50.0f, 0.0f },
 			};
-			m4 &pose = get_pose(components.model, entity);
+			Matrix4x4 &pose = get_pose(components.model, entity);
 			add(components.actor, entity, ShapeType_Sphere, pose, bounding_box, ARRAY_COUNT(bounding_box));
 		} break;
 		case EntityType_Block: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 				{ 1.0f, 0.0f, 0.0f },
 				{ 0.0f, 1.0f, 0.0f },
@@ -224,8 +228,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
@@ -233,15 +239,15 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_default, get_model(components.model, entity));
 
 			// Actor
-			m4 &pose = get_pose(components.model, entity);
+			Matrix4x4 &pose = get_pose(components.model, entity);
 			add(components.actor, entity, ShapeType_Box, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Fullscreen: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ -1.0f, -1.0f, 0.0f },
 				{  1.0f, -1.0f, 0.0f },
 				{ -1.0f,  1.0f, 0.0f },
@@ -254,8 +260,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = ARRAY_COUNT(quad_vertex_indices);
 
@@ -263,18 +271,18 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_TRIANGLE_STRIP;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 		} break;
 
 		case EntityType_Model: {
 			ASSERT(context.model, "Cannot create a model without creation context");
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, context.model);
+			add(components.model, entity, engine, components.allocator, position, context.model);
 			add_to_program(components.renderer, context.model->program_type, get_model(components.model, entity));
 		} break;
 		case EntityType_Ruler: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 				{ 0.0f, 2.0f, 0.0f },
 			};
@@ -285,8 +293,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = 2;
 
@@ -294,11 +304,11 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_LINE_STRIP;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_line, get_model(components.model, entity));
 		} break;
 		case EntityType_Roomba: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 			};
 
@@ -308,8 +318,10 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			md.vertices = vertex_buffer_data;
 			md.vertex_count = ARRAY_COUNT(vertex_buffer_data);
 
+			GroupData group_data;
+
 			md.group_count = 1;
-			md.groups = PUSH_STRUCTS(*components.arena, 1, GroupData);
+			md.groups = &group_data;
 			md.groups[0].indices = (GLindex*) quad_vertex_indices;
 			md.groups[0].index_count = 1;
 
@@ -317,24 +329,24 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			model_cc.draw_mode = GL_POINTS;
 
 			// Model
-			add(components.model, entity, engine, *components.arena, position, &model_cc);
+			add(components.model, entity, engine, components.allocator, position, &model_cc);
 			add_to_program(components.renderer, ProgramType_roomba, get_model(components.model, entity));
 
 			// Material
 			// add(components.material, entity, context.material);
 
 			// Actor
-			static v3 bounding_box[] = {
+			static Vector3 bounding_box[] = {
 				{ -50.0f, -50.0f, 0.0f },
 				{  50.0f, -50.0f, 0.0f },
 				{  50.0f,  50.0f, 0.0f },
 				{ -50.0f,  50.0f, 0.0f },
 			};
-			m4 &pose = get_pose(components.model, entity);
+			Matrix4x4 &pose = get_pose(components.model, entity);
 			add(components.actor, entity, ShapeType_Sphere, pose, bounding_box, ARRAY_COUNT(bounding_box));
 		} break;
 		case EntityType_Plane: {
-			static v3 vertex_buffer_data[] = {
+			static Vector3 vertex_buffer_data[] = {
 				{ 0.0f, 0.0f, 0.0f },
 				{ 1.0f, 0.0f, 0.0f },
 				{ 0.0f, 1.0f, 1.0f },
@@ -346,14 +358,14 @@ Entity *spawn_entity(EngineApi *engine, ComponentGroup &components, EntityType t
 			add_to_program(components.renderer, ProgramType_default, get_model(components.model, entity));
 
 			// Material
-			add(components.material, entity, context.material); // V3(0.5f, 0.5f, 0.5f), V3(0, 0, 0), 1);
+			add(components.material, entity, context.material); // vector3(0.5f, 0.5f, 0.5f), vector3(0, 0, 0), 1);
 
 			// Actor
-			m4 &pose = get_pose(components.model, entity);
+			Matrix4x4 &pose = get_pose(components.model, entity);
 			add(components.actor, entity, ShapeType_AABox, pose, vertex_buffer_data, ARRAY_COUNT(vertex_buffer_data));
 		} break;
 		case EntityType_Fluid: {
-			add(components.fluid, entity, *components.arena);
+			add(components.fluid, entity, components.allocator);
 			add_to_program(components.renderer, ProgramType_fluid, &components.fluid.fluids[entity.fluid_id].renderable);
 		} break;
 		default: {
@@ -369,37 +381,37 @@ namespace component_glue {
 			Entity &entity = components.entities[i];
 			switch (entity.type) {
 				case EntityType_Avatar: {
-					// v3 *vertices = animation__get_skeleton_vertices(components, entity);
+					// Vector3 *vertices = animation__get_skeleton_vertices(components, entity);
 					// model__update_vertices(components, entity, vertices);
 				} break;
 				case EntityType_BlockAvatar: {
-					v3 move = get_move(components.input, entity) * 10;
+					Vector3 move = get_move(components.input, entity) * 10;
 					add_acceleration(components.mover, entity, move);
 
 					if (get_jump(components.input, entity)) {
-						v3 up = V3(0, 200, 0);
+						Vector3 up = vector3(0, 200, 0);
 						add_impulse(components.mover, entity, up);
 					}
 
-					v3 &wanted_translation = get_wanted_translation(components.mover, entity);
+					Vector3 &wanted_translation = get_wanted_translation(components.mover, entity);
 					SweepResults result = sweep(components.actor, entity, wanted_translation);
 
-					v3 &position = get_position(components.mover, entity);
+					Vector3 &position = get_position(components.mover, entity);
 					position += result.constrained_translation;
 
-					m4 &pose = get_pose(components.model, entity);
+					Matrix4x4 &pose = get_pose(components.model, entity);
 					translation(pose) = position;
 
 					set_pose(components.actor, entity, pose);
 
 					if (result.id) {
-						v3 &velocity = get_velocity(components.mover, entity);
+						Vector3 &velocity = get_velocity(components.mover, entity);
 						if (velocity.y <= 0)
 							velocity.y = 0;
 					}
 				} break;
 				case EntityType_Block: {
-					m4 &pose = get_pose(components.model, entity);
+					Matrix4x4 &pose = get_pose(components.model, entity);
 					set_pose(components.actor, entity, pose);
 				} break;
 				default: {};
